@@ -1,0 +1,1488 @@
+---
+system: Humanitarian Knowledge Card System
+version: "1.0"
+
+architecture_note: >
+  Knowledge Cards are the single human-curated layer between the knowledge graph and proposal
+  generation. They replace the wiki template / knowledge card dual-layer architecture. Every
+  card is a first-class graph node. No proposal is generated against a card with status DRAFT
+  or EXPIRED. The graph provides data extraction, contradiction detection, delta alerting, and
+  source traceability. Human curators provide judgment, synthesis, and approval.
+
+# ─── Graph Node Schema ────────────────────────────────────────────────────────
+
+card_node_schema:
+  node_id: uuid
+  label: KnowledgeCard
+  card_type: DONOR | FIELD_CONTEXT | OUTCOME_EVIDENCE | PARTNER_CAPACITY | TRACK_RECORD | POLITICAL_ECONOMY
+  title: string
+  scope:
+    country: "node_id (optional)"
+    crisis: "node_id (optional)"
+    donor: "node_id (optional)"
+    sector: "string (optional)"
+    outcome_code: "OA1–OA16 (optional)"
+    partner: "node_id (optional)"
+  status: DRAFT | UNDER_REVIEW | APPROVED | SUPERSEDED | ARCHIVED
+  version: integer
+  curated_by: staff_id
+  approved_by: "staff_id — Tier 2+ required"
+  created_at: ISO8601
+  last_updated: ISO8601
+  valid_until: "ISO8601 — card reverts to DRAFT on expiry and re-enters curation queue"
+  source_nodes: "[node_id list] — graph entities this card draws on"
+  live_fields: "[field names] — exempt from human lock; display graph value directly"
+  pending_delta_alerts: "[delta_id list] — new ingested data that may require card update"
+  sections: "{ section_name: markdown_content }"
+
+# ─── Pipeline Role ────────────────────────────────────────────────────────────
+
+pipeline_role:
+  draft_assistance: >
+    When a curator opens a new card, the system pre-populates each section with a structured
+    draft: population figures pulled from graph nodes, indicator values auto-inserted, project
+    history auto-listed, evaluation findings extracted. The curator edits, enriches,
+    contextualises, and approves. Never starts from scratch.
+  delta_alerting: >
+    When newly ingested documents produce triplets touching a card's source nodes, the card is
+    flagged with a delta alert. The curator decides whether to update the card or acknowledge
+    and dismiss.
+  contradiction_surfacing: >
+    When the graph detects a contradiction in nodes a card references, the card is flagged.
+    Example: "Section 3 references SOP v2, which has been superseded by SOP v3. Review required."
+  expiry_enforcement: >
+    On valid_until date, card status automatically reverts to DRAFT. The card enters the
+    curation queue. Proposals cannot be generated against it until re-approved.
+  live_field_exception: >
+    Fields listed in live_fields display the current graph value directly without requiring
+    card re-approval. Restricted to factual, low-judgment data: population figures, funding
+    coverage %, project counts, contact details.
+
+# ─── Proposal Assembly Rule ───────────────────────────────────────────────────
+
+proposal_assembly_rule: >
+  Cards are read by the proposal agent in this order:
+  KC-2 (situation and needs) →
+  KC-3 (evidence and activities) →
+  KC-4 (partner) →
+  KC-5 (track record) →
+  KC-1 (donor — sets tone, language, and format for the entire document) →
+  KC-6 (political framing, if active complex emergency).
+  KC-1 is always read last before writing begins.
+
+# ─── Cards ────────────────────────────────────────────────────────────────────
+
+cards:
+
+  # ── KC-1: Donor Intelligence Card ──────────────────────────────────────────
+
+  - card_id: KC-1
+    template_name: Donor Intelligence Card
+    description: >
+      A comprehensive relationship intelligence brief on a specific humanitarian donor.
+      Answers: who are they, how do they think, what do they fund, how do we pitch to them
+      for this specific instrument. Primary input to proposal tone, framing, budget format,
+      and strategic alignment sections.
+    valid_until_default: 12 months
+    graph_query_anchors:
+      - Donor
+      - FundingInstrument
+      - FundingAppeal
+      - PledgeCommitment
+      - "Project (funded by this donor)"
+    proposal_sections_fed:
+      - Cover page
+      - Executive summary framing
+      - Strategic alignment
+      - Budget format and categories
+      - Proposal tone and language calibration
+      - Risk and compliance section
+
+    sections:
+
+      - section_name: "1. Donor Overview"
+        word_limit: 250
+        graph_sources:
+          - Donor node properties
+          - FundingInstrument history
+        curation_note: >
+          Factual overview — draft can be largely machine-assisted.
+          Curator validates strategic characterisation.
+        instructions: >
+          Provide a concise summary of the donor's mission, mandate, and institutional
+          identity. Distinguish between the donor's core institutional role (e.g. government
+          foreign policy, corporate CSR, private foundation) and their humanitarian aid
+          function specifically. Describe their historical role and positioning in the
+          humanitarian system — are they a traditional donor, an emerging donor, a private
+          actor new to the sector? Note any major strategic shifts in the last 3 years.
+
+      - section_name: "2. Organisational Structure & Key Decision-Makers"
+        word_limit: 450
+        graph_sources:
+          - FocalPoint nodes linked to Donor
+          - FundingInstrument agreement contacts
+        live_fields:
+          - contact_details
+          - key_contacts_list
+        curation_note: >
+          Contact details are a live_field — graph-updated without requiring full card
+          re-approval. Strategic characterisation of decision-makers requires human judgment.
+        instructions: >
+          Outline the organisational structure focusing on entities relevant to humanitarian
+          funding decisions: CSR departments, corporate foundations, giving arms, government
+          aid ministries, or foundation programme teams. Identify governance structures and
+          decision-making hierarchies. Map relationships between corporate entities and
+          philanthropic branches where applicable. List key individuals or departments
+          responsible for humanitarian funding decisions — include names, titles, professional
+          backgrounds, and authority levels where known. Highlight champions of forced
+          displacement causes. Provide contact information where available. Flag any recent
+          leadership changes that may signal strategic shifts.
+
+      - section_name: "3. Partnerships, Coalitions & Influence Networks"
+        word_limit: 450
+        graph_sources:
+          - UNAgency nodes
+          - ClusterSector nodes
+          - FundingInstrument co-funders
+        curation_note: >
+          Coalition and network analysis requires human synthesis —
+          cannot be auto-assembled reliably.
+        instructions: >
+          Map this donor's partnerships with other funders, UN agencies, and NGOs. Identify
+          coalition memberships and collaborative funding mechanisms (pooled funds, joint
+          appeals, blended finance vehicles). Note participation in joint initiatives and
+          multi-stakeholder platforms that influence their funding priorities. Analyse the
+          donor's position within the broader funding ecosystem: are they a leader, a follower,
+          or an independent actor? Identify which other donors or organisations most influence
+          their strategy — this shapes how to frame multilateral or inter-agency aspects of
+          a proposal.
+
+      - section_name: "4. Funding History & Trends"
+        word_limit: 700
+        graph_sources:
+          - FundingInstrument nodes
+          - Expenditure nodes
+          - FundingAppeal nodes
+        live_fields:
+          - latest_contribution_amount
+          - total_contributions_usd
+          - active_agreements_count
+        curation_note: >
+          Table is auto-populated from graph. Narrative interpretation and trend analysis
+          require human judgment.
+        instructions: >
+          Analyse funding patterns across three dimensions.
+          (1) Contribution history: provide a structured table —
+          Year | Instrument | Amount USD | Earmarking level | Sector | Operation | Status —
+          for all available years. Follow with a 200-word narrative interpreting the trend:
+          growth, contraction, shifts in earmarking, sector pivots.
+          (2) Allocation models: document any use of impact investing, blended finance,
+          venture philanthropy, performance-based or results-based financing, or
+          humanitarian-development nexus instruments.
+          (3) Cross-system patterns: describe collaborations with WFP, UNICEF, UNDP, IOM,
+          World Bank or other IFIs — note whether the donor funds UNHCR directly or prefers
+          pooled mechanisms, and what that implies for proposal positioning.
+
+      - section_name: "5. Strategic Alignment with UNHCR Outcomes"
+        word_limit: 750
+        graph_sources:
+          - Policy nodes
+          - "LegalFramework nodes (donor country commitments)"
+          - PledgeCommitment nodes
+        curation_note: >
+          Strategic alignment analysis is high-judgment content. Graph provides factual
+          anchors; curator writes the interpretive alignment narrative.
+        instructions: >
+          Analyse alignment between this donor's stated priorities and UNHCR's 16 strategic
+          outcomes: OA1 (Access to territory, registration and documentation), OA2 (Status
+          determination), OA3 (Protection policy and law), OA4 (Gender-based violence),
+          OA5 (Child protection), OA6 (Safety and access to justice), OA7 (Community
+          engagement and women's empowerment), OA8 (Well-being and basic needs), OA9
+          (Sustainable housing and settlements), OA10 (Healthy lives), OA11 (Education),
+          OA12 (Clean water, sanitation and hygiene), OA13 (Self-reliance, economic inclusion
+          and livelihoods), OA14 (Voluntary return and sustainable reintegration), OA15
+          (Resettlement and complementary pathways), OA16 (Local integration and other local
+          solutions). Explicitly name the donor's specific strategic frameworks and foreign
+          policy initiatives (e.g. Belt and Road Initiative, Global Development Initiative,
+          TICAD, Indo-Pacific Strategy, EU Global Gateway, US Strategy for Sub-Saharan Africa).
+          Identify synergies, alignment with UNHCR's operational capacity, and concrete entry
+          points for proposals. Provide actionable alignment arguments — not abstract
+          overlap statements.
+
+      - section_name: "6. Current Instrument in Play"
+        word_limit: 400
+        graph_sources:
+          - FundingInstrument current node
+          - FundingAppeal current node
+        curation_note: >
+          This section must be updated for each proposal cycle. It is the most time-sensitive
+          section of this card. valid_until for this section = instrument closing date.
+        instructions: >
+          Identify the specific funding instrument currently in scope for the proposal being
+          prepared: the HIP year, call for proposals reference number, framework agreement,
+          or funding window. Map the proposed intervention directly against this instrument's
+          stated priorities, eligibility criteria, geographic scope, and scoring rubrics or
+          evaluation criteria if published. Identify the 2–3 alignment arguments most likely
+          to be decisive for this specific instrument. Note any exclusions or restrictions
+          in the current instrument (sectors, countries, activities, or partners explicitly
+          excluded). Flag deadlines and submission requirements.
+
+      - section_name: "7. Thematic Priorities"
+        word_limit: 600
+        graph_sources:
+          - FundingInstrument sector history aggregated
+          - "Policy nodes (donor country policy documents)"
+        curation_note: >
+          Emerging priorities require active monitoring of donor communications, speeches,
+          and strategy documents — not derivable from funding history alone.
+        instructions: >
+          Describe the donor's thematic interests across three dimensions.
+          (1) Core focus areas: historical funding priorities (education, healthcare, climate,
+          livelihoods, protection) and alignment with UNHCR mission areas (forced displacement,
+          crisis response, social protection, trafficking prevention, statelessness).
+          (2) Emerging priorities: accountability to affected populations, digital inclusion,
+          private sector engagement, localisation, innovation, climate-displacement nexus,
+          mental health and psychosocial support.
+          (3) UN system linkages: the donor's preferences for UN agency relationships — do
+          they fund UNHCR directly, prefer joint UN programming, or insist on NGO
+          implementation with UN oversight? Note any known tensions or preferences regarding
+          UN system reform or efficiency expectations.
+
+      - section_name: "8. Geographic Priorities"
+        word_limit: 500
+        graph_sources:
+          - FundingInstrument geographic_scope history
+          - Country nodes linked to past projects
+        live_fields:
+          - funded_countries_list
+          - top_3_funded_regions
+        curation_note: >
+          Geographic restriction flags are high-stakes — must be human-verified,
+          not auto-populated.
+        instructions: >
+          Identify geographic focus at two levels.
+          (1) Specific countries: priority countries based on funding history, current
+          strategic interest, and emerging focus — distinguish between crisis-driven
+          priorities (reactive) and strategic priorities (proactive). Note contexts they
+          explicitly prioritise: protracted crises, sudden-onset emergencies, transition
+          contexts, or specific regional dynamics.
+          (2) Regional strategies: cross-border initiatives, regional frameworks, indirect
+          geographic priorities expressed through thematic programmes. Flag any countries
+          or regions the donor explicitly avoids or has restrictions on (political
+          sensitivities, sanctions regimes, bilateral tensions).
+
+      - section_name: "9. Funding Cycle & Application Process"
+        word_limit: 500
+        graph_sources:
+          - FundingInstrument instrument_type
+          - FundingAppeal history
+        curation_note: >
+          Process details change annually — this section has the shortest valid_until of
+          any section. Flag for mandatory review at each new funding cycle.
+        instructions: >
+          Describe the typical funding cycle and application process. Include: eligibility
+          criteria, typical deadlines and their predictability, whether opportunities are
+          open calls or pre-identified partner mechanisms, lead times required for concept
+          note vs full proposal, internal UNHCR approval requirements before submission.
+          Summarise funding governance: key decision-making committees or boards, review
+          timelines, advisory group influence, typical feedback cycles. Document approval
+          criteria: alignment requirements, scalability expectations, SDG focus, replication
+          potential, impact measurement standards, risk assessment methodology, and due
+          diligence requirements. Note any multi-year funding opportunities and the
+          conditions attached to them.
+
+      - section_name: "10. Proposal Design Guidance"
+        word_limit: 600
+        graph_sources:
+          - FundingInstrument past approved proposals metadata
+        curation_note: >
+          Language guidance is high-value, high-judgment content. Must be based on direct
+          familiarity with this donor's communications and past feedback, not derivable
+          from graph alone.
+        instructions: >
+          Provide donor-specific proposal writing guidance across four elements.
+          (1) Language and framing: keywords and concepts that resonate with this donor
+          (e.g. "transformative impact", "scalable models", "resilience building",
+          "sustainable outcomes", "measurable results"); language and framing to avoid
+          (e.g. dependency-reinforcing language, generic development framing,
+          charity-oriented narrative).
+          (2) Structural preferences: does this donor prefer a concise concept note, a
+          detailed logical framework, a narrative theory of change, or a results-chain
+          format? Note any template or format requirements.
+          (3) Budget considerations: typical funding ranges, matching fund or co-financing
+          requirements, overhead/ISC rate norms, acceptable cost categories, multi-year
+          vs single-year preferences, payment schedule norms.
+          (4) Scalability and innovation requirements: emphasis on replicable models,
+          technology integration, knowledge sharing, or systemic change — and how ambitious
+          vs realistic the proposal narrative should be calibrated.
+
+      - section_name: "11. Reviewer Decision Patterns"
+        word_limit: 300
+        graph_sources:
+          - FundingInstrument closed history
+          - "Evaluation nodes (donor-commissioned)"
+        curation_note: >
+          SENSITIVE. Requires Tier 2+ approval. Not to be shared externally. Based on
+          institutional memory and direct staff experience — graph provides factual
+          anchors only.
+        instructions: >
+          Based on past approved and rejected proposals to this donor (where data is
+          available in the institutional record): identify the most common stated reasons
+          for rejection, the proposal elements that correlate with approval, and any known
+          reviewer preferences, sensitivities, or red flags. Flag if this donor has
+          previously funded UNHCR in the target country or operation — repeat funding
+          implies different expectations (demonstrated performance, not just potential)
+          than first-time relationships. Note any past relationship friction, audit findings,
+          or reporting compliance issues that may affect reviewer disposition. Treat as
+          sensitive institutional intelligence.
+
+      - section_name: "12. Risk Appetite, Compliance & Specific Requirements"
+        word_limit: 600
+        graph_sources:
+          - FundingInstrument compliance_requirements
+          - Past audit findings
+        curation_note: >
+          Compliance requirements are factual and can be largely graph-populated.
+          Risk tolerance characterisation requires human judgment.
+        instructions: >
+          Document this donor's risk and compliance profile across five dimensions.
+          (1) Risk tolerance: reputational, operational, and financial risk appetite —
+          conservative or innovation-tolerant?
+          (2) Due diligence: requirements for UNHCR and implementing partners — audit
+          standards, anti-fraud and corruption policies, mandatory partner training,
+          sub-granting restrictions.
+          (3) Reporting standards: frequency, format, level of detail required for interim
+          and final reports; audit requirements.
+          (4) Visibility and branding: visual identity requirements (signage, equipment
+          marking, distributed goods, staff clothing) — include known exemptions or
+          sensitivities; communication and visibility obligations; coordination requirements
+          with donor communication teams.
+          (5) Specific current priorities: active Humanitarian Implementation Plans (HIPs),
+          resilience marker requirements, humanitarian-development nexus expectations,
+          gender marker requirements, or other mandatory compliance elements for the
+          current funding cycle.
+
+  # ── KC-2: Field Context Card ────────────────────────────────────────────────
+
+  - card_id: KC-2
+    template_name: Field Context Card
+    description: >
+      A comprehensive operational intelligence brief on a specific country or sub-national
+      humanitarian context. Answers: what is the situation, who is affected, what are the
+      needs, what is already being done, and what are the risks. Primary input to proposal
+      situation analysis, needs justification, coordination, and risk sections.
+    valid_until_default: "6 months (acute emergencies) / 12 months (protracted contexts)"
+    graph_query_anchors:
+      - Country
+      - Crisis
+      - PopulationGroup
+      - Settlement
+      - OperationalZone
+      - AccessConstraint
+      - Assessment
+      - "Project (active)"
+      - ClusterSector
+      - LegalFramework
+      - NationalLaw
+    proposal_sections_fed:
+      - Situation analysis
+      - Population and needs
+      - Protection environment
+      - Response landscape and gaps
+      - Coordination
+      - Risk analysis
+      - "Annexes: maps and population tables"
+    data_freshness_rules:
+      population_figures: "Must be <= 6 months old at time of card approval. Source and as-of date mandatory for every figure."
+      economic_indicators: "Must be <= 12 months old."
+      assessment_data: "Must be <= 18 months old."
+      if_data_missing: >
+        Flag explicitly as DATA GAP with the date of the last available figure. Never omit,
+        estimate without basis, or present outdated data without flagging.
+
+    sections:
+
+      - section_name: "1. Protection & Legal Landscape"
+        word_limit: 800
+        graph_sources:
+          - LegalFramework nodes
+          - NationalLaw nodes
+          - ProtectionIncident nodes
+          - AccessConstraint nodes
+          - ConflictEvent nodes
+        curation_note: >
+          Legal gap analysis is high-judgment content. Graph surfaces the nodes;
+          curator interprets the practical implications for programming.
+        instructions: >
+          Assess the legal, institutional, and security environment for displaced, stateless,
+          and at-risk populations. Summarise national legal provisions for asylum and
+          statelessness — their existence, scope, and actual implementation in practice
+          (which often differs from the law on paper). Identify key national institutions
+          (ministries, courts, local authorities, border agencies) and evaluate their
+          effectiveness and disposition toward affected populations. Analyse prevailing
+          security conditions (conflict, crime, border controls) and major protection risks
+          (violence, exploitation, discrimination, refoulement, arbitrary detention). For
+          conflict settings, briefly analyse drivers of conflict, social cohesion dynamics,
+          and political stability. Describe which rights are most constrained in practice
+          (movement, work, education, documentation, access to courts) and evaluate the
+          likely evolution of asylum policies over the proposal period. Data protection
+          assessment: classify this context per UNHCR Data Protection Policy — Scenario 1
+          (no personal data collection or processing), Scenario 2 (relies on existing data,
+          no new collection), or Scenario 3 (new data collection or processing required).
+          Note any DPIA requirements or data-sharing sensitivities.
+
+      - section_name: "2. Population Profile & Demographics"
+        word_limit: 2000
+        graph_sources:
+          - PopulationGroup nodes
+          - RegistrationCohort nodes
+          - "Indicator nodes (disaggregated)"
+          - DisplacementEvent nodes
+          - SituationReport nodes
+        live_fields:
+          - total_population_figure
+          - registration_count
+          - new_arrivals_last_30_days
+        curation_note: >
+          Figures are live_fields — auto-updated from graph. Trend narrative, projection,
+          and country-of-origin analysis require human synthesis.
+        instructions: >
+          Detail the displaced and stateless population with strict quoting of key population
+          figures including sources and reference dates. CRITICAL RULE: every population
+          figure must follow the format "As of [month year], [source] reports [X]
+          [population type]." Never aggregate or estimate without flagging.
+          Cover: total displaced population; refugees by country of origin with breakdown
+          by nationality; IDPs; asylum seekers; stateless persons; returnees; and any other
+          persons of concern. Provide demographic breakdown with specific percentages:
+          age distribution (% children 0–4, 5–11, 12–17, % adults 18–59, % elderly 60+),
+          gender distribution (% female, % male), prevalent ethnicities and cultural
+          affiliations. Describe education levels (% with primary, secondary, tertiary
+          education) and professional skills (common occupations and skill sets relevant to
+          livelihoods programming). Summarise recent population movement trends with specific
+          numbers and timeframes (e.g. "15,000 new arrivals in Q3 2024"). Project future
+          inflows or outflows based on current trends and conditions in countries of origin.
+          Assess conditions in countries of origin that could enable voluntary return. Note
+          internal demographic shifts (birth rates, mortality, aging) that will affect
+          future programming.
+
+      - section_name: "3. Socio-Economic Status & Basic Needs"
+        word_limit: 1000
+        graph_sources:
+          - "Indicator nodes (socio-economic)"
+          - "Assessment nodes (HNO/MSNA)"
+          - VulnerabilityProfile nodes
+          - ServicePoint nodes
+        curation_note: >
+          Needs analysis must be grounded in the most recent available assessment. If
+          assessment data is >18 months old, flag as DATA GAP and note implications
+          for proposal credibility.
+        instructions: >
+          Analyse socio-economic vulnerability and basic needs across three layers.
+          (1) Macroeconomic context: key national economic indicators (GDP, inflation,
+          unemployment, currency stability) that affect host community reception and
+          displaced population coping strategies.
+          (2) Comparative vulnerability: compare income sources, employment, housing, and
+          socio-economic status of displaced populations with host communities. Describe
+          the relationship and social cohesion dynamics between the two groups — areas of
+          tension and areas of solidarity. Analyse labour market regulations and
+          socio-economic policies affecting access to work and social protection for
+          displaced persons.
+          (3) Unmet needs: summarise barriers to essential services (health, education,
+          legal aid, WASH, food). Describe the most critical unmet basic needs by sector,
+          drawing on the most recent HNO, MSNA, or equivalent assessment. Beneficiary
+          targeting context: describe typical targeting approaches and vulnerability
+          assessment tools used in this context (vulnerability scoring, Household Economic
+          Approach, community-based targeting, self-selection mechanisms).
+
+      - section_name: "4. Stakeholder & Partnership Landscape"
+        word_limit: 800
+        graph_sources:
+          - ImplementingPartner nodes
+          - UNAgency nodes
+          - GovernmentAuthority nodes
+          - Donor nodes active in context
+          - NGOPartner nodes
+        curation_note: >
+          Stakeholder analysis requires field-level intelligence not fully captured in
+          the graph. Curator should draw on direct operational experience and recent
+          field reports.
+        instructions: >
+          Map stakeholders and partnership dynamics comprehensively. Identify principal
+          stakeholders: government (national and local), international organisations,
+          NGOs, donors, private sector, community leaders, diaspora organisations, and
+          academic or research institutions. Analyse each stakeholder's leverage over
+          protection outcomes, solutions, and humanitarian access. Note how shifts in
+          stakeholder roles, funding patterns, or political relationships could affect
+          humanitarian strategy and UNHCR's comparative advantage. Implementing partner
+          assessment: for key NGO partners active in this context, assess their capacity
+          (technical expertise, geographic reach, community acceptance, financial
+          management systems), track record in the sector, typical partnership modalities,
+          and any due diligence considerations or known partnership challenges. Do not
+          duplicate detail that belongs in KC-4 — this section provides context-level
+          landscape, not individual partner deep dives.
+
+      - section_name: "5. Durable Solutions & Strategic Outlook"
+        word_limit: 800
+        graph_sources:
+          - LegalFramework nodes
+          - NationalLaw nodes
+          - "PledgeCommitment nodes (resettlement)"
+          - RegistrationCohort nodes
+        curation_note: >
+          Solutions outlook is highly contextual and politically sensitive. Requires
+          senior staff input and alignment with UNHCR country strategy.
+        instructions: >
+          Define pathways and prospects for durable solutions over a 3–5 year horizon.
+          Address each of the three durable solutions.
+          (1) Voluntary return: conditions in countries of origin, go-and-see visits,
+          tripartite agreements in place or in negotiation, safety and dignity conditions,
+          property restitution frameworks, reintegration support availability.
+          (2) Local integration: legal framework enabling or obstructing local integration,
+          access to documentation and citizenship pathways, economic inclusion prospects,
+          social integration dynamics, political will.
+          (3) Resettlement and complementary pathways: projected resettlement quotas,
+          priority caseloads, complementary pathways available (education mobility, labour
+          mobility, family reunification, community sponsorship). Identify legal or policy
+          gaps hindering durable solutions and note partnership opportunities to address
+          them. Provide a realistic assessment of which solution is most likely for the
+          majority of the population over the planning horizon.
+
+      - section_name: "6. Climate, Environment & Disaster Risk"
+        word_limit: 600
+        graph_sources:
+          - HazardEvent nodes
+          - DisasterZone nodes
+          - Settlement environmental risk properties
+        curation_note: >
+          Climate projections require specialist input. Where UNHCR has no internal
+          capacity, flag need for UNEP or specialist partner contribution.
+        instructions: >
+          Analyse the intersection of climate change, environmental degradation, and
+          humanitarian displacement in this context. Address: climate-related displacement
+          drivers (drought, flooding, sea-level rise, desertification) and their
+          contribution to population movements. Environmental conditions and risks in
+          displacement sites (flooding risk, landslide exposure, water stress,
+          deforestation from firewood collection, soil degradation). Climate change
+          trajectory: how are conditions projected to evolve over the next 5–10 years
+          and what are the implications for displacement patterns and humanitarian needs?
+          Environmentally sustainable intervention opportunities: how can humanitarian
+          programming minimise environmental impact and contribute to ecosystem restoration
+          or climate resilience. Note any existing climate-displacement nexus frameworks
+          or environmental management plans.
+
+      - section_name: "7. Institutional Positioning & Programme Portfolio"
+        word_limit: 1200
+        graph_sources:
+          - Operation node
+          - SubOffice nodes
+          - "Project nodes (active and closed)"
+          - "Evaluation nodes (in-country)"
+          - LessonsLearned nodes
+        curation_note: >
+          Original Sections 7 and 8 of the Field Context Card are merged here. Lessons
+          applied section is particularly high value for sophisticated donors — requires
+          direct input from programme staff.
+        instructions: >
+          Synthesise UNHCR's operational presence and programme history as a unified
+          institutional narrative that answers: why is UNHCR the right organisation to
+          programme in this context? Address:
+          (1) Establishment and evolution: year UNHCR established presence, how the
+          operation has evolved (mandate changes, office expansions, emergency responses),
+          key institutional milestones demonstrating long-term commitment and trust.
+          (2) Current footprint: office types and locations (Country Office, Branch Office,
+          Sub Office, Field Unit), approximate staff numbers, sectoral expertise established.
+          (3) Programme portfolio: active and recently closed projects by sector and donor —
+          project name, donor, budget scale, period, key results achieved.
+          (4) Gaps and added value: areas where UNHCR has limited programming or capacity;
+          explicit acknowledgement of what this proposal fills that is currently absent.
+          (5) Operational plan alignment: how this proposal connects to the current Country
+          Operational Plan outcomes and outputs.
+          (6) Lessons applied: for each relevant lesson from a past evaluation or AAR in
+          this context — what was the lesson, what design change was made in response, and
+          what result did the change produce? This demonstrates adaptive management.
+
+      - section_name: "8. Coordination Architecture"
+        word_limit: 800
+        graph_sources:
+          - ClusterSector nodes
+          - UNAgency nodes
+          - GovernmentAuthority nodes
+          - FundingAppeal nodes
+          - Dataset nodes
+        curation_note: >
+          Nexus analysis is increasingly mandatory for institutional donors. Curator must
+          be explicit about whether nexus is genuine or performative in this context.
+        instructions: >
+          Map the humanitarian and development coordination landscape comprehensively.
+          (1) Humanitarian coordination: active clusters and sectors (Protection, Shelter,
+          WASH, Food Security, Health, Education, CCCM, Early Recovery, Nutrition,
+          Logistics, Emergency Telecoms), UNHCR's leadership or co-leadership roles,
+          inter-agency coordination forums and their frequency.
+          (2) Government coordination: relevant line ministries, national coordination
+          bodies, government-led mechanisms, and the quality of government engagement
+          with the humanitarian system.
+          (3) Development coordination: UNCT structure and functioning, development
+          partners active in this context (World Bank, UNDP, bilateral development
+          agencies), active humanitarian-development nexus or triple nexus initiatives.
+          (4) Appeals and planning frameworks: inclusion in HRP, Flash Appeals, Regional
+          Refugee Response Plans (3RP, RMRP, RRRP) — UNHCR's role and budget share.
+          (5) Information management: active IM systems (5Ws, RAIS, ActivityInfo, HDX
+          datasets), data gaps, and information management coordination challenges.
+
+      - section_name: "9. Humanitarian-Development-Peace Nexus"
+        word_limit: 600
+        graph_sources:
+          - Operation operation_type
+          - "Programme nodes (development phase)"
+          - "UNAgency nodes (UNDP, World Bank activity)"
+        curation_note: >
+          Nexus analysis must be honest about whether the conditions for genuine nexus
+          programming exist. Overstating nexus alignment is a common proposal weakness
+          flagged by donors.
+        instructions: >
+          Provide a dedicated nexus analysis — do not conflate with coordination
+          architecture. Address:
+          (1) Context classification: is this an acute emergency, protracted crisis,
+          transition, or stabilisation context? How does this shape the appropriate
+          programming modality?
+          (2) Development actor landscape: which development actors are active, what is
+          their mandate overlap with UNHCR, and where are the handover or complementarity
+          opportunities?
+          (3) Peacebuilding dimension: is there a peace process, stabilisation framework,
+          or conflict prevention dimension relevant to this context? How does proposed
+          programming contribute to or avoid undermining it?
+          (4) Transition planning: what would a credible transition away from humanitarian
+          dependency look like for this population? What conditions need to hold?
+          (5) Nexus compliance: reference OECD DAC nexus criteria, any HNPW commitments,
+          and SDG localisation targets applicable to this context. This section feeds
+          directly into proposals targeting donors with explicit nexus requirements
+          (ECHO, SIDA, GFFO, FCDO, SDC).
+
+      - section_name: "10. Operational Risks & Assumptions"
+        word_limit: 800
+        graph_sources:
+          - AccessConstraint nodes
+          - ConflictEvent nodes
+          - HazardEvent nodes
+          - ProtectionIncident nodes
+        curation_note: >
+          Risk register should be grounded in concrete past incidents, not generic
+          categories. Curator should reference specific events from the graph and
+          operational experience.
+        instructions: >
+          Systematically identify operational risks and key assumptions for this context.
+          Structure as a risk register with five categories. For each category, list:
+          (a) key assumptions that must hold for the programme to succeed, and (b) risks
+          that could materialise and their likely impact on programming.
+          (1) Security and conflict risks: violence against staff or beneficiaries, access
+          constraints, armed actor interference, IHL violations.
+          (2) Political and policy risks: government restrictions on UNHCR mandate, policy
+          reversals on asylum, border closures, electoral volatility.
+          (3) Environmental and climate risks: natural disasters, seasonal flooding or
+          drought affecting site access, resource scarcity driving community tensions.
+          (4) Fraud, corruption, and diversion risks: partner integrity risks, diversion
+          of assistance, falsification of beneficiary data, corruption in government
+          partnerships.
+          (5) Operational delivery risks: supply chain disruptions, staffing gaps, funding
+          shortfalls mid-implementation, partner capacity failures. For each risk, note
+          the typical contingency measure or mitigation approach used in this context.
+          Flag assumptions that are particularly fragile or have failed in previous cycles.
+
+  # ── KC-3: Outcome Evidence Card ─────────────────────────────────────────────
+
+  - card_id: KC-3
+    template_name: Outcome Evidence Card
+    description: >
+      A synthesis of evidence on the effectiveness of humanitarian interventions targeting
+      a specific UNHCR strategic outcome (OA1–OA16). Answers: what interventions work,
+      for whom, under what conditions, at what cost, measured how, and implemented how.
+      Primary input to proposal theory of change, activities, M&E framework, and budget.
+    valid_until_default: "24 months — update triggered by significant new evaluation"
+    graph_query_anchors:
+      - "InterventionType (sector = outcome sector)"
+      - Evaluation
+      - EvidenceFinding
+      - EffectivenessMetric
+      - LessonsLearned
+      - StandardIndicator
+      - ContextCondition
+    proposal_sections_fed:
+      - Theory of change
+      - Activity design
+      - Targeting and beneficiary selection
+      - M&E results framework
+      - "Budget — cost benchmarks and cost drivers"
+      - "Risk analysis — known intervention risks"
+      - Implementation timeline
+    indicator_architecture:
+      KOI:
+        section: "4 — Key Outcome Indicators"
+        definition: >
+          Outcome and impact level. Measures whether the beneficiary's situation changed.
+          Assessed at endline, typically annually. Slow-moving.
+        example: "% of households meeting minimum SPHERE shelter standard"
+      KRI:
+        section: "11 — Key Result Indicators"
+        definition: >
+          Output level. Measures what was directly delivered. Assessed continuously
+          or quarterly. Fast-moving.
+        example: "Number of shelters constructed to standard"
+      enforcement_rule: >
+        Every intervention listed in Section 2 must have at least one KRI in Section 11
+        and at least one KOI in Section 4. No orphaned interventions permitted.
+
+    sections:
+
+      - section_name: "1. Outcome Definition & Rationale"
+        word_limit: 150
+        graph_sources:
+          - StandardIndicator nodes for this outcome
+          - Policy nodes referencing this outcome
+        curation_note: >
+          Short but precise — this paragraph anchors the entire card. Draft can be
+          machine-assisted; curator ensures definitional precision.
+        instructions: >
+          Define this specific humanitarian outcome precisely. Explain its relevance and
+          importance in a humanitarian context, grounding the definition in core policies,
+          strategies, and guidance from leading humanitarian bodies. Distinguish between
+          the outcome as an end state (what the beneficiary's situation looks like when
+          the outcome is achieved) and the output level (what was delivered). Cite full
+          source names with evidence type classification: e.g. (UNHCR Global Policy
+          Framework 2021 — Policy Document) or (IASC Revised Guidelines on Mental Health
+          — Technical Guidance).
+
+      - section_name: "2. Evidence-Based Interventions"
+        word_limit: 2000
+        graph_sources:
+          - InterventionType nodes
+          - EvidenceFinding nodes
+          - Evaluation nodes
+          - ContextCondition nodes
+        curation_note: >
+          This is the intellectual core of the card. Requires significant expertise to
+          write well. Curator should be a sector specialist with direct knowledge of
+          the evaluation literature.
+        instructions: >
+          List and describe interventions with strong evidence of contributing to this
+          outcome. For each intervention, present a PICO framework table with columns:
+          P (Population and Problem Statement) | I (Intervention Description) |
+          C (Comparison — what was it compared to) | O (Outcome and Evidence Synthesis) |
+          Evidence Source Type.
+          Classify each evidence source as one of:
+          1) Global Systematic Review or Meta-Analysis,
+          2) Multi-Country Evaluation,
+          3) Single Country Case Study,
+          4) Rigorous Impact Evaluation (RCT),
+          5) Quasi-Experimental Study,
+          6) Qualitative Research,
+          7) Programme Monitoring Data,
+          8) Expert Consensus or Guideline.
+          Following the table, provide bullet-point evidence summaries for each
+          intervention with full references including URLs to source evaluation reports
+          in brackets indicating evidence type: e.g. [UNHCR Global Evaluation of
+          Protection Programmes 2022 — Multi-Country Evaluation]. Include context
+          conditions note: specify the primary context conditions under which each
+          intervention's evidence was generated, so the proposal agent can assess
+          transferability to the target context.
+
+      - section_name: "3. Implementation Guidance & Best Practices"
+        word_limit: 1000
+        graph_sources:
+          - LessonsLearned nodes
+          - "EvidenceFinding nodes (implementation type)"
+        curation_note: >
+          Lessons and guidance should be grounded in specific evaluations, not generic
+          best-practice assertions. The source trail is essential.
+        instructions: >
+          Provide practical, actionable guidance on how to effectively implement each
+          intervention listed in Section 2. Organise by intervention type. For each,
+          cover: enabling factors (conditions that must be in place for implementation
+          to succeed), critical success factors (the 2–3 design elements most strongly
+          associated with good outcomes in the evidence), common pitfalls and how to
+          avoid them, and lessons from past evaluations and implementation reviews.
+          For each recommendation, indicate the evidence source in brackets with full
+          name and classification: e.g. (UNHCR Operational Handbook — Technical
+          Guidance) or (UNHCR Somalia Post-Implementation Review 2023 — Programme
+          Evaluation). Flag recommendations that are contested or context-specific
+          rather than universally applicable.
+
+      - section_name: "4. Key Outcome Indicators (KOI)"
+        word_limit: 800
+        graph_sources:
+          - "StandardIndicator nodes (outcome level)"
+          - "Indicator nodes (achieved values in past projects)"
+        curation_note: >
+          Distinguish clearly between KOI (outcome level, this section) and KRI (output
+          level, Section 11). This distinction is enforced by the system and must be
+          consistent across the card.
+        instructions: >
+          Identify robust, measurable outcome and impact-level indicators from UNHCR's
+          Results Framework that track achievement of this outcome. These measure whether
+          the beneficiary's situation changed — not what was delivered. For each indicator:
+          name and code, definition, unit of measurement, recommended measurement method
+          and frequency, typical achievable value range from the evidence base, and source.
+          Present in table format. Indicate source in brackets: e.g. (UNHCR Results
+          Framework 2022–2026 — Institutional Framework). Note: output-level indicators
+          belong in Section 11, not here. If an indicator could be interpreted as either
+          outcome or output level, resolve the ambiguity explicitly.
+
+      - section_name: "5. Cross-Cutting Considerations"
+        word_limit: 500
+        graph_sources:
+          - "Policy nodes (gender, AAP, environment)"
+          - "LessonsLearned nodes (cross-cutting type)"
+        curation_note: >
+          Avoid generic cross-cutting language. Each point should be specific to this
+          outcome and this intervention type.
+        instructions: >
+          Describe cross-cutting issues that materially affect design and implementation
+          of interventions for this outcome. Cover: gender equality (how gender dynamics
+          affect access, uptake, and outcomes for this intervention type); disability
+          inclusion (adaptations required for persons with disabilities); accountability
+          to affected populations (specific AAP mechanisms appropriate for this
+          intervention type and outcome); localisation (how to maximise local partner and
+          community leadership without compromising quality); environmental sustainability
+          (environmental impact of this intervention type and mitigation measures). For
+          each consideration, explain how it should be integrated into programme design
+          — not as a compliance checkbox but as a design element that affects outcomes.
+          Reference specific guidance documents with full names and classifications:
+          e.g. [IASC Gender Handbook 2017 — Technical Guidance] or [UNHCR Environmental
+          Sustainability Evaluation 2023 — Programme Evaluation].
+
+      - section_name: "6. Challenges, Knowledge Gaps & Future Directions"
+        word_limit: 600
+        graph_sources:
+          - "EvidenceFinding nodes (inconclusive)"
+          - "Evaluation nodes (methodology limitations noted)"
+        curation_note: >
+          Intellectual honesty here strengthens, not weakens, proposal credibility
+          with sophisticated donors.
+        instructions: >
+          Summarise the major challenges and knowledge gaps related to achieving this
+          outcome. Distinguish between: implementation challenges (difficulties that
+          arise in delivery regardless of the evidence base), evidence gaps (areas where
+          we do not have sufficient evaluation data to know what works), and structural
+          barriers (systemic factors outside programme control that limit outcomes). For
+          each knowledge gap, classify the type of evidence needed: e.g. "No rigorous
+          impact evaluations in urban displacement contexts [Evidence Gap: Rigorous
+          Impact Evaluation]." Suggest specific areas for further research, pilot
+          programmes, or policy development. If the proposed intervention operates in a
+          knowledge gap area, a learning component should be built into the proposal.
+
+      - section_name: "7. Cost Intelligence"
+        word_limit: 1000
+        graph_sources:
+          - "EffectivenessMetric nodes (cost_per_beneficiary type)"
+          - Expenditure nodes aggregated by InterventionType
+          - comparable_projects cost data
+        curation_note: >
+          Merges original Outcome Card Sections 7 and 8 (cost-effectiveness and unit
+          costs). Cost data is particularly prone to obsolescence — date every figure
+          and flag aggressively.
+        instructions: >
+          Provide a unified cost reference for this outcome across three layers.
+          (1) Comparative cost-effectiveness: which modality or intervention type delivers
+          this outcome most efficiently, and under what conditions? Reference
+          cost-effectiveness analyses and value-for-money assessments.
+          (2) Unit cost benchmarks by context type: provide a structured table —
+          Intervention Type | Context Type (emergency/protracted, urban/camp,
+          high/low-income country) | Unit | Cost Range (USD) | Source | Date.
+          Provide range estimates rather than point estimates where possible. Every
+          figure must have a named source and date.
+          (3) Cost drivers: what factors most explain cost variance across contexts
+          (supply chain complexity, partner overhead structures, population density,
+          access constraints, procurement environment, staff cost differentials)?
+          This section feeds directly into the proposal Budget Constructor. Flag any
+          figures older than 3 years as potentially outdated.
+
+      - section_name: "8. Sustainability & Exit Strategies"
+        word_limit: 500
+        graph_sources:
+          - "EvidenceFinding nodes (sustainability type)"
+          - "LessonsLearned nodes (exit strategy type)"
+        curation_note: >
+          Sustainability sections are frequently weak in proposals. Specific,
+          evidence-grounded content here differentiates strong proposals.
+        instructions: >
+          Discuss the long-term sustainability of interventions targeting this outcome.
+          Address: sustainability risks (what typically causes positive outcomes to erode
+          after programme closure), exit strategy design principles (how to sequence
+          programme closure to maximise sustained impact), local capacity building
+          approaches (how to strengthen government, community, and local partner capacity
+          to maintain services), and handover mechanisms (what formal agreements, capacity
+          transfers, or system integrations support sustained outcomes). Reference specific
+          evaluations or guidance with full names: e.g. [UNHCR Transition Guidelines —
+          Policy Framework] or [UNHCR Colombia Sustainability Evaluation 2022 —
+          Multi-Year Programme Evaluation]. Note where sustainability evidence is weak
+          or absent.
+
+      - section_name: "9. Age, Gender & Diversity Integration"
+        word_limit: 500
+        graph_sources:
+          - "Policy nodes (AGD)"
+          - "EvidenceFinding nodes (disaggregated by sex/age)"
+          - "LessonsLearned nodes (targeting type)"
+        curation_note: >
+          AGD integration must be specific to this outcome. Generic AGD language is a
+          common proposal weakness. Curator should draw on AGD focal point expertise.
+        instructions: >
+          Describe how UNHCR's Age, Gender, and Diversity approach must be integrated
+          into interventions for this specific outcome. Address four dimensions.
+          (1) Gender and age analysis: how to conduct participatory assessments and
+          collect sex- and age-disaggregated data for this intervention type — what
+          questions to ask, what tools to use, who to involve.
+          (2) Adapted assistance: how to tailor interventions for women, men, boys, girls,
+          older persons, and persons with disabilities — specific adaptations, not generic
+          inclusion statements.
+          (3) Prevention of protection risks: how AGD-responsive programming prevents GBV,
+          child protection risks, and PSEA risks specific to this intervention type.
+          (4) Meaningful participation: how to ensure affected populations — including
+          marginalised sub-groups — participate in design, implementation, and monitoring.
+          Provide concrete examples of AGD-responsive programming for this outcome drawn
+          from evaluations. Reference specific AGD tools: e.g. [UNHCR AGD Policy 2018 —
+          Institutional Policy] or [Women's Refugee Commission Participatory Assessment
+          Lebanon — Qualitative Research].
+
+      - section_name: "10. Monitoring, Evaluation & Accountability"
+        word_limit: 1500
+        graph_sources:
+          - StandardIndicator nodes
+          - Assessment methodology nodes
+          - "EvidenceFinding nodes (monitoring type)"
+        curation_note: >
+          The evaluation design guidance (randomisation vs quasi-experimental) is
+          technically demanding. Curator should be or consult an M&E specialist.
+        instructions: >
+          Describe M&E approaches and accountability mechanisms appropriate for this
+          outcome. Address five dimensions.
+          (1) Monitoring systems: data collection methods, tools, frequency, and
+          responsible actors — what is realistic in this intervention type context.
+          (2) Accountability to Affected Populations: feedback and complaint mechanisms
+          appropriate for this intervention type (hotlines, suggestion boxes, community
+          committees, third-party monitoring) — note specific AAP mechanisms with
+          evidence of effectiveness for this sector.
+          (3) Evaluation design: when and how to conduct outcome evaluations. When
+          randomisation is ethically and operationally feasible, specify the most
+          appropriate design:
+          (a) Individual-level randomisation: maximises statistical power but risks
+          contamination — suitable for individually-delivered services;
+          (b) Cluster randomisation: randomises groups (villages, camps, schools),
+          reduces spillover, requires larger sample sizes — preferred when programmes
+          operate at community scale;
+          (c) Phased rollout or stepped-wedge: randomises timing across clusters,
+          allows all participants to eventually receive services while preserving a
+          counterfactual.
+          When randomisation is not feasible, specify the best quasi-experimental
+          alternative: regression discontinuity (RDD), difference-in-differences (DiD),
+          or propensity score matching (PSM) — and the conditions under which each
+          is appropriate.
+          (4) Remote management monitoring: if direct access is limited, describe
+          adapted monitoring approaches (third-party monitoring, remote sensing, phone
+          surveys, community-based monitoring).
+          (5) Learning loops: how M&E findings feed back into programme adaptation
+          during implementation, not only at endline. Reference UNHCR's AAP framework
+          and standard M&E tools: e.g. [UNHCR AAP Framework 2020 — Institutional
+          Framework] or [3ie Humanitarian Evaluation Synthesis 2022 — Evidence Synthesis].
+
+      - section_name: "11. Key Result Indicators (KRI) — Output Level"
+        word_limit: 800
+        graph_sources:
+          - "StandardIndicator nodes (output level)"
+          - Activity nodes linked to InterventionType
+        curation_note: >
+          Cross-check with Section 4 KOIs to ensure vertical logic: each KOI should
+          be achievable through the outputs measured by the KRIs.
+        instructions: >
+          Identify output-level indicators for each intervention listed in Section 2.
+          KRIs measure what was directly delivered — services, goods, training,
+          infrastructure — not whether the beneficiary's situation changed (that is the
+          KOI in Section 4). For each intervention, provide 2–3 KRIs from UNHCR's
+          Results Framework. Present in a table: Intervention | Indicator Name |
+          Indicator Code | Definition | Unit | Typical Targets | Source. Source format:
+          e.g. (UNHCR Results Framework Indicator RF-001 — Institutional Indicator).
+          Every intervention in Section 2 must have at least one KRI here.
+          No orphaned interventions.
+
+      - section_name: "12. Budget Structure & Financial Planning"
+        word_limit: 600
+        graph_sources:
+          - Expenditure nodes aggregated by budget category and InterventionType
+          - FundingInstrument budget_format requirements
+        curation_note: >
+          Budget structures vary significantly by donor and context. This section
+          provides the baseline; KC-1 Section 10 provides the donor-specific overlay.
+        instructions: >
+          Provide typical budget structure for interventions achieving this outcome.
+          Address four elements.
+          (1) Cost category breakdown: typical percentage ranges for each budget line —
+          personnel (%), supplies and commodities (%), equipment (%), travel (%),
+          contractual services (%), partner transfers (%), operating costs (%),
+          indirect support costs / ISC (%). Provide typical ranges, not false precision.
+          (2) Unit cost reference: cross-reference Section 7 for context-specific unit
+          cost benchmarks.
+          (3) Budget justification guidance: common cost drivers, economies of scale
+          thresholds, cost-efficiency measures that are evidence-based rather than
+          arbitrary.
+          (4) Multi-year budget design: phasing of costs across years — typical
+          front-loading patterns (high startup costs in year 1), steady-state budgets
+          in year 2+, and closeout cost implications. Reference budget guidance
+          documents: e.g. [UNHCR Financial Rules and Regulations — Institutional
+          Guidelines] or [ECHO Cost Norms 2024 — Donor Guidelines].
+
+      - section_name: "13. Implementation Timeline & Phasing"
+        word_limit: 500
+        graph_sources:
+          - "Project nodes (closed) — actual timeline vs planned"
+          - "Activity nodes — sequencing patterns"
+        curation_note: >
+          Timeline guidance should be grounded in actual past project timelines, not
+          theoretical ideals. Curators should check closed project data in the graph
+          for this intervention type.
+        instructions: >
+          Describe typical implementation timelines and activity sequencing for this
+          outcome. Address six elements.
+          (1) Duration norms: typical project lengths by context type — 6 months
+          emergency, 12 months standard, 24+ months multi-year — and what drives
+          the choice.
+          (2) Startup phase: typical mobilisation, procurement, and partner agreement
+          timelines (usually months 1–2) and common startup bottlenecks.
+          (3) Implementation phase: core activity delivery with typical monthly or
+          quarterly milestones for this intervention type.
+          (4) Closeout phase: final distributions, reporting, evaluation preparation
+          (typically the final month).
+          (5) Critical path: key dependencies and sequencing constraints — e.g.
+          procurement must precede distribution, training must precede service delivery,
+          baseline must precede implementation.
+          (6) Seasonal and contextual factors: optimal timing based on climate,
+          agricultural cycles, school calendars, religious calendars, or conflict
+          seasonality. Reference planning tools: e.g. [UNHCR Project Management
+          Handbook — Technical Guidance] or [IASC Emergency Response Timeline
+          Analysis — Multi-Agency Review].
+
+  # ── KC-4: Partner Capacity Card ─────────────────────────────────────────────
+
+  - card_id: KC-4
+    template_name: Partner Capacity Card
+    description: >
+      A structured due diligence and capability brief on a specific implementing partner.
+      Answers: can this partner deliver the proposed activities, in this context, to this
+      quality standard, at this scale, and with acceptable risk? Primary input to proposal
+      implementation arrangements and partnership sections.
+    valid_until_default: "12 months, or immediately upon material compliance event"
+    graph_query_anchors:
+      - ImplementingPartner
+      - "Project (implemented_by this partner)"
+      - Activity
+      - "Indicator (achieved)"
+      - "Evaluation (evaluates partner projects)"
+    proposal_sections_fed:
+      - Implementation arrangements
+      - Partnership description
+      - "Risk analysis — partner risk row"
+      - Organisational capacity statement
+
+    sections:
+
+      - section_name: "1. Partner Overview"
+        word_limit: 250
+        graph_sources:
+          - ImplementingPartner node properties
+        curation_note: >
+          Factual overview — largely graph-populated. Curator validates and adds
+          contextual characterisation.
+        instructions: >
+          Describe the organisation: full legal name, mandate, founding year, governance
+          structure, registration status (national or international), operational countries,
+          total staff (approximate), annual budget range, and primary legal registration
+          country. Identify their primary technical specialisation and secondary capacities.
+          Describe their position in the local NGO ecosystem — are they a large national
+          NGO, a small community-based organisation, or an international NGO with a local
+          presence? Note any affiliations with networks or federations (e.g. ICVA,
+          InterAction, VOICE members).
+
+      - section_name: "2. Track Record in Sector & Geography"
+        word_limit: 600
+        graph_sources:
+          - Project nodes implemented_by this partner
+          - Activity nodes achieved vs target
+          - Evaluation nodes for partner projects
+        live_fields:
+          - active_project_count
+          - total_beneficiaries_reached_last_3_years
+        curation_note: >
+          Track record must reflect both strengths and weaknesses. Requires
+          cross-checking with project monitoring data, not self-reported partner
+          information alone.
+        instructions: >
+          Summarise the partner's delivery history specifically in the relevant sector
+          AND the target country or region — both dimensions are required. For each
+          relevant project: name, year, budget, beneficiaries reached, key results
+          achieved, and source. Explicitly flag any projects that were suspended,
+          terminated, significantly underperformed, or received adverse audit findings.
+          Do not sanitise the record — a candid assessment of past difficulties
+          alongside strengths is more valuable than an uncritical endorsement.
+
+      - section_name: "3. Performance Evidence"
+        word_limit: 500
+        graph_sources:
+          - Evaluation nodes for partner projects
+          - "EffectivenessMetric nodes (partner-attributed)"
+          - Activity target vs achieved data
+        curation_note: >
+          Performance ratio computation is machine-assisted. Trend narrative and
+          contextual interpretation require human judgment.
+        instructions: >
+          Synthesise evaluations and post-distribution monitoring studies that assessed
+          this partner's performance. For each relevant evaluation: project assessed,
+          evaluation type, evaluator, key indicator targets vs achieved, overall
+          performance rating, key commendations, and key weaknesses identified. Compute
+          an overall performance ratio where data allows: aggregate achieved versus
+          aggregate targeted across all evaluated projects and activities. Note any
+          trend in performance — improving, stable, or declining. Source all claims
+          to specific evaluation documents.
+
+      - section_name: "4. Organisational Capacity Assessment"
+        word_limit: 600
+        graph_sources:
+          - ImplementingPartner capacity_rating
+          - Audit report nodes
+          - FundingInstrument reporting compliance data
+        curation_note: >
+          Capacity ratings require evidence-based justification. Ratings without
+          supporting source citations should not be approved.
+        instructions: >
+          Assess four capacity dimensions, rating each as Strong, Adequate, Weak, or
+          Unknown with supporting evidence.
+          (1) Financial management: external audit results and findings, financial
+          control and accounting systems, sub-granting capacity and controls, cash
+          advance management.
+          (2) Human resources: relevant technical staff in post, staff turnover rate
+          and its impact on institutional memory, ratio of local to international
+          staff in senior positions, HR policies.
+          (3) Procurement: procurement systems and controls, spot-check results, supply
+          chain reach in the target geography, any documented procurement irregularities.
+          (4) MEAL: monitoring and evaluation systems and data quality, reporting
+          compliance rate with UNHCR, quality of past reports submitted, third-party
+          monitoring capacity. Source each rating to a specific assessment, audit,
+          or review document.
+
+      - section_name: "5. Community Acceptance & Localisation Profile"
+        word_limit: 400
+        graph_sources:
+          - CommunityStructure nodes linked to partner
+          - ImplementingPartner properties
+          - "LessonsLearned nodes (community engagement type)"
+        curation_note: >
+          Community acceptance is often better assessed through field staff knowledge
+          than through formal documents. Curator should consult field office staff
+          directly.
+        instructions: >
+          Assess the partner's relationship with affected communities and their
+          localisation credentials. Community acceptance: level of community trust and
+          acceptance in the target area, cultural and linguistic proximity to affected
+          populations, presence and effectiveness of community feedback mechanisms,
+          AAP complaint resolution rate if measured. Localisation: percentage of local
+          and national staff in senior and technical positions, local procurement
+          practices, community participation in programme design and monitoring, any
+          community-based governance structures involving the partner. Assess honestly
+          — community acceptance is not binary and varies by population group, location,
+          and intervention type.
+
+      - section_name: "6. Compliance & Risk Profile"
+        word_limit: 400
+        graph_sources:
+          - ImplementingPartner compliance records
+          - FundingInstrument audit findings
+        curation_note: >
+          SENSITIVE. Requires Tier 2+ approval. Must be factually accurate — both
+          overstatement and understatement of risk carry institutional consequences.
+        instructions: >
+          Document the partner's compliance and risk history comprehensively. Cover:
+          adverse audit findings (nature, severity, remediation taken and its adequacy),
+          fraud or misconduct incidents (nature, response, systemic risk remaining),
+          PSEA policy status and implementation quality (not just existence of a policy
+          but evidence of training and complaint mechanism), data protection compliance
+          with UNHCR data protection standards, and overall due diligence status. Assign
+          an overall risk rating: Low, Medium, or High, with clear justification. Note
+          any conditions currently placed on the partnership (enhanced monitoring
+          requirements, co-signature requirements, reduced cash advances, suspended
+          payments). This section is SENSITIVE and requires Tier 2 approval.
+
+      - section_name: "7. Partnership Fit Assessment"
+        word_limit: 300
+        graph_sources:
+          - ImplementingPartner active portfolio
+          - FundingInstrument donor acceptability history
+        curation_note: >
+          The recommendation must be unambiguous. "Recommended with conditions" requires
+          the conditions to be specific and actionable, not vague qualifications.
+        instructions: >
+          Synthesise a clear recommendation on whether this partner is appropriate for
+          the specific proposed intervention. Assess five fit dimensions:
+          (1) Sector fit: demonstrated technical expertise in the proposed activity type?
+          (2) Geographic fit: established presence and access in the target area?
+          (3) Scale fit: can they absorb the proposed budget and volume without
+          organisational strain?
+          (4) Timeline fit: available and able to mobilise within the proposed timeline?
+          (5) Donor fit: acceptable to the target donor? Any known restrictions or
+          preferences regarding this partner?
+          Conclude with an unambiguous recommendation:
+          Recommended / Recommended with conditions (specify) / Not recommended (specify
+          reason and suggest alternatives).
+
+  # ── KC-5: Institutional Track Record Card ───────────────────────────────────
+
+  - card_id: KC-5
+    template_name: Institutional Track Record Card
+    description: >
+      UNHCR's own credibility brief for a specific country-sector combination. Answers:
+      why is UNHCR the right organisation to receive this funding, in this context, for
+      this type of work? Primary input to proposal organisational capacity and past
+      performance sections. Also functions as institutional memory for staff transitions.
+    valid_until_default: 12 months
+    graph_query_anchors:
+      - Operation
+      - SubOffice
+      - "Project (closed, in scope)"
+      - "Evaluation (in-country)"
+      - FocalPoint
+      - LessonsLearned
+    proposal_sections_fed:
+      - Organisational capacity statement
+      - Past performance
+      - "Why UNHCR — institutional credibility narrative"
+      - "Annexes: past performance table"
+
+    sections:
+
+      - section_name: "1. Operational History & Institutional Credibility"
+        word_limit: 400
+        graph_sources:
+          - Operation node history
+          - SubOffice nodes
+          - Project nodes timeline
+        curation_note: >
+          Narrative quality matters here — this is the opening of UNHCR's institutional
+          case. Senior programme staff input is valuable.
+        instructions: >
+          Document UNHCR's history in this country and sector in the form of an
+          institutional credibility narrative — the story of why UNHCR is trusted and
+          well-positioned here. Cover: year of establishment and evolution of presence,
+          key mandate milestones (emergency responses managed, registration exercises
+          completed, legal frameworks supported), office structure evolution, and the
+          accumulated institutional knowledge that would be difficult to replicate. This
+          section answers the donor's implicit question: "Have they done this before,
+          do they know this context, and have they earned the right to lead?"
+
+      - section_name: "2. Closed Project Performance Record"
+        word_limit: 800
+        graph_sources:
+          - "Project nodes (status=closed, sector match)"
+          - Evaluation nodes
+          - Indicator achieved vs target
+        curation_note: >
+          Performance table is largely machine-assembled from graph. Narrative
+          interpretation and honest contextualisation of underperformance require
+          human judgment.
+        instructions: >
+          For the 3–5 most relevant closed projects in the target sector (and country
+          or region): present a performance table — Project Name | Donor | Budget (USD)
+          | Period | Key Targets | Key Results Achieved | Achievement Rate (%) | Donor
+          Satisfaction (if documented) | Evaluation Rating (if applicable). Follow with
+          a brief narrative interpretation: what does this track record demonstrate about
+          UNHCR's capacity in this sector? Be honest about projects where targets were
+          not fully met — explain the contextual factors and what was learned. Fabrication
+          or selective omission of poor performance is a serious institutional risk if
+          discovered by donors. Source every figure to a specific project report, audit,
+          or evaluation.
+
+      - section_name: "3. Technical Expertise on Record"
+        word_limit: 400
+        graph_sources:
+          - "FocalPoint nodes (sector match)"
+          - TrainingMaterial nodes
+          - "SOP nodes (produced locally)"
+          - Dataset nodes
+        curation_note: >
+          Technical expertise documentation is often underdeveloped in proposals.
+          Curator should actively solicit input from technical sector leads.
+        instructions: >
+          Document the technical depth UNHCR has built in this sector in this context
+          — without naming individuals. Cover: staff with sector-specific expertise
+          (number, specialisation, years in post), training programmes designed or
+          delivered locally, technical tools developed or adapted for this context
+          (registration systems, assessment methodologies, coordination tools), and
+          technical guidance produced (SOPs, guidelines, training materials, research).
+          The goal is to demonstrate embedded institutional knowledge — not just
+          institutional presence.
+
+      - section_name: "4. Relationship Capital"
+        word_limit: 400
+        graph_sources:
+          - "GovernmentAuthority nodes (relationship_quality)"
+          - PledgeCommitment nodes
+          - FundingInstrument history with target donor
+        curation_note: >
+          Relationship quality assessments are among the most human-judgment-dependent
+          sections in any card. Graph provides factual anchors; curator provides
+          contextual interpretation.
+        instructions: >
+          Describe the institutional relationships that make UNHCR uniquely positioned
+          for this work. Cover: government relationships (ministry-level MoUs, formal
+          agreements, joint programmes, government co-financing arrangements, renewal
+          dates), community trust indicators (registration acceptance rate, community
+          feedback scores, community-led initiatives supported by UNHCR), donor
+          relationship history with the specific target donor in this country (previous
+          projects funded, relationship quality, any past tensions or particular
+          strengths), and inter-agency positioning (cluster leadership, co-leadership,
+          technical contributions that shape the broader response). Quantify relationship
+          capital where possible — not just "strong government relations" but "UNHCR has
+          signed a formal MoU with the Ministry of Interior covering refugee registration,
+          renewed in 2024."
+
+      - section_name: "5. Adaptive Management — Lessons Applied"
+        word_limit: 400
+        graph_sources:
+          - "LessonsLearned nodes (in-country)"
+          - "EvidenceFinding nodes (in-country)"
+          - Project design changes over time
+        curation_note: >
+          This section requires direct input from programme staff who have been in the
+          operation across multiple cycles. It cannot be assembled from documents alone.
+        instructions: >
+          Demonstrate that UNHCR learns from experience and adapts. For each significant
+          lesson drawn from a past evaluation, AAR, or PDM in this context, use the
+          three-part structure:
+          (1) What was the problem or lesson identified?
+          (2) What specific design or operational change was made in response?
+          (3) What result did the change produce in the subsequent project cycle?
+          This structure is the only format that demonstrates genuine adaptive management
+          rather than a list of lessons that were noted but not acted on. This section
+          is particularly valued by sophisticated institutional donors who conduct their
+          own analysis of UNHCR's learning culture.
+
+  # ── KC-6: Crisis Political Economy Card ─────────────────────────────────────
+
+  - card_id: KC-6
+    template_name: Crisis Political Economy Card
+    description: >
+      A strategic intelligence brief on the political economy of a specific complex
+      emergency. Not a situation report. Not a needs assessment. This is the analytical
+      layer that explains why the crisis exists, who benefits from its continuation, what
+      trajectory it is on, and how proposed programming should be framed strategically.
+      Used for complex emergencies only — not for natural disaster or non-conflict
+      displacement contexts.
+    valid_until_default: "6 months — political economies shift"
+    applicability: >
+      Use for active complex emergencies with significant conflict or political dimensions.
+      Not required for natural disaster response, refugee hosting contexts with stable
+      politics, or development-phase programming.
+    graph_query_anchors:
+      - Crisis
+      - ConflictEvent
+      - GovernmentAuthority
+      - AccessConstraint
+      - ProtectionIncident
+    proposal_sections_fed:
+      - "Situation analysis — crisis narrative"
+      - Overall objective framing
+      - Strategic positioning statement
+      - "Risk analysis — political risks"
+
+    sections:
+
+      - section_name: "1. Structural Drivers of Crisis"
+        word_limit: 500
+        graph_sources:
+          - Crisis node properties
+          - "ConflictEvent nodes (historical)"
+          - "AccessConstraint nodes (political type)"
+        curation_note: >
+          Requires genuine conflict analysis expertise. Should be informed by or
+          co-written with a protection or political affairs specialist. Generic
+          conflict description is not sufficient.
+        instructions: >
+          Analyse the root causes and proximate triggers of the crisis. Distinguish
+          clearly between structural drivers (governance failures, political exclusion,
+          inequality, historical grievances, resource competition, institutional
+          weakness, identity politics) and triggering events (conflict outbreak,
+          election violence, coup, climate shock, economic collapse). Identify which
+          drivers are addressable through humanitarian or development programming and
+          which are not — false theories of change that assume humanitarian programming
+          can resolve structural political failures are a common proposal weakness.
+          Avoid simplistic or single-cause framing. Draw on conflict analysis frameworks
+          (do-no-harm, PCIA, 3Ps) where applicable.
+
+      - section_name: "2. Power Dynamics & Stakeholder Interests"
+        word_limit: 600
+        graph_sources:
+          - "GovernmentAuthority nodes (relationship_quality, authority_type)"
+          - ConflictEvent nodes
+          - CommunityStructure nodes
+        curation_note: >
+          SENSITIVE. Some content may be inappropriate to include in a proposal
+          submitted to government partners. Curator must make a conscious decision
+          about what is for internal strategy use versus what can be shared externally.
+        instructions: >
+          Map who holds power in this context and how it affects humanitarian space
+          and programme effectiveness. Cover: government authority and legitimacy
+          (de facto versus de jure control, territorial fragmentation), armed actor
+          landscape at a strategic level — without operational security detail
+          inappropriate for a proposal document, community power structures and their
+          relationship to formal authorities, diaspora influence on political dynamics
+          and on affected population decisions, and regional political dynamics
+          (neighbouring state interests, proxy actors, regional organisation engagement).
+          Critically: identify whose interests are served by the continuation of the
+          crisis and who has genuine incentives to support durable solutions. This
+          analysis shapes the do-no-harm assessment and helps identify genuine versus
+          performative government partners.
+
+      - section_name: "3. Crisis Trajectory — Three Scenarios"
+        word_limit: 500
+        graph_sources:
+          - AccessConstraint trends
+          - ConflictEvent frequency trends
+          - DisplacementEvent projections
+        curation_note: >
+          Scenario planning requires honest assessment including the deterioration
+          scenario. Proposals that present only optimistic projections fail the
+          credibility test with experienced donors.
+        instructions: >
+          Project three scenarios for this crisis over the proposal period (typically
+          12–24 months). Base projections on current trends and early warning
+          indicators, not on optimism or institutional preference.
+          (1) Improvement scenario: what specific developments would need to occur for
+          conditions to improve, what would the humanitarian response look like in that
+          scenario, and what is the probability?
+          (2) Status quo scenario: the most likely trajectory based on current dynamics
+          — what does this mean for operational requirements and risk?
+          (3) Deterioration scenario: what triggers could cause a rapid worsening, what
+          are the early warning signs, and what contingency implications does this have
+          for programme design? For each scenario, note the implications for programme
+          continuity, partner safety, beneficiary access, and budget assumptions.
+
+      - section_name: "4. Strategic Framing for This Proposal"
+        word_limit: 500
+        graph_sources:
+          - Crisis node
+          - AccessConstraint nodes
+          - FundingAppeal urgency framing
+        curation_note: >
+          This section is what separates a strategically compelling proposal from a
+          technically competent one. It requires the most senior programme staff input
+          and the most careful drafting. Write last, after Sections 1–3 are complete.
+        instructions: >
+          Synthesise the political economy analysis into a strategic narrative for the
+          proposal. Address:
+          (1) Why this intervention is necessary at this specific moment — what window
+          of opportunity exists, or what irreversible harm will occur without action now.
+          (2) Why this is the right scale and approach given the political dynamics —
+          not just the humanitarian needs.
+          (3) What political or structural conditions make this intervention viable now
+          that may not persist — and what this means for urgency of funding.
+          (4) The theory of change at the political level, not only the programme level
+          — how does this intervention contribute to conditions for durable solutions,
+          not just to immediate needs?
+          (5) What risks the political economy poses to this specific programme — and
+          how the design mitigates them. This section is the intellectual core of the
+          proposal's strategic positioning.
