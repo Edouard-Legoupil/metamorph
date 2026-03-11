@@ -1,0 +1,53 @@
+# Core app/server
+fastapi==0.110.2
+uvicorn[standard]
+pydantic
+python-dotenv
+jinja2
+
+# Graph/Knowledge Graph
+neo4j==5.17.0
+
+# Task queue & cache
+celery==5.3.6
+redis==5.0.1
+diskcache
+
+# Markdown/HTML/Parsing
+markdown
+pyyaml
+selectolax
+beautifulsoup4
+
+# Async web & http clients
+httpx
+requests
+aiohttp
+
+# File and doc processing
+boto3
+Pillow  # for image/thumbnail handling if you support attachments
+
+# AI/Langchain/Embeddings
+litellm
+tiktoken
+
+# LLM extraction routing (Docling + MinerU) - install if available or as local module
+docling  # If PyPI not available: comment out and use local module/install
+mineru   # If PyPI not available: comment or use local cmd wrapper
+
+# Utilities
+sentry-sdk
+types-requests
+types-PyYAML
+
+# Testing
+pytest
+pytest-asyncio
+pytest-mock
+
+# Static serving (optional, useful for FastAPI + React)
+python-multipart
+
+# Logging and monitoring
+structlog

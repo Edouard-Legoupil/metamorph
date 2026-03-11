@@ -68,3 +68,10 @@ Cards are read in a defined order: field context first to establish the situatio
 **Expiry is a feature.** Knowledge cards have validity periods. A six-month-old field context card is not the same as a current one. The system makes staleness explicit and enforces re-curation before cards can be used.
 
 **Honesty over presentation.** Cards are designed to surface difficulties — partner compliance issues, evidence gaps, contested findings, scenario deterioration — not to produce polished narrative that obscures operational realities. Proposals that hide problems lose donor trust. Proposals that acknowledge them and explain mitigations build it.
+
+
+## Vibe coding
+
+See [AGENT.md](AGENT.md)
+
+

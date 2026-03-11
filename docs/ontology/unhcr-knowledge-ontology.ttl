@@ -1,0 +1,1412 @@
+################################################################################
+# UNHCR KNOWLEDGE ONTOLOGY 
+################################################################################
+# Author:    Edouard Legoupil. Data Scientist - AI Engineering
+# License:   CC BY 4.0  
+# comment:   Initial version of UNHCR Knowledge Ontology. 
+#            Created to improve RAG ingestion for further agentic processing and knowledge graph construction.
+################################################################################
+
+@prefix :        <https://proposalgen.unhcr.org/ontology/hko#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix dc:      <http://purl.org/dc/elements/1.1/> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix geo:     <http://www.w3.org/2003/01/geo/wgs84_pos#> .
+@prefix foaf:    <http://xmlns.com/foaf/0.1/> .
+
+
+
+<https://proposalgen.unhcr.org/ontology/hko> a owl:Ontology  ;
+  rdfs:label       "UNHCR Knowledge Ontology" ;
+  rdfs:comment     "A knowledge graph ontology for UNHCR operations, covering geography, situations, populations, programmes, legal frameworks, finance, stakeholders, and knowledge artifacts." ;
+  owl:versionInfo  "0.1" ;
+  dc:creator       "Edouard Legoupil" ;
+  dc:date          "2026" ;
+  dcterms:description "Ontology supporting UNHCR's knowledge management and operational data needs, with IATI alignment for financial transparency." .
+
+
+########## CORE ##########
+
+:Entity a owl:Class ;
+  rdfs:label   "Entity" ;
+  rdfs:comment "Top-level class for all typed nodes in the ontology." .
+
+:DocumentaryArtifact a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Documentary Artifact" ;
+  rdfs:comment "Any document, dataset, or recorded knowledge product produced or used by UNHCR." .
+
+:identifier a owl:DatatypeProperty ;
+  rdfs:domain  :Entity ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "identifier" ;
+  rdfs:comment "Unique string identifier for an entity." ;
+  rdfs:subPropertyOf dcterms:identifier .
+
+:createdAt a owl:DatatypeProperty ;
+  rdfs:domain  :Entity ;
+  rdfs:range   xsd:dateTime ;
+  rdfs:label   "created at" ;
+  rdfs:comment "Timestamp when the entity record was created." .
+
+:lastUpdated a owl:DatatypeProperty ;
+  rdfs:domain  :Entity ;
+  rdfs:range   xsd:dateTime ;
+  rdfs:label   "last updated" ;
+  rdfs:comment "Timestamp of the most recent update to the entity record." .
+
+
+:verificationStatus a owl:DatatypeProperty ;
+  rdfs:domain  :Entity ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "verification status ; Use a Simple Knowledge Organization System -SKOS concept scheme for controlled values (e.g., Verified, Unverified, Pending). Allow controlled vocabulary binding." .
+
+:hasTag a owl:DatatypeProperty ;
+  rdfs:domain  :Entity ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "has tag" ;
+  rdfs:comment "Free-text tag associated with the entity. For multi-valued tagging, each tag should be a separate triple. Consider a skos:Concept-based tag class for formal taxonomy." .
+
+
+###########################################
+########## DOMAIN A — GEOGRAPHIC ##########
+###########################################  
+
+
+# --- Geography Class ---
+
+:GeographicEntity a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Geographic Entity" ;
+  rdfs:comment "Abstract superclass grouping all geographic classes for cleaner hierarchy." .
+
+# For proper hierarchy: All geographic classes now subClassOf :GeographicEntity (not flat :Entity) 
+:Country a owl:Class ;
+  rdfs:subClassOf :GeographicEntity ;
+  rdfs:label   "Country" ;
+  rdfs:comment "A sovereign state or territory." .
+
+:Region a owl:Class ;
+  rdfs:subClassOf :GeographicEntity ;
+  rdfs:label   "Region" ;
+  rdfs:comment "An administrative or operational sub-national area." .
+
+:Settlement a owl:Class ;
+  rdfs:subClassOf :GeographicEntity ;
+  rdfs:label   "Settlement" ;
+  rdfs:comment "A human settlement, camp, or locality." .
+
+:Border a owl:Class ;
+  rdfs:subClassOf :GeographicEntity ;
+  rdfs:label   "Border" ;
+  rdfs:comment "A boundary between two countries or territories." .
+
+:OperationalZone a owl:Class ;
+  rdfs:subClassOf :GeographicEntity ;
+  rdfs:label   "Operational Zone" ;
+  rdfs:comment "A UNHCR-defined geographic zone of operation." .
+
+:DisasterZone a owl:Class ;
+  rdfs:subClassOf :GeographicEntity ;
+  rdfs:label   "Disaster Zone" ;
+  rdfs:comment "A region formally classified as affected by a disaster." .
+
+# --- IATI Geography --- 
+
+:RecipientRegion a owl:Class ;
+  rdfs:subClassOf :Region ;
+  rdfs:label   "Recipient Region" ;
+  rdfs:comment "A recipient region as defined in IATI. Subclass of :Region — integrated into Domain A." .
+
+:IATILocation a owl:Class ;
+  rdfs:subClassOf :GeographicEntity ;
+  rdfs:label   "IATI Location" ;
+  rdfs:comment "A location reference within an IATI activity. Subclass of :GeographicEntity — integrated into Domain A." .
+
+# --- IATI Location Datatype Properties ---
+
+:locationRef a owl:DatatypeProperty ;
+  rdfs:domain  :IATILocation ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "location ref" ;
+  rdfs:comment "Reference code for the location (e.g., from a gazetteer)." .
+
+:locationName a owl:DatatypeProperty ;
+  rdfs:domain  :IATILocation ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "location name" ;
+  rdfs:comment "Name of the IATI location." .
+
+:locationDescription a owl:DatatypeProperty ;
+  rdfs:domain  :IATILocation ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "location description" ;
+  rdfs:comment "Narrative description of the location." .
+
+:locationExactnessCode a owl:DatatypeProperty ;
+  rdfs:domain  :IATILocation ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "location exactness code" ;
+  rdfs:comment "IATI exactness code indicating precision of the location." .
+
+:locationClassCode a owl:DatatypeProperty ;
+  rdfs:domain  :IATILocation ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "location class code" ;
+  rdfs:comment "IATI location class code." .
+
+:locationSRS a owl:DatatypeProperty ;
+  rdfs:domain  :IATILocation ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "location SRS" ;
+  rdfs:comment "Spatial reference system for the location coordinates." .
+
+:locationPos a owl:DatatypeProperty ;
+  rdfs:domain  :IATILocation ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "location position" ;
+  rdfs:comment "Latitude/longitude string from the GML <pos> element. Consider using geo:lat/geo:long instead for interoperability." .
+
+
+# --- Geography Datatype Property ---
+
+:iso3 a owl:DatatypeProperty ;
+  rdfs:domain  :Country ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "ISO 3166-1 alpha-3 code" ;
+  rdfs:comment "Three-letter ISO country code." .
+
+:adminLevel a owl:DatatypeProperty ;
+  rdfs:domain  :Region ;
+  rdfs:range   xsd:integer ;
+  rdfs:label   "admin level" ;
+  rdfs:comment "Administrative level of the region (0=country, 1=province, 2=district, etc.)." .
+
+:pcode a owl:DatatypeProperty ;
+  rdfs:domain  :Region ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "p-code" ;
+  rdfs:comment "OCHA humanitarian p-code for the region." .
+
+:settlementType a owl:DatatypeProperty ;
+  rdfs:domain  :Settlement ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "settlement type" ;
+  rdfs:comment "Type of settlement (e.g., refugee camp, urban area, informal settlement)." .
+
+:populationFigure a owl:DatatypeProperty ;
+  rdfs:domain  :Settlement ;
+  rdfs:range   xsd:integer ;
+  rdfs:label   "population figure" ;
+  rdfs:comment "Estimated population count of the settlement." .
+
+:populationDate a owl:DatatypeProperty ;
+  rdfs:domain  :Settlement ;
+  rdfs:range   xsd:date ;
+  rdfs:label   "population figure date" ;
+  rdfs:comment "Date of the population figure estimate." .
+
+geo:lat a owl:DatatypeProperty ;
+  rdfs:domain  :GeographicEntity ;
+  rdfs:range   xsd:decimal ;
+  rdfs:label   "latitude" ;
+  rdfs:comment "WGS84 latitude. Uses the W3C Geo vocabulary." .
+
+geo:long a owl:DatatypeProperty ;
+  rdfs:domain  :GeographicEntity ;
+  rdfs:range   xsd:decimal ;
+  rdfs:label   "longitude" ;
+  rdfs:comment "WGS84 longitude. Uses the W3C Geo vocabulary." .
+
+
+# --- IATI Recipient Region Datatype Properties ---
+
+:recipientRegionCode a owl:DatatypeProperty ;
+  rdfs:domain  :RecipientRegion ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "recipient region code" .
+
+:recipientRegionVocabulary a owl:DatatypeProperty ;
+  rdfs:domain  :RecipientRegion ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "recipient region vocabulary" .
+
+:recipientRegionVocabularyURI a owl:DatatypeProperty ;
+  rdfs:domain  :RecipientRegion ;
+  rdfs:range   xsd:anyURI ;
+  rdfs:label   "recipient region vocabulary URI" .
+
+:recipientRegionLabel a owl:DatatypeProperty ;
+  rdfs:domain  :RecipientRegion ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "recipient region label" .  
+
+
+# --- Geography Object Property ---
+
+:locatedIn a owl:ObjectProperty , owl:TransitiveProperty ;
+  rdfs:domain    :GeographicEntity ;
+  rdfs:range     :GeographicEntity ;
+  rdfs:label     "located in" ;
+  rdfs:comment   "Indicates containment within a broader geographic area. Transitive: Settlement → Region → Country. So Settlement locatedIn Region locatedIn Country infers Settlement locatedIn Country." ;
+  owl:inverseOf  :contains .
+
+
+:contains a owl:ObjectProperty , owl:TransitiveProperty ;
+  rdfs:domain    :GeographicEntity ;
+  rdfs:range     :GeographicEntity ;
+  rdfs:label     "contains" ;
+  rdfs:comment   "Inverse of :locatedIn. Indicates that this geographic entity spatially contains another. Generalised to :contains (Settlement → Region was too narrow; any geographic containment applies)." ;
+  owl:inverseOf  :locatedIn .
+
+
+:borders a owl:ObjectProperty , owl:SymmetricProperty ;
+  rdfs:domain  :GeographicEntity ;
+  rdfs:range   :GeographicEntity ;
+  rdfs:label   "borders" ;
+  rdfs:comment "Indicates that two geographic entities share a boundary. Symmetric.— domain/range broadened to GeographicEntity (borders can exist between regions too, not only countries)" .
+
+:covers a owl:ObjectProperty ;
+  rdfs:domain    :OperationalZone ;
+  rdfs:range     :GeographicEntity ;
+  rdfs:label     "covers" ;
+  rdfs:comment   "Indicates geographic areas covered by an operational zone." ;
+  owl:inverseOf  :coveredBy .
+
+:coveredBy a owl:ObjectProperty ;
+  rdfs:domain    :GeographicEntity ;
+  rdfs:range     :OperationalZone ;
+  rdfs:label     "covered by" ;
+  rdfs:comment   "Inverse of :covers." ;
+  owl:inverseOf  :covers .
+
+:hasCrossing a owl:ObjectProperty ;
+  rdfs:domain  :Border ;
+  rdfs:range   :GeographicEntity ;
+  rdfs:label   "has crossing" ;
+  rdfs:comment "A formal border crossing point associated with a border. — a Border has crossings, each crossing links two Countries." .
+
+:classifiedAs a owl:ObjectProperty ;
+  rdfs:domain    :GeographicEntity ;
+  rdfs:range     :DisasterZone ;
+  rdfs:label     "classified as" ;
+  rdfs:comment   "Indicates that a geographic area has been classified as a disaster zone." ;
+  owl:inverseOf  :classifiesRegion .
+
+:classifiesRegion a owl:ObjectProperty ;
+  rdfs:domain    :DisasterZone ;
+  rdfs:range     :GeographicEntity ;
+  rdfs:label     "classifies region" ;
+  rdfs:comment   "Inverse of :classifiedAs." ;
+  owl:inverseOf  :classifiedAs .
+
+
+
+####################################################
+########## DOMAIN B — SITUATION & CONTEXT ##########
+####################################################
+
+
+# --- Situation Class ---
+
+#  Event subclasses share a common :Event superclass for cleaner hierarchy.
+:Situation a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Situation" ;
+  rdfs:comment "A humanitarian or operational situation requiring UNHCR attention." .
+
+:Event a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Event" ;
+  rdfs:comment "A discrete occurrence that has a temporal dimension." .
+
+:DisplacementEvent a owl:Class ;
+  rdfs:subClassOf :Event ;
+  rdfs:label   "Displacement Event" ;
+  rdfs:comment "An event causing the displacement of a population group." .
+
+:HazardEvent a owl:Class ;
+  rdfs:subClassOf :Event ;
+  rdfs:label   "Hazard Event" ;
+  rdfs:comment "A natural or man-made hazard event (e.g., flood, earthquake)." .
+
+:ConflictEvent a owl:Class ;
+  rdfs:subClassOf :Event ;
+  rdfs:label   "Conflict Event" ;
+  rdfs:comment "An armed conflict or civil strife event." .
+
+:ProtectionIncident a owl:Class ;
+  rdfs:subClassOf :Event ;
+  rdfs:label   "Protection Incident" ;
+  rdfs:comment "An incident with protection implications for persons of concern." .
+
+:AccessConstraint a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Access Constraint" ;
+  rdfs:comment "A factor limiting humanitarian access to a population or area." .
+
+# --- Situation Datatype Property ---
+
+:situationId a owl:DatatypeProperty ;
+  rdfs:domain  :Situation ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "situation ID" ;
+  rdfs:comment "Unique UNHCR situation identifier." .
+
+:situationType a owl:DatatypeProperty ;
+  rdfs:domain  :Situation ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "situation type" ;
+  rdfs:comment "Classification of the situation (e.g., refugee, IDP, statelessness)." .
+
+:onsetDate a owl:DatatypeProperty ;
+  rdfs:domain  :Event ;
+  rdfs:range   xsd:date ;
+  rdfs:label   "onset date" ;
+  rdfs:comment "Date on which the event or situation began." .
+
+# --- Situation Object Property ---
+
+:triggeredBy a owl:ObjectProperty ;
+  rdfs:domain  :DisplacementEvent ;
+  rdfs:range   :Event ;
+  rdfs:label   "triggered by" ;
+  rdfs:comment "The event or situation that caused a displacement event. Range narrowed from :Entity to :Event." .
+
+:affects a owl:ObjectProperty , owl:SymmetricProperty ;
+  rdfs:domain  :Entity ;
+  rdfs:range   :Entity ;
+  rdfs:label   "affects" ;
+  rdfs:comment "Indicates that one entity has a significant impact on another. Symmetric.— if a conflict affects a population, the population is affected by the conflict (bidirectional relevance)." .
+
+:compounds a owl:ObjectProperty , owl:SymmetricProperty ;
+  rdfs:domain  :Situation ;
+  rdfs:range   :Situation ;
+  rdfs:label   "compounds" ;
+  rdfs:comment "Indicates that one situation worsens another. Symmetric.— two situations compounding each other is a mutual relationship." .
+
+:ledTo a owl:ObjectProperty ;
+  rdfs:domain  :Event ;
+  rdfs:range   :ProtectionIncident ;
+  rdfs:label   "led to" ;
+  rdfs:comment "Indicates that an event caused or contributed to a protection incident. Domain narrowed from :Entity to :Event." .
+
+:constrainsAccessTo a owl:ObjectProperty ;
+  rdfs:domain    :AccessConstraint ;
+  rdfs:range     :GeographicEntity ;
+  rdfs:label     "constrains access to" ;
+  rdfs:comment   "Identifies the geographic area or entity to which access is constrained. Range narrowed from :Entity to :GeographicEntity." ;
+  owl:inverseOf  :accessConstrainedBy .
+
+:accessConstrainedBy a owl:ObjectProperty ;
+  rdfs:domain    :GeographicEntity ;
+  rdfs:range     :AccessConstraint ;
+  rdfs:label     "access constrained by" ;
+  rdfs:comment   "Inverse of :constrainsAccessTo." ;
+  owl:inverseOf  :constrainsAccessTo .
+
+:escalatedTo a owl:ObjectProperty ;
+  rdfs:domain  :ProtectionIncident ;
+  rdfs:range   :Situation ;
+  rdfs:label   "escalated to" ;
+  rdfs:comment "Indicates that a protection incident escalated into a broader situation." .
+
+
+###########################################################
+########## DOMAIN C — POPULATION & BENEFICIARIES ##########
+###########################################################
+
+
+# --- Population Class ---
+
+:PopulationGroup a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Population Group" ;
+  rdfs:comment "A group of persons of concern to UNHCR (refugees, IDPs, returnees, stateless persons, etc.)." .
+
+:HouseholdProfile a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Household Profile" ;
+  rdfs:comment "Demographic and socioeconomic characteristics of a household unit." .
+
+:VulnerabilityProfile a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Vulnerability Profile" ;
+  rdfs:comment "A characterisation of the specific vulnerabilities of a population group or individual." .
+
+:CommunityStructure a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Community Structure" ;
+  rdfs:comment "Social or governance structures within a refugee or displaced community." .
+
+:RegistrationCohort a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Registration Cohort" ;
+  rdfs:comment "A cohort of persons registered under a specific registration exercise or legal category." .
+
+
+# --- Population Datatype Property ---
+
+:groupType a owl:DatatypeProperty ;
+  rdfs:domain  :PopulationGroup ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "group type" ;
+  rdfs:comment "Type of population group (e.g., Refugee, IDP, Returnee, Stateless)." .
+
+:estimatedSize a owl:DatatypeProperty ;
+  rdfs:domain  :PopulationGroup ;
+  rdfs:range   xsd:integer ;
+  rdfs:label   "estimated size" ;
+  rdfs:comment "Estimated number of individuals in the population group." .
+
+# --- Population Object Property ---
+
+:displacedFrom a owl:ObjectProperty ;
+  rdfs:domain  :PopulationGroup ;
+  rdfs:range   :GeographicEntity ;
+  rdfs:label   "displaced from" ;
+  rdfs:comment "The geographic area from which the population group was displaced. Range narrowed from :Entity to :GeographicEntity." .
+
+:displacedTo a owl:ObjectProperty ;
+  rdfs:domain  :PopulationGroup ;
+  rdfs:range   :GeographicEntity ;
+  rdfs:label   "displaced to" ;
+  rdfs:comment "The geographic area to which the population group has been displaced. Range narrowed from :Entity to :GeographicEntity." .
+
+:transitingThrough a owl:ObjectProperty ;
+  rdfs:domain  :PopulationGroup ;
+  rdfs:range   :GeographicEntity ;
+  rdfs:label   "transiting through" ;
+  rdfs:comment "A geographic area through which the population group is passing. Range narrowed from :Entity to :GeographicEntity." .
+
+:registeredAs a owl:ObjectProperty ;
+  rdfs:domain    :PopulationGroup ;
+  rdfs:range     :RegistrationCohort ;
+  rdfs:label     "registered as" ;
+  rdfs:comment   "Associates a population group with its registration cohort." ;
+  owl:inverseOf  :registers .
+
+:registers a owl:ObjectProperty ;
+  rdfs:domain    :RegistrationCohort ;
+  rdfs:range     :PopulationGroup ;
+  rdfs:label     "registers" ;
+  rdfs:comment   "Inverse of :registeredAs." ;
+  owl:inverseOf  :registeredAs .
+
+:protectedBy a owl:ObjectProperty ;
+  rdfs:domain  :PopulationGroup ;
+  rdfs:range   :LegalFramework ;
+  rdfs:label   "protected by" ;
+  rdfs:comment "Identifies the legal framework under which the population group is protected." .
+
+:hasProfile a owl:ObjectProperty ;
+  rdfs:domain    :PopulationGroup ;
+  rdfs:range     :VulnerabilityProfile ;
+  rdfs:label     "has profile" ;
+  rdfs:comment   "Associates a population group with its vulnerability profile." ;
+  owl:inverseOf  :profileOf .
+
+:profileOf a owl:ObjectProperty ;
+  rdfs:domain    :VulnerabilityProfile ;
+  rdfs:range     :PopulationGroup ;
+  rdfs:label     "profile of" ;
+  rdfs:comment   "Inverse of :hasProfile." ;
+  owl:inverseOf  :hasProfile .
+
+:organisedAs a owl:ObjectProperty ;
+  rdfs:domain  :PopulationGroup ;
+  rdfs:range   :CommunityStructure ;
+  rdfs:label   "organised as" ;
+  rdfs:comment "Links a population group to its community governance or social structure." .
+
+:hostedBy a owl:ObjectProperty ;
+  rdfs:domain    :PopulationGroup ;
+  rdfs:range     :Settlement ;
+  rdfs:label     "hosted by" ;
+  rdfs:comment   "The settlement hosting the population group." ;
+  owl:inverseOf  :hosts .
+
+:hosts a owl:ObjectProperty ;
+  rdfs:domain    :Settlement ;
+  rdfs:range     :PopulationGroup ;
+  rdfs:label     "hosts" ;
+  rdfs:comment   "Inverse of :hostedBy." ;
+  owl:inverseOf  :hostedBy .
+
+
+
+###########################################################
+########## DOMAIN D — OPERATIONAL & PROGRAMMATIC ##########
+###########################################################
+
+# --- Operational Class ---
+
+:Operation a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Operation" ;
+  rdfs:comment "A UNHCR country or regional operation." .
+
+:Programme a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Programme" ;
+  rdfs:comment "A structured programme within a UNHCR operation." .
+
+:Project a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Project" ;
+  rdfs:comment "A time-bound funded project within a programme." .
+
+:Activity a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Activity" ;
+  rdfs:comment "A specific activity or intervention delivered within a project." .
+
+:SubOffice a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Sub-Office" ;
+  rdfs:comment "A UNHCR sub-office or field presence." .
+
+:ImplementingPartner a owl:Class ;
+  rdfs:subClassOf :Organisation ;
+  rdfs:label   "Implementing Partner" ;
+  rdfs:comment "An organisation (NGO, government body, or UN agency) implementing activities on behalf of UNHCR." .
+
+:ServicePoint a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Service Point" ;
+  rdfs:comment "A physical or virtual point where services are delivered to beneficiaries." .
+
+
+# --- IATI Operational Class ---
+
+:IATIActivity a owl:Class ;
+  rdfs:subClassOf :Activity ;
+  rdfs:label   "IATI Activity" ;
+  rdfs:comment "An activity as reported in the International Aid Transparency Initiative standard. Subclass of :Activity — integrated into Domain D." .
+
+:Participation a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Participation" ;
+  rdfs:comment "N-ary relation capturing the role, type, and reference of a participating organisation in an IATI activity — integrated into Domain D." .
+
+
+# --- Operational Datatype Property ---
+
+:operationCode a owl:DatatypeProperty ;
+  rdfs:domain  :Operation ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "operation code" ;
+  rdfs:comment "UNHCR operation code." .
+
+:programmeType a owl:DatatypeProperty ;
+  rdfs:domain  :Programme ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "programme type" ;
+  rdfs:comment "Type of programme (e.g., Protection, Durable Solutions, Livelihoods)." .
+
+:projectCode a owl:DatatypeProperty ;
+  rdfs:domain  :Project ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "project code" ;
+  rdfs:comment "UNHCR or partner project identifier code." .
+
+:activityType a owl:DatatypeProperty ;
+  rdfs:domain  :Activity ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "activity type" ;
+  rdfs:comment "Type of activity delivered." .
+
+# --- IATI Activity Datatype Properties ---
+
+:hasIATIIdentifier a owl:DatatypeProperty ;
+  rdfs:domain  :IATIActivity ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "IATI identifier" ;
+  rdfs:comment "The globally unique IATI activity identifier." .
+
+# --- Operational Object Property ---
+
+:respondsTo a owl:ObjectProperty ;
+  rdfs:domain  :Operation ;
+  rdfs:range   :Situation ;
+  rdfs:label   "responds to" ;
+  rdfs:comment "Links an operation or programme to the humanitarian situation it addresses. Domain narrowed from :Entity to :Operation." .
+
+:targets a owl:ObjectProperty ;
+  rdfs:domain    :Activity ;
+  rdfs:range     :PopulationGroup ;
+  rdfs:label     "targets" ;
+  rdfs:comment   "Identifies the population group targeted by an activity. Domain narrowed from :Entity to :Activity." ;
+  owl:inverseOf  :isTargetedBy .
+
+:isTargetedBy a owl:ObjectProperty ;
+  rdfs:domain    :PopulationGroup ;
+  rdfs:range     :Activity ;
+  rdfs:label     "is targeted by" ;
+  rdfs:comment   "Inverse of :targets." ;
+  owl:inverseOf  :targets .
+
+:deliversIn a owl:ObjectProperty ;
+  rdfs:domain  :Activity ;
+  rdfs:range   :GeographicEntity ;
+  rdfs:label   "delivers in" ;
+  rdfs:comment "The geographic area in which an activity is delivered. Domain and range narrowed from :Entity to :Activity/:GeographicEntity." .
+
+:implementedBy a owl:ObjectProperty ;
+  rdfs:domain    :Project ;
+  rdfs:range     :ImplementingPartner ;
+  rdfs:label     "implemented by" ;
+  rdfs:comment   "Identifies the implementing partner responsible for a project. Domain/range narrowed from :Entity/:Entity." ;
+  owl:inverseOf  :implements_ .
+
+:implements_ a owl:ObjectProperty ;
+  rdfs:domain    :ImplementingPartner ;
+  rdfs:range     :Project ;
+  rdfs:label     "implements (project)" ;
+  rdfs:comment   "Inverse of :implementedBy. An implementing partner implements a project." ;
+  owl:inverseOf  :implementedBy .
+
+:partOf a owl:ObjectProperty , owl:TransitiveProperty ;
+  rdfs:domain    :Project ;
+  rdfs:range     :Programme ;
+  rdfs:label     "part of" ;
+  rdfs:comment   "Indicates a project is part of a programme. Transitive property." ;
+  owl:inverseOf  :includes .
+
+:includes a owl:ObjectProperty , owl:TransitiveProperty ;
+  rdfs:domain    :Programme ;
+  rdfs:range     :Project ;
+  rdfs:label     "includes" ;
+  rdfs:comment   "Inverse of :partOf. A programme includes projects." ;
+  owl:inverseOf  :partOf .
+
+:coordinatesWith a owl:ObjectProperty , owl:SymmetricProperty ;
+  rdfs:domain  :Organisation ;
+  rdfs:range   :Organisation ;
+  rdfs:label   "coordinates with" ;
+  rdfs:comment "Indicates a coordination relationship between two organisations. Symmetric. Domain narrowed from :Operation to :Organisation." .
+
+:operatesAt a owl:ObjectProperty ;
+  rdfs:domain  :SubOffice ;
+  rdfs:range   :ServicePoint ;
+  rdfs:label   "operates at" ;
+  rdfs:comment "Links a sub-office to the service point(s) where it operates." .
+
+:achieves a owl:ObjectProperty ;
+  rdfs:domain  :Activity ;
+  rdfs:range   :Indicator ;
+  rdfs:label   "achieves" ;
+  rdfs:comment "Indicates the indicator(s) an activity contributes to achieving." .
+
+:measuredAgainst a owl:ObjectProperty ;
+  rdfs:domain  :Indicator ;
+  rdfs:range   :StandardIndicator ;
+  rdfs:label   "measured against" ;
+  rdfs:comment "Links an operational indicator to its corresponding standard indicator." .
+
+:hasInterventionType a owl:ObjectProperty ;
+  rdfs:domain  :Activity ;
+  rdfs:range   :InterventionType ;
+  rdfs:label   "has intervention type" ;
+  rdfs:comment "Classifies an activity by its intervention type. Renamed from :instanceOf to avoid confusion with rdf:type." .
+
+# --- IATI Activity Object Properties ---
+
+:hasParticipation a owl:ObjectProperty ;
+  rdfs:domain  :IATIActivity ;
+  rdfs:range   :Participation ;
+  rdfs:label   "has participation" ;
+  rdfs:comment "Links an IATI activity to its participating organisations via the N-ary Participation class." .
+
+:hasSector a owl:ObjectProperty ;
+  rdfs:domain  :IATIActivity ;
+  rdfs:range   :Sector ;
+  rdfs:label   "has sector" ;
+  rdfs:comment "Sector classification of the IATI activity." .
+
+:hasLocation a owl:ObjectProperty ;
+  rdfs:domain  :IATIActivity ;
+  rdfs:range   :IATILocation ;
+  rdfs:label   "has location" ;
+  rdfs:comment "Geographic location of the IATI activity." .
+
+:hasRecipientRegion a owl:ObjectProperty ;
+  rdfs:domain  :IATIActivity ;
+  rdfs:range   :RecipientRegion ;
+  rdfs:label   "has recipient region" ;
+  rdfs:comment "The recipient region of the IATI activity." .
+
+:representsOperation a owl:ObjectProperty ;
+  rdfs:domain  :IATIActivity ;
+  rdfs:range   :Operation ;
+  rdfs:label   "represents operation" ;
+  rdfs:comment "Optional link between an IATI activity and the corresponding UNHCR operation." .
+
+
+
+# --- Participation N-ary relation Properties ---
+
+:participationOrg a owl:ObjectProperty ;
+  rdfs:domain  :Participation ;
+  rdfs:range   :Organisation ;
+  rdfs:label   "participation org" ;
+  rdfs:comment "The organisation participating in the activity." .
+
+:participationRoleCode a owl:DatatypeProperty ;
+  rdfs:domain  :Participation ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "participation role code" ;
+  rdfs:comment "IATI role code for the participating organisation (e.g., 1=Funding, 2=Accountable, 3=Extending, 4=Implementing)." .
+
+:participationTypeCode a owl:DatatypeProperty ;
+  rdfs:domain  :Participation ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "participation type code" ;
+  rdfs:comment "Organisation type code as defined in the IATI codelists." .
+
+:participationRef a owl:DatatypeProperty ;
+  rdfs:domain  :Participation ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "participation ref" ;
+  rdfs:comment "Reference identifier of the participating organisation." .
+
+
+
+##########################################################
+########## DOMAIN E — POLICY, LEGAL & NORMATIVE ##########
+##########################################################
+
+# --- Policy & Legal Class  ---
+
+:NationalLaw a owl:Class ;
+  rdfs:subClassOf :LegalFramework ;
+  rdfs:label   "National Law" ;
+  rdfs:comment "A domestic law of a particular country. Subclass of :LegalFramework." .
+
+:ExComConclusion a owl:Class ;
+  rdfs:subClassOf :DocumentaryArtifact ;
+  rdfs:label   "ExCom Conclusion" ;
+  rdfs:comment "A conclusion adopted by UNHCR's Executive Committee." .
+
+:PledgeCommitment a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Pledge Commitment" ;
+  rdfs:comment "A formal commitment made by a state or actor in a pledging process." .
+
+:StandardIndicator a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Standard Indicator" ;
+  rdfs:comment "A normative indicator from a standard framework (e.g., UNHCR Results Framework, SDGs)." .
+
+# --- Policy & Legal Documentary Artifact SubClassOf  ---
+
+:Policy a owl:Class ;
+  rdfs:subClassOf :DocumentaryArtifact ;
+  rdfs:label   "Policy" ;
+  rdfs:comment "A formal UNHCR or inter-agency policy document." .
+
+:SOP a owl:Class ;
+  rdfs:subClassOf :DocumentaryArtifact ;
+  rdfs:label   "Standard Operating Procedure" ;
+  rdfs:comment "A standard operating procedure defining operational steps." .
+
+:LegalFramework a owl:Class ;
+  rdfs:subClassOf :DocumentaryArtifact ;
+  rdfs:label   "Legal Framework" ;
+  rdfs:comment "An international, regional, or national legal framework relevant to protection." .
+
+# --- Policy & Legal Datatype Property  ---
+
+:policyCode a owl:DatatypeProperty ;
+  rdfs:domain  :Policy ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "policy code" ;
+  rdfs:comment "UNHCR internal policy reference code." .
+
+:instrumentType a owl:DatatypeProperty ;
+  rdfs:domain  :LegalFramework ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "instrument type" ;
+  rdfs:comment "Type of legal instrument (e.g., Convention, Protocol, Domestic Law)." .
+
+# --- Policy & Legal Object Property  ---
+
+:appliesTo a owl:ObjectProperty ;
+  rdfs:domain  :LegalFramework ;
+  rdfs:range   :PopulationGroup ;
+  rdfs:label   "applies to" ;
+  rdfs:comment "Identifies the population group to which a legal framework applies. Domain narrowed from :Entity to :LegalFramework." .
+
+:supersedes a owl:ObjectProperty ;
+  rdfs:domain  :DocumentaryArtifact ;
+  rdfs:range   :DocumentaryArtifact ;
+  rdfs:label   "supersedes" ;
+  rdfs:comment "Indicates that a document replaces or supersedes an earlier document." .
+
+:implements a owl:ObjectProperty ;
+  rdfs:domain  :Operation ;
+  rdfs:range   :LegalFramework ;
+  rdfs:label   "implements (legal)" ;
+  rdfs:comment "Indicates that an operation operationalises a legal framework. Domain narrowed from :Entity to :Operation." .
+
+:conflictsWith a owl:ObjectProperty , owl:SymmetricProperty ;
+  rdfs:domain  :LegalFramework ;
+  rdfs:range   :LegalFramework ;
+  rdfs:label   "conflicts with" ;
+  rdfs:comment "Indicates that two legal instruments are in conflict with each other. Symmetric. Domain/range broadened from :NationalLaw/:Entity to :LegalFramework/:LegalFramework." .
+
+:mandates a owl:ObjectProperty ;
+  rdfs:domain    :LegalFramework ;
+  rdfs:range     :Activity ;
+  rdfs:label     "mandates" ;
+  rdfs:comment   "Indicates that a legal framework mandates a particular type of activity or response. Range narrowed from :Entity to :Activity." ;
+  owl:inverseOf  :mandatedBy .
+
+:mandatedBy a owl:ObjectProperty ;
+  rdfs:domain    :Activity ;
+  rdfs:range     :LegalFramework ;
+  rdfs:label     "mandated by" ;
+  rdfs:comment   "Inverse of :mandates." ;
+  owl:inverseOf  :mandates .
+
+:governs a owl:ObjectProperty ;
+  rdfs:domain    :LegalFramework ;
+  rdfs:range     :PopulationGroup ;
+  rdfs:label     "governs" ;
+  rdfs:comment   "Indicates that a legal framework governs the status or treatment of a population group. Domain narrowed from :Entity to :LegalFramework." ;
+  owl:inverseOf  :governedBy .
+
+:governedBy a owl:ObjectProperty ;
+  rdfs:domain    :PopulationGroup ;
+  rdfs:range     :LegalFramework ;
+  rdfs:label     "governed by" ;
+  rdfs:comment   "Inverse of :governs." ;
+  owl:inverseOf  :governs .
+
+:references a owl:ObjectProperty ;
+  rdfs:domain  :DocumentaryArtifact ;
+  rdfs:range   :Entity ;
+  rdfs:label   "references" ;
+  rdfs:comment "Indicates that a document references another entity." .
+
+:endorsedBy a owl:ObjectProperty ;
+  rdfs:domain  :Policy ;
+  rdfs:range   :Organisation ;
+  rdfs:label   "endorsed by" ;
+  rdfs:comment "Identifies the organisation(s) that formally endorsed a policy. Range narrowed from :Entity to :Organisation." .
+
+
+####################################################
+########## DOMAIN F — FINANCE & RESOURCES ##########
+####################################################
+
+:Donor a owl:Class ;
+  rdfs:subClassOf :Organisation ;
+  rdfs:label   "Donor" ;
+  rdfs:comment "An organisation or government providing financial contributions to UNHCR. Now subClassOf :Organisation (was flat :Entity in v0.1)." .
+
+:FundingInstrument a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Funding Instrument" ;
+  rdfs:comment "A financial mechanism through which funds are transferred (grant, contribution agreement, etc.)." .
+
+:Budget a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Budget" ;
+  rdfs:comment "A planned financial allocation for an operation, programme, or project." .
+
+:Expenditure a owl:Class ;
+  rdfs:subClassOf :IATITransaction ;
+  rdfs:label   "Expenditure" ;
+  rdfs:comment "An actual financial outlay recorded against a budget or project. Specific type of Transaction." .
+
+:FundingAppeal a owl:Class ;
+  rdfs:subClassOf :DocumentaryArtifact ;
+  rdfs:label   "Funding Appeal" ;
+  rdfs:comment "A formal funding appeal document (e.g., Flash Appeal, Consolidated Appeal). Now subClassOf :DocumentaryArtifact." .
+
+:IATITransaction a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "IATI Transaction" ;
+  rdfs:comment "A financial transaction reported within an IATI activity." .
+
+# --- Finance Data type Property---
+
+:donorCode a owl:DatatypeProperty ;
+  rdfs:domain  :Donor ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "donor code" ;
+  rdfs:comment "UNHCR donor identifier code." .
+
+:amountUsd a owl:DatatypeProperty ;
+  rdfs:domain  :FundingInstrument ;
+  rdfs:range   xsd:decimal ;
+  rdfs:label   "amount (USD)" ;
+  rdfs:comment "Financial amount in US dollars." .
+
+# --- Finance  IATI Transaction Datatype Properties ---
+
+:transactionTypeCode a owl:DatatypeProperty ;
+  rdfs:domain  :IATITransaction ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "transaction type code" .
+
+:transactionDate a owl:DatatypeProperty ;
+  rdfs:domain  :IATITransaction ;
+  rdfs:range   xsd:date ;
+  rdfs:label   "transaction date" .
+
+:transactionValue a owl:DatatypeProperty ;
+  rdfs:domain  :IATITransaction ;
+  rdfs:range   xsd:decimal ;
+  rdfs:label   "transaction value" .
+
+:transactionCurrency a owl:DatatypeProperty ;
+  rdfs:domain  :IATITransaction ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "transaction currency" .
+
+:transactionValueDate a owl:DatatypeProperty ;
+  rdfs:domain  :IATITransaction ;
+  rdfs:range   xsd:date ;
+  rdfs:label   "transaction value date" .
+
+:transactionDescription a owl:DatatypeProperty ;
+  rdfs:domain  :IATITransaction ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "transaction description" .
+
+:transactionValueUSD a owl:DatatypeProperty ;
+  rdfs:domain  :IATITransaction ;
+  rdfs:range   xsd:decimal ;
+  rdfs:label   "transaction value (USD)" .
+
+:transactionAidTypeCode a owl:DatatypeProperty ;
+  rdfs:domain  :IATITransaction ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "transaction aid type code" .
+
+:transactionAidTypeVocabulary a owl:DatatypeProperty ;
+  rdfs:domain  :IATITransaction ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "transaction aid type vocabulary" .
+
+
+# --- Finance Object Property---
+
+:funds a owl:ObjectProperty ;
+  rdfs:domain    :Donor ;
+  rdfs:range     :Project ;
+  rdfs:label     "funds" ;
+  rdfs:comment   "Links a donor to the project it funds. Range narrowed from :Entity to :Project." ;
+  owl:inverseOf  :fundedBy .
+
+:fundedBy a owl:ObjectProperty ;
+  rdfs:domain    :Project ;
+  rdfs:range     :Donor ;
+  rdfs:label     "funded by" ;
+  rdfs:comment   "Inverse of :funds." ;
+  owl:inverseOf  :funds .
+
+:allocatedTo a owl:ObjectProperty ;
+  rdfs:domain    :FundingInstrument ;
+  rdfs:range     :Project ;
+  rdfs:label     "allocated to" ;
+  rdfs:comment   "Indicates which project a funding instrument is allocated to. Range narrowed from :Entity to :Project." ;
+  owl:inverseOf  :allocatedFrom .
+
+:allocatedFrom a owl:ObjectProperty ;
+  rdfs:domain    :Project ;
+  rdfs:range     :FundingInstrument ;
+  rdfs:label     "allocated from" ;
+  rdfs:comment   "Inverse of :allocatedTo." ;
+  owl:inverseOf  :allocatedTo .
+
+:contributesTo a owl:ObjectProperty ;
+  rdfs:domain  :FundingInstrument ;
+  rdfs:range   :Budget ;
+  rdfs:label   "contributes to" ;
+  rdfs:comment "Indicates which budget a funding instrument contributes to." .
+
+:requestedIn a owl:ObjectProperty ;
+  rdfs:domain  :Budget ;
+  rdfs:range   :FundingAppeal ;
+  rdfs:label   "requested in" ;
+  rdfs:comment "Indicates the funding appeal in which a budget line was requested." .
+
+:spentOn a owl:ObjectProperty ;
+  rdfs:domain  :Expenditure ;
+  rdfs:range   :Activity ;
+  rdfs:label   "spent on" ;
+  rdfs:comment "Identifies the activity on which expenditure was recorded. Range narrowed from :Entity to :Activity." .
+
+:committedTo a owl:ObjectProperty ;
+  rdfs:domain  :PledgeCommitment ;
+  rdfs:range   :Operation ;
+  rdfs:label   "committed to" ;
+  rdfs:comment "Identifies the operation or outcome that a pledge commitment is directed toward. Range narrowed from :Entity to :Operation." .
+
+
+# --- Finance IATI Transaction Object Properties ---
+
+:hasTransaction a owl:ObjectProperty ;
+  rdfs:domain  :IATIActivity ;
+  rdfs:range   :IATITransaction ;
+  rdfs:label   "has transaction" ;
+  rdfs:comment "Links an IATI activity to its financial transactions." .
+
+:transactionProviderOrg a owl:ObjectProperty ;
+  rdfs:domain  :IATITransaction ;
+  rdfs:range   :Organisation ;
+  rdfs:label   "transaction provider org" ;
+  rdfs:comment "The organisation providing funds in the transaction." .
+
+:providerOrgIsDonor a owl:ObjectProperty ;
+  rdfs:domain  :IATITransaction ;
+  rdfs:range   :Donor ;
+  rdfs:label   "provider org is donor" ;
+  rdfs:comment "Optional link: if the transaction provider organisation is a known UNHCR donor entity." .
+
+
+
+
+##############################################
+########## DOMAIN G —  STAKEHOLDERS ##########
+##############################################
+
+:Organisation a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Organisation" ;
+  rdfs:comment "Any organisation relevant to UNHCR operations: UN agencies, NGOs, government authorities, donors, private sector." .
+
+:UNAgency a owl:Class ;
+  rdfs:subClassOf :Organisation ;
+  rdfs:label   "UN Agency" ;
+  rdfs:comment "A United Nations agency or body." .
+
+:ClusterSector a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Cluster / Sector" ;
+  rdfs:comment "A humanitarian coordination cluster or sector (e.g., Protection Cluster, Shelter Cluster)." .
+
+:NGOPartner a owl:Class ;
+  rdfs:subClassOf :Organisation ;
+  rdfs:label   "NGO Partner" ;
+  rdfs:comment "A non-governmental organisation working in partnership with UNHCR." .
+
+:PrivateDonor a owl:Class ;
+  rdfs:subClassOf :Donor ;
+  rdfs:label   "Private Donor" ;
+  rdfs:comment "A private sector or individual donor." .
+
+:GovernmentAuthority a owl:Class ;
+  rdfs:subClassOf :Organisation ;
+  rdfs:label   "Government Authority" ;
+  rdfs:comment "A government ministry, department, or public authority. Replaces the duplicate :Government class from IATI section." .  
+
+:Position a owl:Class ;
+  rdfs:subClassOf :Organisation ;
+  rdfs:label   "Position" ;
+  rdfs:comment "A Funded position, aka organisation role allowing to hire staff member or associated personnel." .
+
+:FocalPoint a owl:Class ;
+  rdfs:subClassOf :Position ;
+  rdfs:label   "Focal Point" ;
+  rdfs:comment "A staff member designated as the focal point for a sector, topic, or location. Subclass of :Position." .
+
+:ContactInfo a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Contact Information" ;
+  rdfs:comment "Contact details associated with an organisation or activity." .
+
+# --- STAKEHOLDERS  Datatype Properties ---
+
+:contactOrgName a owl:DatatypeProperty ;
+  rdfs:domain  :ContactInfo ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "contact org name" .
+
+:contactEmail a owl:DatatypeProperty ;
+  rdfs:domain  :ContactInfo ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "contact email" .
+
+:contactWebsite a owl:DatatypeProperty ;
+  rdfs:domain  :ContactInfo ;
+  rdfs:range   xsd:anyURI ;
+  rdfs:label   "contact website" .
+
+:contactAddress a owl:DatatypeProperty ;
+  rdfs:domain  :ContactInfo ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "contact address" .
+
+# --- STAKEHOLDERS  Object Properties ---
+
+:hasContactInfo a owl:ObjectProperty ;
+  rdfs:domain  :IATIActivity ;
+  rdfs:range   :ContactInfo ;
+  rdfs:label   "has contact info" ;
+  rdfs:comment "Contact information associated with the IATI activity." .
+
+:reportedBy a owl:ObjectProperty ;
+  rdfs:domain  :IATIActivity ;
+  rdfs:range   :Organisation ;
+  rdfs:label   "reported by" ;
+  rdfs:comment "The organisation reporting the IATI activity." .
+
+
+########################################################
+########## DOMAIN H — KNOWLEDGE & INFORMATION ##########
+########################################################
+
+# --- Knowledge Class ---
+
+:Indicator a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Indicator" ;
+  rdfs:comment "A measurable indicator used to track progress against results." .
+
+:InterventionType a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Intervention Type" ;
+  rdfs:comment "A typology of humanitarian interventions (e.g., cash assistance, shelter, WASH)." .
+
+
+:EvidenceFinding a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Evidence Finding" ;
+  rdfs:comment "A discrete finding derived from an evaluation or assessment." .
+
+:EffectivenessMetric a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Effectiveness Metric" ;
+  rdfs:comment "A metric used to measure the effectiveness of an intervention." .
+
+:ContextCondition a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Context Condition" ;
+  rdfs:comment "An enabling or constraining condition in the operational context." .
+
+:LessonsLearned a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Lessons Learned" ;
+  rdfs:comment "A lesson derived from operational experience and evidence." .
+
+:UnintendedEffect a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Unintended Effect" ;
+  rdfs:comment "An unintended positive or negative consequence of an intervention." .
+
+
+# --- Knowledge Documentary Artifact Entity subClass --- 
+
+:Document a owl:Class ;
+  rdfs:subClassOf :DocumentaryArtifact ;
+  rdfs:label   "Document" ;
+  rdfs:comment "A generic document artifact. For more specific document types, use subclasses." .
+
+:Assessment a owl:Class ;
+  rdfs:subClassOf :DocumentaryArtifact ;
+  rdfs:label   "Assessment" ;
+  rdfs:comment "A systematic needs assessment." .
+
+:SituationReport a owl:Class ;
+  rdfs:subClassOf :DocumentaryArtifact ;
+  rdfs:label   "Situation Report" ;
+  rdfs:comment "A periodic report on a humanitarian situation." .
+
+:ActivityReport a owl:Class ;
+  rdfs:subClassOf :DocumentaryArtifact ;
+  rdfs:label   "Activity Report" ;
+  rdfs:comment "A periodic report on humanitarian activities." .  
+
+:TrainingMaterial a owl:Class ;
+  rdfs:subClassOf :DocumentaryArtifact ;
+  rdfs:label   "Training Material" ;
+  rdfs:comment "Material used for capacity building or training." .
+
+:Dataset a owl:Class ;
+  rdfs:subClassOf :DocumentaryArtifact ;
+  rdfs:label   "Dataset" ;
+  rdfs:comment "A structured collection of data relevant to UNHCR operations." .
+
+:Evaluation a owl:Class ;
+  rdfs:subClassOf :DocumentaryArtifact ;
+  rdfs:label   "Evaluation" ;
+  rdfs:comment "A formal evaluation of a programme, project, or operation." .
+
+
+:Sector a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "IATI Sector" ;
+  rdfs:comment "A sector classification as used in IATI reporting. Distinct from :ClusterSector which is the humanitarian coordination cluster — integrated into Domain H." .
+
+
+# --- Knowledge Data type Property---
+
+:indicatorCode a owl:DatatypeProperty ;
+  rdfs:domain  :Indicator ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "indicator code" ;
+  rdfs:comment "Code identifying the indicator within its framework." .
+
+:numericValue a owl:DatatypeProperty ;
+  rdfs:domain  :Indicator ;
+  rdfs:range   xsd:decimal ;
+  rdfs:label   "numeric value" ;
+  rdfs:comment "Numeric measurement value of an indicator." .
+
+:textValue a owl:DatatypeProperty ;
+  rdfs:domain  :EvidenceFinding ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "text value" ;
+  rdfs:comment "Textual content of an evidence finding or descriptor." .
+
+:sectorCode a owl:DatatypeProperty ;
+  rdfs:domain  :Sector ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "sector code" ;
+  rdfs:comment "The code for the sector (e.g., DAC 5-digit purpose code)." .
+
+:sectorVocabulary a owl:DatatypeProperty ;
+  rdfs:domain  :Sector ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "sector vocabulary" ;
+  rdfs:comment "The vocabulary used for the sector classification (e.g., DAC, UNHCR)." .
+
+:sectorPercentage a owl:DatatypeProperty ;
+  rdfs:domain  :Sector ;
+  rdfs:range   xsd:decimal ;
+  rdfs:label   "sector percentage" ;
+  rdfs:comment "Percentage of the activity attributed to this sector." .
+
+:sectorLabel a owl:DatatypeProperty ;
+  rdfs:domain  :Sector ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "sector label" ;
+  rdfs:comment "Human-readable label for the sector." .
+
+
+# --- Knowledge Object Property---
+
+:documents a owl:ObjectProperty ;
+  rdfs:domain  :DocumentaryArtifact ;
+  rdfs:range   :Entity ;
+  rdfs:label   "documents" ;
+  rdfs:comment "Indicates the entity or situation documented by a documentary artifact." .
+
+:cites a owl:ObjectProperty ;
+  rdfs:domain  :DocumentaryArtifact ;
+  rdfs:range   :DocumentaryArtifact ;
+  rdfs:label   "cites" ;
+  rdfs:comment "Indicates that one document cites another." .
+
+:producedBy a owl:ObjectProperty ;
+  rdfs:domain    :DocumentaryArtifact ;
+  rdfs:range     :Organisation ;
+  rdfs:label     "produced by" ;
+  rdfs:comment   "Identifies the organisation that produced the document. Range narrowed from :Entity to :Organisation." ;
+  owl:inverseOf  :produced .
+
+:produced a owl:ObjectProperty ;
+  rdfs:domain    :Organisation ;
+  rdfs:range     :DocumentaryArtifact ;
+  rdfs:label     "produced" ;
+  rdfs:comment   "Inverse of :producedBy." ;
+  owl:inverseOf  :producedBy .
+
+:informs a owl:ObjectProperty ;
+  rdfs:domain  :EvidenceFinding ;
+  rdfs:range   :Policy ;
+  rdfs:label   "informs" ;
+  rdfs:comment "Indicates that evidence informs a policy decision. Domain/range narrowed from :Entity/:Entity to :EvidenceFinding/:Policy." .
+
+:records a owl:ObjectProperty ;
+  rdfs:domain  :Assessment ;
+  rdfs:range   :Indicator ;
+  rdfs:label   "records" ;
+  rdfs:comment "Indicates that an assessment records specific indicator measurements. " .
+
+:updates a owl:ObjectProperty ;
+  rdfs:domain  :SituationReport ;
+  rdfs:range   :Situation ;
+  rdfs:label   "updates" ;
+  rdfs:comment "Indicates that a situation report provides updated information on a situation. Range narrowed from :Entity to :Situation." .
+
+:trainedOn a owl:ObjectProperty ;
+  rdfs:domain  :TrainingMaterial ;
+  rdfs:range   :InterventionType ;
+  rdfs:label   "trained on" ;
+  rdfs:comment "Identifies the intervention type or topic a training material covers. Range narrowed from :Entity to :InterventionType." .
+
+:evaluates a owl:ObjectProperty ;
+  rdfs:domain  :Evaluation ;
+  rdfs:range   :Programme ;
+  rdfs:label   "evaluates" ;
+  rdfs:comment "Links an evaluation to the programme it evaluates. Range narrowed from :Entity to :Programme." .
+
+:produces a owl:ObjectProperty ;
+  rdfs:domain  :Evaluation ;
+  rdfs:range   :EvidenceFinding ;
+  rdfs:label   "produces (finding)" ;
+  rdfs:comment "Indicates that an evaluation produces evidence findings. Range narrowed from :Entity to :EvidenceFinding." .
+
+:appliesIn a owl:ObjectProperty ;
+  rdfs:domain  :InterventionType ;
+  rdfs:range   :ContextCondition ;
+  rdfs:label   "applies in" ;
+  rdfs:comment "Identifies the context conditions under which an intervention type is applicable. Domain narrowed from :Entity to :InterventionType." .
+
+:contradicts a owl:ObjectProperty , owl:SymmetricProperty ;
+  rdfs:domain  :EvidenceFinding ;
+  rdfs:range   :EvidenceFinding ;
+  rdfs:label   "contradicts" ;
+  rdfs:comment "Indicates that two evidence findings are in contradiction. Symmetric." .
+
+:corroborates a owl:ObjectProperty , owl:SymmetricProperty ;
+  rdfs:domain  :EvidenceFinding ;
+  rdfs:range   :EvidenceFinding ;
+  rdfs:label   "corroborates" ;
+  rdfs:comment "Indicates that one evidence finding supports another. Symmetric." .
+
+:enabledBy a owl:ObjectProperty ;
+  rdfs:domain    :InterventionType ;
+  rdfs:range     :ContextCondition ;
+  rdfs:label     "enabled by" ;
+  rdfs:comment   "Identifies context conditions that enable an intervention type." ;
+  owl:inverseOf  :enables .
+
+:enables a owl:ObjectProperty ;
+  rdfs:domain    :ContextCondition ;
+  rdfs:range     :InterventionType ;
+  rdfs:label     "enables" ;
+  rdfs:comment   "Inverse of :enabledBy." ;
+  owl:inverseOf  :enabledBy .
+
+:riskOf a owl:ObjectProperty ;
+  rdfs:domain  :InterventionType ;
+  rdfs:range   :UnintendedEffect ;
+  rdfs:label   "risk of" ;
+  rdfs:comment "Identifies the unintended effects that an intervention type risks producing." .
+
+:comparedTo a owl:ObjectProperty , owl:SymmetricProperty ;
+  rdfs:domain  :EffectivenessMetric ;
+  rdfs:range   :EffectivenessMetric ;
+  rdfs:label   "compared to" ;
+  rdfs:comment "Indicates that two effectiveness metrics are compared. Symmetric." .
+
+:generatedFrom a owl:ObjectProperty ;
+  rdfs:domain  :LessonsLearned ;
+  rdfs:range   :EvidenceFinding ;
+  rdfs:label   "generated from" ;
+  rdfs:comment "Links a lesson learned to the evidence finding it was derived from." .
+
+
+#########################
+########## END ##########
+#########################

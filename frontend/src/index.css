@@ -1,0 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+:root {
+  --unhcr-blue: #0072bc;
+  --unhcr-light-blue: #e5f5ff;
+  --unhcr-bg: #f8fafd;
+  --unhcr-border: #e4ebf3;
+  --unhcr-error: #b3261e;
+  --unhcr-warning: #fcb900;
+  --unhcr-success: #339966;
+  --unhcr-shadow: rgba(0, 114, 188, 0.06);
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  background: var(--unhcr-bg);
+  color: #111;
+}
+
+a {
+  color: var(--unhcr-blue);
+  text-decoration: none;
+}
+
+a:hover, a:focus {
+  text-decoration: underline;
+  color: #004e87;
+}
+
+h1, h2, h3, h4, h5 {
+  color: var(--unhcr-blue);
+  font-family: 'Inter', system-ui, sans-serif;
+  margin-top: 0;
+}
+
+button, .button {
+  background: var(--unhcr-blue);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.5em 1.3em;
+  box-shadow: 0 2px 10px var(--unhcr-shadow);
+  transition: background 0.1s;
+}
+
+button:hover, .button:hover {
+  background: #004e87;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  border: 1px solid var(--unhcr-border);
+  border-radius: 5px;
+  padding: 0.4em 0.8em;
+  background: #fff;
+}
+
+.card, .block {
+  background: #fff;
+  border-radius: 7px;
+  border: 1px solid var(--unhcr-border);
+  box-shadow: 0 2px 8px var(--unhcr-shadow);
+  padding: 1.1em 1.7em;
+  margin-bottom: 1.5em;
+}
+
+nav {
+  background: var(--unhcr-blue);
+  color: #fff;
+  padding: 1em 2em;
+  box-shadow: 0 2px 8px var(--unhcr-shadow);
+}
+
+footer {
+  background: var(--unhcr-blue);
+  color: #fff;
+  text-align: center;
+  padding: 0.7em 0;
+  font-size: 0.9em;
+}
+
+blockquote {
+  border-left: 5px solid var(--unhcr-blue);
+  margin: 1em 0;
+  padding-left: 1em;
+  background: var(--unhcr-light-blue);
+}
+
+code {
+  background: #eef6f8;
+  color: #1d3557;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.98em;
+}
+
+.success {
+  color: var(--unhcr-success);
+}
+.warning {
+  color: var(--unhcr-warning);
+}
+.error {
+  color: var(--unhcr-error);
+}
+
+::-webkit-scrollbar {
+  width: 11px;
+  background: var(--unhcr-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--unhcr-light-blue);
+  border-radius: 6px;
+}

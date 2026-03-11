@@ -1,0 +1,38 @@
+server:
+  host: 0.0.0.0
+  port: ${LITELLM_PORT:-8080}
+  timeout: 120s
+providers:
+    type: openai
+    api_key: ${OPENAI_API_KEY}
+    api_base: ${AZURE_OPENAI_ENDPOINT}
+    azure_deployment_id: ${AZURE_OPENAI_DEPLOYMENT_ID}
+    api_type: azure
+    api_version: 2023-05-15
+  anthropic:
+    type: anthropic
+    api_key: ${ANTHROPIC_API_KEY}
+  ollama:
+    type: ollama
+    base_url: ${OLLAMA_BASE_URL}
+    default_model: ${OLLAMA_MODEL:-llama3}
+defaults:
+  provider: openai
+  model: ${OPENAI_MODEL:-gpt-4}
+  temperature: ${LLM_TEMPERATURE:-0.2}
+logging:
+  level: ${LITELLM_LOG_LEVEL:-info}
+  log_file: /app/litellm.log
+  router:
+    enable: true
+    weights:
+      gpt-4: 0.45
+      claude-3: 0.45
+      ollama/llama3: 0.1
+    fallback: [gpt-3.5-turbo, claude-instant, ollama/llama3]
+safety:
+  allowed_models:
+    - gpt-4
+    - gpt-3.5-turbo
+    - claude-3
+    - ollama/llama3
