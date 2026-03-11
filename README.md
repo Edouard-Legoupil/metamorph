@@ -52,9 +52,11 @@ Cards are read in a defined order: field context first to establish the situatio
 ## Key References
 
 
-1. [knowledge-pipeline-blueprint.md](knowledge-pipeline-blueprint.md): Core pipeline architecture
-2. [humanitarian-knowledge-ontology.md](humanitarian-knowledge-ontology.md): Full LPG ontology — 45+ node types, 50+ edge types
-3. [knowledge-card.yaml](knowledge-card.yaml): Complete Knowledge Card specifications (6 cards)
+1. [knowledge-pipeline-blueprint.md](docs/guide/knowledge-pipeline-blueprint.md): Core pipeline architecture: Three-component architecture: Ingestion → Reconciliation → Orchestration, with trust routing
+
+2. [unhcr-knowledge-ontology.ttl](docs/ontology/unhcr-knowledge-ontology.ttl): LPG ontology with 8 domains to build the knowledge graph - Complete Labeled Property Graph ontology — all node types, edge types, and property schemas
+
+3. [knowledge-card.yaml](docs/guide/knowledge-card.yaml): Complete Knowledge Card specifications  - Defines the 6 card types (KC-1 through KC-6), their sections, word limits, and graph queries
 
 
 ---

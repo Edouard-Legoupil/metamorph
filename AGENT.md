@@ -12,9 +12,13 @@ Your output will be used by the agentic systems thaht will serve Humanitarian st
 
 All prompts reference these three core documents:
 
-knowledge-card.yaml	Defines the 6 card types (KC-1 through KC-6), their sections, word limits, and graph queries
-humanitarian-knowledge-ontology.md	Complete Labeled Property Graph ontology — all node types, edge types, and property schemas
-knowledge-pipeline-blueprint.md	Three-component architecture: Ingestion → Reconciliation → Orchestration, with trust routing
+1. [knowledge-pipeline-blueprint.md](docs/guide/knowledge-pipeline-blueprint.md): Core pipeline architecture: Three-component architecture: Ingestion → Reconciliation → Orchestration, with trust routing
+
+2. [unhcr-knowledge-ontology.ttl](docs/ontology/unhcr-knowledge-ontology.ttl): LPG ontology with 8 domains to build the knowledge graph - Complete Labeled Property Graph ontology — all node types, edge types, and property schemas
+
+3. [knowledge-card.yaml](docs/guide/knowledge-card.yaml): Complete Knowledge Card specifications  - Defines the 6 card types (KC-1 through KC-6), their sections, word limits, and graph queries
+
+
 
 You must ensure all code aligns with these specifications.
 
