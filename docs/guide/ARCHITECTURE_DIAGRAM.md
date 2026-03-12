@@ -2,7 +2,6 @@
 
 ## 1. System landscape diagram
 
-![alt text](img/System_landscape_diagram.png)
 
 ```mermaid
 flowchart LR
@@ -31,13 +30,12 @@ flowchart LR
     subgraph KNOW[Knowledge Layer]
         PG[(PostgreSQL)]
         GRAPH[(Neo4j / Memgraph)]
-        VEC[(Qdrant / pgvector)]
-        SEARCH[(OpenSearch / FTS)]
+        VEC[(PostgreSQL - pgvector)]
+        SEARCH[(PostgreSQL -  FTS)]
     end
 
     subgraph MODEL[Model Layer]
-        OLLAMA[Ollama]
-        VLLM[vLLM / TGI]
+        LiteLLM[Inference: Cloud / Ollama]
         NLP[spaCy / GLiNER / sentence-transformers]
     end
 
@@ -70,8 +68,7 @@ flowchart LR
     CHUNK --> SEARCH
 
     WORKER --> NLP
-    WORKER --> OLLAMA
-    WORKER --> VLLM
+    WORKER --> LiteLLM
     WORKER --> PG
     WORKER --> GRAPH
     WORKER --> VEC
@@ -85,7 +82,6 @@ flowchart LR
 
 ## 2. Document-to-knowledge pipeline
 
-![alt text](img/Document-to-knowledge_pipeline.png)
 
 ```mermaid
 flowchart TD
@@ -128,7 +124,6 @@ flowchart TD
 
 ## 3. Context assembly
 
- ![alt text](img/Context_assembly.png) 
 
 ```mermaid
 flowchart TD
@@ -158,7 +153,6 @@ flowchart TD
 
 ## 4. Hybrid retrieval 
 
- ![alt text](img/Hybrid_retrieval.png) 
 
 ```mermaid
 flowchart TD
@@ -187,7 +181,6 @@ flowchart TD
 
 ## 5. Knowledge-card generation flow
 
- ![alt text](img/Knowledge-card_generation_flow.png) 
 
 ```mermaid
 flowchart LR
