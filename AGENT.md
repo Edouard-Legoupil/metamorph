@@ -70,31 +70,35 @@ The **retrieval layer** is hybrid and query-aware.
 
 ## 📚 Reference Inputs
 
-All prompts, designs, and code must align with these documents when present:
+All prompts, workflows, and implementations MUST conform to the canonical documentation set:
 
-1. `docs/guide/knowledge-pipeline-blueprint.md`
-   - pipeline architecture
-   - ingestion, reconciliation, orchestration
-   - trust routing
-2. `docs/ontology/unhcr-knowledge-ontology.ttl`
-   - ontology / schema definition
-   - node, edge, and property semantics
-3. `docs/guide/knowledge-card.yaml`
-   - knowledge card definitions
-   - section structure
-   - section-level query requirements
-4. `AGENT.md` (this document)
-   - implementation philosophy
-   - system architecture
-   - feature scope
-   - engineering constraints
+- `docs/guide/ARCHITECTURE.md`: System vision, layered architecture, and key landscape/pipeline diagrams.
 
-If these documents disagree, treat this order of precedence as default unless explicitly instructed otherwise:
+- `docs/guide/PIPELINE.md`: End-to-end knowledge pipeline, claim/evidence model, rules for provenance, agent context, and progressive QA.
 
-1. domain ontology / governance constraints
-2. knowledge-card specifications
-3. architecture principles in this file
-4. local implementation convenience
+- `docs/guide/DATABASE.md`: PostgreSQL, graph, and vector schema (DBA/operator reference).
+
+- `docs/guide/CURATION.md`: Reviewer, conflict, curation, and trust/verification surface/policy.
+
+- `docs/guide/API.md`: API, CLI, MCP/agent endpoints, including contract, conventions, and examples.
+
+- `docs/ontology/unhcr-knowledge-ontology.ttl`: Core ontology for all node types, edge semantics, and schema enforcement.
+
+- `docs/guide/get-started.md`: For hands-on setup/bootstrapping.
+
+In case of any ambiguity, **the following precedence applies**:
+
+1. The ontology and governance docs
+
+2. The PIPELINE, CURATION, and DATABASE documentation
+
+3. The architecture principles and system diagrams
+
+4. This AGENT.md philosophy/spec
+
+5. Local implementation or expediency
+
+All references and engineering work must cite/link the doc section governing the logic where applicable.
 
 ---
 
