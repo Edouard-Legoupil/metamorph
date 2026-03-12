@@ -15,7 +15,7 @@ The ontology covers ten thematic domains (A–J), plus a set of SKOS controlled 
 
 ## Ontology structure
 
-### Domains A–H  (operational knowledge)
+### Domains A–H  (UNHCR operational knowledge)
 
 | Domain | Theme | Key classes |
 |--------|-------|-------------|
@@ -28,7 +28,9 @@ The ontology covers ten thematic domains (A–J), plus a set of SKOS controlled 
 | **G** | Stakeholders | `Organisation`, `Person`, `Role`, `Position`, `FocalPoint` |
 | **H** | Knowledge & Information | `Indicator`, `EvidenceFinding`, `InterventionType`, `LessonsLearned`, `EffectivenessMetric` |
 
-### Domain I  (knowledge provenance — v0.2)
+### Domains for knowledge Curation
+
+#### Domain I  (knowledge provenance)
 
 Domain I is the curation backbone. It tracks how every assertion in the graph originated, was verified, and was resolved.
 
@@ -59,7 +61,7 @@ DocumentVersion → ContentChunk / Section / WikiBlock
 | `ReviewTask` | A work item assigned to a reviewer with priority, deadline, and status |
 | `KnowledgeCard` | A curated summary of one or more CanonicalFacts for display or briefing use |
 
-### Domain J  (SKOS controlled vocabularies — v0.2)
+#### Domain J  (SKOS controlled vocabularies — v0.2)
 
 All enumerated value spaces are expressed as `skos:ConceptScheme` instances rather than raw strings. This enables controlled filtering, multilingual labels, and provenance-aware reasoning.
 
@@ -73,33 +75,10 @@ All enumerated value spaces are expressed as `skos:ConceptScheme` instances rath
 | `SourceTrustScheme` | Primary Source (ST-1) → Peer-Reviewed → Official Report → Grey Literature → Media → Unverified Open Source (ST-6) | `Claim` |
 | `ReviewOutcomeScheme` | Open, InProgress, Accepted, Rejected, Amended, Deferred, Escalated | `ReviewTask`, `CuratorDecision` |
 
----
-
-## Domain G — Stakeholder modeling pattern (v0.2)
-
-Version 0.2 replaces the flat Position-as-Organisation pattern with a four-class model that clearly separates people, roles, posts, and institutions.
-
-```
-Person  ──holdsRole──►  Role
-  │
-  ├──assignedTo──►  Position  ──positionIn──►  Organisation
-  │                    │
-  │                    ├──carriesRole──►  Role
-  │                    │
-  │    (if FocalPoint)─└──focalFor──►  ClusterSector / GeographicEntity / InterventionType
-  │
-  └──memberOf──►  Organisation
-```
-
-**Rules:**
-- A `Person` is a human being (staff, consultant, partner contact). It does **not** subclass `Organisation`.
-- A `Role` is a reusable functional descriptor (e.g., "Protection Officer"). Roles are not posts.
-- A `Position` is a funded HR post — it can be vacant. It belongs to exactly one `Organisation`.
-- A `FocalPoint` is a `Position` (not a person). The person *fills* the focal-point position; the position itself carries the `:focalFor` scope link.
 
 ---
 
-## Core OWL concepts — plain-language reference
+## Core OWL concepts 
 
 ### Class
 A class is a category of things. Think of it as a typed folder.

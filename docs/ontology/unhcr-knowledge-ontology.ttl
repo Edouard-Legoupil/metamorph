@@ -211,17 +211,9 @@
   rdfs:label   "population figure date" ;
   rdfs:comment "Date of the population figure estimate." .
 
-geo:lat a owl:DatatypeProperty ;
-  rdfs:domain  :GeographicEntity ;
-  rdfs:range   xsd:decimal ;
-  rdfs:label   "latitude" ;
-  rdfs:comment "WGS84 latitude. Uses the W3C Geo vocabulary." .
-
-geo:long a owl:DatatypeProperty ;
-  rdfs:domain  :GeographicEntity ;
-  rdfs:range   xsd:decimal ;
-  rdfs:label   "longitude" ;
-  rdfs:comment "WGS84 longitude. Uses the W3C Geo vocabulary." .
+# geo:lat and geo:long are used directly from the W3C Geo vocabulary (geo: prefix).
+# They are NOT re-declared here to avoid conflicts with the external vocabulary definition.
+# Use geo:lat / geo:long directly on :GeographicEntity instances.
 
 
 # --- IATI Recipient Region Datatype Properties ---
@@ -257,7 +249,7 @@ geo:long a owl:DatatypeProperty ;
   owl:inverseOf  :contains .
 
 
-:contains a owl:ObjectProperty , owl:TransitiveProperty ;
+:contains a owl:ObjectProperty ;
   rdfs:domain    :GeographicEntity ;
   rdfs:range     :GeographicEntity ;
   rdfs:label     "contains" ;
@@ -433,6 +425,20 @@ geo:long a owl:DatatypeProperty ;
   rdfs:subClassOf :Entity ;
   rdfs:label   "Household Profile" ;
   rdfs:comment "Demographic and socioeconomic characteristics of a household unit." .
+
+:hasHouseholdProfile a owl:ObjectProperty ;
+  rdfs:domain    :PopulationGroup ;
+  rdfs:range     :HouseholdProfile ;
+  rdfs:label     "has household profile" ;
+  rdfs:comment   "Associates a population group with its household-level demographic and socioeconomic profile." ;
+  owl:inverseOf  :householdProfileOf .
+
+:householdProfileOf a owl:ObjectProperty ;
+  rdfs:domain    :HouseholdProfile ;
+  rdfs:range     :PopulationGroup ;
+  rdfs:label     "household profile of" ;
+  rdfs:comment   "Inverse of :hasHouseholdProfile." ;
+  owl:inverseOf  :hasHouseholdProfile .
 
 :VulnerabilityProfile a owl:Class ;
   rdfs:subClassOf :Entity ;
@@ -662,9 +668,9 @@ geo:long a owl:DatatypeProperty ;
   rdfs:range     :ImplementingPartner ;
   rdfs:label     "implemented by" ;
   rdfs:comment   "Identifies the implementing partner responsible for a project. Domain/range narrowed from :Entity/:Entity." ;
-  owl:inverseOf  :implements_ .
+  owl:inverseOf  :implementsProject .
 
-:implements_ a owl:ObjectProperty ;
+:implementsProject a owl:ObjectProperty ;
   rdfs:domain    :ImplementingPartner ;
   rdfs:range     :Project ;
   rdfs:label     "implements (project)" ;
@@ -678,7 +684,7 @@ geo:long a owl:DatatypeProperty ;
   rdfs:comment   "Indicates a project is part of a programme. Transitive property." ;
   owl:inverseOf  :includes .
 
-:includes a owl:ObjectProperty , owl:TransitiveProperty ;
+:includes a owl:ObjectProperty ;
   rdfs:domain    :Programme ;
   rdfs:range     :Project ;
   rdfs:label     "includes" ;
@@ -848,7 +854,7 @@ geo:long a owl:DatatypeProperty ;
   rdfs:label   "supersedes" ;
   rdfs:comment "Indicates that a document replaces or supersedes an earlier document." .
 
-:implements a owl:ObjectProperty ;
+:implementsLegal a owl:ObjectProperty ;
   rdfs:domain  :Operation ;
   rdfs:range   :LegalFramework ;
   rdfs:label   "implements (legal)" ;
@@ -920,6 +926,11 @@ geo:long a owl:DatatypeProperty ;
   rdfs:label   "Budget" ;
   rdfs:comment "A planned financial allocation for an operation, programme, or project." .
 
+:IATITransaction a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "IATI Transaction" ;
+  rdfs:comment "A financial transaction reported within an IATI activity." .
+
 :Expenditure a owl:Class ;
   rdfs:subClassOf :IATITransaction ;
   rdfs:label   "Expenditure" ;
@@ -929,11 +940,6 @@ geo:long a owl:DatatypeProperty ;
   rdfs:subClassOf :DocumentaryArtifact ;
   rdfs:label   "Funding Appeal" ;
   rdfs:comment "A formal funding appeal document (e.g., Flash Appeal, Consolidated Appeal). Now subClassOf :DocumentaryArtifact." .
-
-:IATITransaction a owl:Class ;
-  rdfs:subClassOf :Entity ;
-  rdfs:label   "IATI Transaction" ;
-  rdfs:comment "A financial transaction reported within an IATI activity." .
 
 # --- Finance Data type Property---
 
@@ -1170,7 +1176,7 @@ geo:long a owl:DatatypeProperty ;
   rdfs:label   "given name" .
 
 :familyName a owl:DatatypeProperty ;
-  rdfs:subPropertyOf foaf:lastName ;
+  rdfs:subPropertyOf foaf:familyName ;
   rdfs:domain  :Person ;
   rdfs:range   xsd:string ;
   rdfs:label   "family name" .
@@ -2225,28 +2231,32 @@ geo:long a owl:DatatypeProperty ;
   skos:prefLabel "Critical" ;
   skos:notation "SV-4" ;
   skos:definition "Immediate risk of severe harm or major operational/legal consequence; requires urgent escalation." ;
-  skos:topConceptOf :SeverityScheme .
+  skos:topConceptOf :SeverityScheme ;
+  skos:narrower :svHigh .
 
 :svHigh a skos:Concept ;
   skos:inScheme :SeverityScheme ;
   skos:prefLabel "High" ;
   skos:notation "SV-3" ;
   skos:definition "Significant risk or impact; requires prompt action within 24–48 hours." ;
-  skos:broader :svCritical .
+  skos:broader :svCritical ;
+  skos:narrower :svMedium .
 
 :svMedium a skos:Concept ;
   skos:inScheme :SeverityScheme ;
   skos:prefLabel "Medium" ;
   skos:notation "SV-2" ;
   skos:definition "Moderate risk or discrepancy; should be addressed in the next review cycle." ;
-  skos:broader :svHigh .
+  skos:broader :svHigh ;
+  skos:narrower :svLow .
 
 :svLow a skos:Concept ;
   skos:inScheme :SeverityScheme ;
   skos:prefLabel "Low" ;
   skos:notation "SV-1" ;
   skos:definition "Minor issue; address when bandwidth permits." ;
-  skos:broader :svMedium .
+  skos:broader :svMedium ;
+  skos:narrower :svInformational .
 
 :svInformational a skos:Concept ;
   skos:inScheme :SeverityScheme ;
@@ -2265,31 +2275,31 @@ geo:long a owl:DatatypeProperty ;
 
 :dtSituationReport a skos:Concept ;
   skos:inScheme :DocumentTypeScheme ;
-  skos:prefLabel "Situation Report" ;
+  skos:prefLabel "Situation Report (document type)" ;
   skos:notation "DT-SITREP" ;
   skos:topConceptOf :DocumentTypeScheme .
 
 :dtAssessment a skos:Concept ;
   skos:inScheme :DocumentTypeScheme ;
-  skos:prefLabel "Assessment" ;
+  skos:prefLabel "Assessment (document type)" ;
   skos:notation "DT-ASSESS" ;
   skos:topConceptOf :DocumentTypeScheme .
 
 :dtEvaluation a skos:Concept ;
   skos:inScheme :DocumentTypeScheme ;
-  skos:prefLabel "Evaluation" ;
+  skos:prefLabel "Evaluation (document type)" ;
   skos:notation "DT-EVAL" ;
   skos:topConceptOf :DocumentTypeScheme .
 
 :dtPolicy a skos:Concept ;
   skos:inScheme :DocumentTypeScheme ;
-  skos:prefLabel "Policy" ;
+  skos:prefLabel "Policy (document type)" ;
   skos:notation "DT-POLICY" ;
   skos:topConceptOf :DocumentTypeScheme .
 
 :dtSOP a skos:Concept ;
   skos:inScheme :DocumentTypeScheme ;
-  skos:prefLabel "Standard Operating Procedure" ;
+  skos:prefLabel "Standard Operating Procedure (document type)" ;
   skos:notation "DT-SOP" ;
   skos:topConceptOf :DocumentTypeScheme .
 
@@ -2301,25 +2311,25 @@ geo:long a owl:DatatypeProperty ;
 
 :dtFundingAppeal a skos:Concept ;
   skos:inScheme :DocumentTypeScheme ;
-  skos:prefLabel "Funding Appeal" ;
+  skos:prefLabel "Funding Appeal (document type)" ;
   skos:notation "DT-APPEAL" ;
   skos:topConceptOf :DocumentTypeScheme .
 
 :dtActivityReport a skos:Concept ;
   skos:inScheme :DocumentTypeScheme ;
-  skos:prefLabel "Activity Report" ;
+  skos:prefLabel "Activity Report (document type)" ;
   skos:notation "DT-ACTREP" ;
   skos:topConceptOf :DocumentTypeScheme .
 
 :dtDataset a skos:Concept ;
   skos:inScheme :DocumentTypeScheme ;
-  skos:prefLabel "Dataset" ;
+  skos:prefLabel "Dataset (document type)" ;
   skos:notation "DT-DATA" ;
   skos:topConceptOf :DocumentTypeScheme .
 
 :dtTrainingMaterial a skos:Concept ;
   skos:inScheme :DocumentTypeScheme ;
-  skos:prefLabel "Training Material" ;
+  skos:prefLabel "Training Material (document type)" ;
   skos:notation "DT-TRAIN" ;
   skos:topConceptOf :DocumentTypeScheme .
 
