@@ -1,6 +1,8 @@
-# Architecture Diagram (Mermaid)
+# Architecture Diagram 
 
 ## 1. System landscape diagram
+
+![alt text](img/System_landscape_diagram.png)
 
 ```mermaid
 flowchart LR
@@ -83,6 +85,8 @@ flowchart LR
 
 ## 2. Document-to-knowledge pipeline
 
+![alt text](img/Document-to-knowledge_pipeline.png)
+
 ```mermaid
 flowchart TD
     A[Source document] --> B[Register file metadata]
@@ -122,7 +126,9 @@ flowchart TD
 
 ---
 
-## 3. Contradiction-resolution workflow
+## 3. Context assembly
+
+ ![alt text](img/Context_assembly.png) 
 
 ```mermaid
 flowchart TD
@@ -150,7 +156,9 @@ flowchart TD
 
 ---
 
-## 4. Hybrid retrieval and context assembly
+## 4. Hybrid retrieval 
+
+ ![alt text](img/Hybrid_retrieval.png) 
 
 ```mermaid
 flowchart TD
@@ -178,6 +186,8 @@ flowchart TD
 ---
 
 ## 5. Knowledge-card generation flow
+
+ ![alt text](img/Knowledge-card_generation_flow.png) 
 
 ```mermaid
 flowchart LR
