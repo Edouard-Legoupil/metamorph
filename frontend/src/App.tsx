@@ -1,7 +1,12 @@
 import React from "react";
+import NavBar from "./components/NavBar";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import CuratorWorkspace from "./pages/CuratorWorkspace";
+import Scraping from "./pages/Scraping";
+import Ingestion from "./pages/Ingestion";
+import Wiki from "./pages/Wiki";
+import CurationWorkspace from "./pages/CuratorWorkspace";
 import Login from "./pages/Login";
+import About from "./pages/About";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const apiKey = typeof window !== 'undefined' ? localStorage.getItem("API_KEY") : null;
@@ -15,19 +20,16 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <Router>
+      <NavBar />
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/curation" element={
-          <RequireAuth>
-            <CuratorWorkspace />
-          </RequireAuth>
-        } />
-        <Route path="/curation/card/:cardId" element={
-          <RequireAuth>
-            <CuratorWorkspace />
-          </RequireAuth>
-        } />
-        <Route path="*" element={<Navigate to="/curation" />} />
+        <Route path="/" element={<Navigate to="/wiki" />} />
+        <Route path="/wiki" element={<RequireAuth><Wiki /></RequireAuth>} />
+        <Route path="/scraping" element={<RequireAuth><Scraping /></RequireAuth>} />
+        <Route path="/ingestion" element={<RequireAuth><Ingestion /></RequireAuth>} />
+        <Route path="/curation" element={<RequireAuth><CurationWorkspace /></RequireAuth>} />
+        <Route path="/about" element={<RequireAuth><About /></RequireAuth>} />
+        <Route path="*" element={<Navigate to="/wiki" />} />
       </Routes>
     </Router>
   );

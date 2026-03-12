@@ -1,0 +1,335 @@
+version: "3.9"
+
+name: metamorph
+
+x-common-env: &common-env
+  APP_ENV: development
+  LOG_LEVEL: INFO
+  POSTGRES_DSN: postgresql+psycopg://metamorph:metamorph@postgres:5432/metamorph
+  REDIS_URL: redis://redis:6379/0
+  GRAPH_BACKEND: neo4j
+  NEO4J_URI: bolt://neo4j:7687
+  NEO4J_USER: neo4j
+  NEO4J_PASSWORD: change-me
+  S3_ENDPOINT: http://minio:9000
+  S3_ACCESS_KEY: minioadmin
+  S3_SECRET_KEY: minioadmin
+  S3_BUCKET: metamorph-documents
+  VECTOR_BACKEND: qdrant
+  QDRANT_URL: http://qdrant:6333
+  SEARCH_BACKEND: opensearch
+  OPENSEARCH_URL: http://opensearch:9200
+  WIKI_BACKEND: wikijs
+  WIKIJS_URL: http://wikijs:3000
+  WIKIJS_API_KEY: change-me
+  OIDC_ENABLED: "true"
+  OIDC_ISSUER_URL: http://keycloak:8080/realms/metamorph
+  OIDC_CLIENT_ID: metamorph
+  OIDC_CLIENT_SECRET: change-me
+  LLM_BACKEND: ollama
+  OLLAMA_BASE_URL: http://ollama:11434
+  VLLM_BASE_URL: http://vllm:8001
+  EMBEDDING_MODEL: multilingual-e5-large
+  RERANK_MODEL: bge-reranker-large
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+  TESSERACT_LANGS: eng+fra+ara
+
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: metamorph-api
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      <<: *common-env
+      API_PORT: 8000
+      SECRET_KEY: change-me-in-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      neo4j:
+        condition: service_started
+      minio:
+        condition: service_started
+      qdrant:
+        condition: service_started
+      opensearch:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+      - ./data/uploads:/app/uploads
+      - ./data/models:/models
+    ports:
+      - "8000:8000"
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: metamorph-worker
+    restart: unless-stopped
+    command: celery -A app.worker.celery_app worker --loglevel=INFO --concurrency=2
+    environment:
+      <<: *common-env
+      SECRET_KEY: change-me-in-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      neo4j:
+        condition: service_started
+      minio:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+      - ./data/uploads:/app/uploads
+      - ./data/models:/models
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: metamorph-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+      VITE_WIKI_BASE_URL: http://localhost:3000
+    depends_on:
+      - api
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: metamorph-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: metamorph
+      POSTGRES_PASSWORD: metamorph
+      POSTGRES_DB: metamorph
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metamorph -d metamorph"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/initdb:/docker-entrypoint-initdb.d
+
+  redis:
+    image: redis:7-alpine
+    container_name: metamorph-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  neo4j:
+    image: neo4j:5.26-community
+    container_name: metamorph-neo4j
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/change-me
+      NEO4J_server_memory_heap_initial__size: 1G
+      NEO4J_server_memory_heap_max__size: 2G
+      NEO4J_server_memory_pagecache_size: 1G
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+      NEO4J_dbms_security_procedures_allowlist: apoc.*
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_plugins:/plugins
+
+  minio:
+    image: minio/minio:latest
+    container_name: metamorph-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: metamorph-minio-init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set local http://minio:9000 minioadmin minioadmin;
+      mc mb -p local/metamorph-documents || true;
+      mc anonymous set private local/metamorph-documents;
+      exit 0;
+      "
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: metamorph-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  opensearch:
+    image: opensearchproject/opensearch:2.19.1
+    container_name: metamorph-opensearch
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      plugins.security.disabled: "true"
+      OPENSEARCH_JAVA_OPTS: -Xms1g -Xmx1g
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.19.1
+    container_name: metamorph-opensearch-dashboards
+    restart: unless-stopped
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
+    depends_on:
+      - opensearch
+    ports:
+      - "5601:5601"
+
+  wikijs:
+    image: ghcr.io/requarks/wiki:2
+    container_name: metamorph-wikijs
+    restart: unless-stopped
+    environment:
+      DB_TYPE: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: metamorph
+      DB_PASS: metamorph
+      DB_NAME: metamorph
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: metamorph-keycloak
+    restart: unless-stopped
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/metamorph
+      KC_DB_USERNAME: metamorph
+      KC_DB_PASSWORD: metamorph
+      KC_HEALTH_ENABLED: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: metamorph-ollama
+    restart: unless-stopped
+    profiles: ["local-llm"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: metamorph-vllm
+    restart: unless-stopped
+    profiles: ["gpu-llm"]
+    ports:
+      - "8001:8000"
+    environment:
+      HUGGING_FACE_HUB_TOKEN: ""
+    command: >
+      --model Qwen/Qwen2.5-7B-Instruct
+      --served-model-name metamorph-local-llm
+      --dtype auto
+      --max-model-len 16384
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: metamorph-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: metamorph-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana-dashboards:/var/lib/grafana/dashboards
+    ports:
+      - "3100:3000"
+    depends_on:
+      - prometheus
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: metamorph-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./infrastructure/monitoring/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+
+volumes:
+  postgres_data:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_plugins:
+  minio_data:
+  qdrant_data:
+  opensearch_data:
+  ollama_data:
+  prometheus_data:
+  grafana_data:

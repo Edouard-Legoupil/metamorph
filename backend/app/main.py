@@ -11,6 +11,7 @@ from app.api.v1.endpoints.block_preview import router as block_preview_router
 from app.api.v1.endpoints.trust_routing import router as trust_routing_router
 from app.api.v1.endpoints.delta_alerts import router as delta_alerts_router
 from app.api.v1.endpoints.auth import router as auth_router
+from app.api.v1.endpoints.blocks_card import router as blocks_card_router
 
 app = FastAPI()
 app.include_router(triplets.router, prefix="/api/v1/triplets")
@@ -22,6 +23,7 @@ app.include_router(block_preview_router, prefix="/api/v1/blocks")
 app.include_router(trust_routing_router, prefix="/api/v1/trust")
 app.include_router(delta_alerts_router, prefix="/api/v1/alerts")
 app.include_router(auth_router, prefix="/api/v1/auth")
+app.include_router(blocks_card_router, prefix="/api/v1/blocks")
 
 # Must be LAST: Serve React build at /
 FRONTEND_BUILD_DIR = os.getenv(

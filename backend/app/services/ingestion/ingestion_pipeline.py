@@ -100,4 +100,36 @@ def process_document(file_path: str) -> Dict[str, Any]:
         }
     )
     print(f"Queued {record['doc_id']} for triplet extraction.")
+
+    # --- Claim extraction pipeline integration ---
+    from app.services.extraction.triplet_extractor import extract_triplets_from_markdown
+
+    with open(extraction["markdown_path"], "r") as mdfile:
+        markdown_content = mdfile.read()
+    extraction_results = extract_triplets_from_markdown(
+        markdown_content, doc_type=metadata["filetype"], doc_id=record["doc_id"]
+    )
+    triplets = extraction_results["triplets"]
+    print(f"Extracted {len(triplets)} claims/triplets.")
+
+    # --- Delta engine conflict/reconciliation routing ---
+    from app.services.reconciliation.delta_engine import delta_engine
+
+    accepted_claims = []
+    for triplet in triplets:
+        # TODO: Existing triplets should come from graph/DB, stub as empty for now
+        delta_result = delta_engine(triplet, existing_triplets=[])
+        print(
+            f"Delta engine outcome: {delta_result['outcome']} -> {delta_result['action']}"
+        )
+        if (
+            delta_result["outcome"] == "EXPANSION"
+            or delta_result["outcome"] == "CONFIRMATION"
+        ):
+            accepted_claims.append(triplet)
+        # Contradiction logic: could queue for curator review, shadow update, etc
+        # Placeholder: skip for now
+
+    record["accepted_claims"] = accepted_claims
+    record["all_triplets"] = triplets
     return record
