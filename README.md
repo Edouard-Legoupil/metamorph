@@ -20,22 +20,22 @@ The pipeline has three stages.
 
 **Knowledge Reconciliation.** As new documents arrive, the graph detects what has changed, what confirms existing knowledge, and what contradicts it. Contradictions are surfaced explicitly rather than silently overwritten. A delta alerting system notifies human curators when new data affects existing knowledge assets.
 
-**Human-Curated Knowledge Cards.** The primary output of the system is a set of six structured Knowledge Cards — the single curated layer between the graph and any downstream use. No proposal is generated against a card that has not been approved by a human curator. The graph assists curation by pre-populating drafts; human judgment provides interpretation, synthesis, and sign-off.
+**Human-Curated Knowledge Cards.** The primary output of the system is a wiki showing key knowledge entitities and organised through six structured Knowledge Cards Templates — the single curated layer between the graph and any downstream use. The graph assists curation by pre-populating drafts; human judgment provides interpretation, synthesis, and sign-off.
 
 ---
 
 ## The Resulting Knowledge Cards
 
-Six card types, each scoped to a specific intelligence and agentic interaction needs:
+Six card types templates, each scoped to a specific intelligence and agentic interaction needs:
 
 | Card | Answers |
 |---|---|
-| **KC-1 Donor Intelligence** | Who is this funder, how do they think, what does the current instrument require |
-| **KC-2 Field Context** | What is the situation, who is affected, what are the needs and risks |
-| **KC-3 Outcome Evidence** | What interventions work, at what cost, measured how, implemented how |
-| **KC-4 Partner Capacity** | Can this partner deliver, at this scale, with acceptable risk |
-| **KC-5 Institutional Track Record** | Why UNHCR — credibility, past performance, relationship capital |
-| **KC-6 Crisis Political Economy** | Why this crisis, why now, what is the strategic framing |
+| **KC-1 Donor Intelligence** | For each donor: Who is this funder, how do they think, what does the current instrument require |
+| **KC-2 Field Context** | For each field context: What is the situation, who is affected, what are the needs and risks |
+| **KC-3 Outcome Evidence** | For each outcome: What interventions work, at what cost, measured how, implemented how |
+| **KC-4 Partner Capacity** | For each partner: Can this partner deliver, at this scale, with acceptable risk |
+| **KC-5 Institutional Track Record** | For each operation: Why UNHCR — credibility, past performance, relationship capital |
+| **KC-6 Crisis Political Economy** | For each crisis: Why this crisis, why now, what is the strategic framing |
 
 Each card carries a validity period. Expired cards revert to draft automatically. Proposals cannot be generated against an expired or unapproved card.
 

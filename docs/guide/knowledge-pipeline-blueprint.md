@@ -1,321 +1,588 @@
+
 # Knowledge Pipeline Blueprint
+## From Document-Centric Storage to a Living, Evidence-Backed Knowledge System
 
-## From Document-Centric Storage to a Living World Brain
-
-**Version:** 1.0 — Structured Technical Specification  
-**Purpose:** LLM-ready platform build specification  
-**Architecture:** Three-component pipeline — Ingestion → Reconciliation → Orchestration
+**Version:** 1.0 — Technical Specification  
+**Purpose:** Build specification for an open-source, cloud-agnostic, agent-ready knowledge platform  
+**Architecture:** Layered pipeline — Source Registration → Normalization → Claims & Evidence → Reconciliation → Knowledge Graph → Wiki/Cards → Hybrid Retrieval → Agent Context Assembly
 
 ---
 
 ## Table of Contents
-
 1. [System Overview](#1-system-overview)
-2. [Component 1: Ingestion & Extraction](#2-component-1-ingestion--extraction)
-3. [Component 2: Knowledge Reconciliation](#3-component-2-knowledge-reconciliation)
-4. [Component 3: Orchestration & Curation](#4-component-3-orchestration--curation)
-5. [Data Models & Schemas](#5-data-models--schemas)
-6. [Interface Specifications](#6-interface-specifications)
-7. [Trust & Routing Logic](#7-trust--routing-logic)
+2. [Architecture Principles](#2-architecture-principles)
+3. [End-to-End Pipeline](#3-end-to-end-pipeline)
+4. [Component A: Source Registration & Document Normalization](#4-component-a-source-registration--document-normalization)
+5. [Component B: Claims, Evidence, and Entity Resolution](#5-component-b-claims-evidence-and-entity-resolution)
+6. [Component C: Reconciliation, Contradictions, and Trust Routing](#6-component-c-reconciliation-contradictions-and-trust-routing)
+7. [Component D: Knowledge Graph and Canonical Facts](#7-component-d-knowledge-graph-and-canonical-facts)
+8. [Component E: Wiki, Knowledge Cards, and Human Curation](#8-component-e-wiki-knowledge-cards-and-human-curation)
+9. [Component F: Search, Retrieval, and Agent Interfaces](#9-component-f-search-retrieval-and-agent-interfaces)
+10. [Data Models & Schemas](#10-data-models--schemas)
+11. [Interfaces & UX Requirements](#11-interfaces--ux-requirements)
+12. [Trust, Verification, and Governance Logic](#12-trust-verification-and-governance-logic)
+13. [Open-Source & Cloud-Agnostic Deployment Constraints](#13-open-source--cloud-agnostic-deployment-constraints)
+14. [Success Criteria](#14-success-criteria)
 
 ---
 
 ## 1. System Overview
 
 ### 1.1 Core Transformation
+The platform evolves knowledge through **seven successive operational layers**:
 
-The platform evolves knowledge through three successive representations:
-
-| Stage | Model | Description | Mode |
+| Layer | Representation | Description | Primary Mode |
 |---|---|---|---|
-| **Stage 1** | Document-Centric | Collection of PDFs with human-in-the-loop tagging | Passive storage |
-| **Stage 2** | Entity-Centric | Knowledge graph connecting entities via enriched metadata | Active linking |
-| **Stage 3** | User-Centric | Wiki pages consolidating information, surfacing confirmation and disagreement | Active synthesis |
+| **Layer 0** | Source of Record | Original documents, immutable metadata, file lineage | Controlled storage |
+| **Layer 1** | Normalized Documents | Markdown, sections, chunks, tables, layout metadata | Structured parsing |
+| **Layer 2** | Claims & Evidence | Atomic claims linked to exact evidence spans and provenance | Auditable extraction |
+| **Layer 3** | Reconciled Knowledge | Accepted, disputed, shadow, and superseded facts | Controlled reconciliation |
+| **Layer 4** | Knowledge Graph | Canonical entities, relations, events, timelines, conflict links | Active linking |
+| **Layer 5** | Wiki / Knowledge Cards | Human-friendly pages generated from graph + claims + evidence | Active synthesis |
+| **Layer 6** | Retrieval & Agent Context | Hybrid retrieval and compact context packs for humans and agents | Query-aware reasoning |
 
 ### 1.2 Operating Principle
-
-The system operates as a **listener**: as soon as a document is published, the pipeline triggers automatically. This shifts the organisation from *information storage* (passive) to *intelligence synthesis* (active).
+The system operates as a **listener and continuously updating curator**: as soon as a new document is published or uploaded, the pipeline triggers automatically, processes the document into normalized artifacts, extracts evidence-backed claims, reconciles them against accepted knowledge, and updates the relevant wiki pages, knowledge cards, search indexes, and agent interfaces according to trust-routing rules.
 
 ### 1.3 Key Design Challenge
+The knowledge graph alone is not the single source of truth, nor the wiki a canonical store. Instead, the platform distinguishes clearly between:
 
-A knowledge graph is a **cloud** of interconnected data. A wiki is a **linear** series of human-readable pages. To bridge the two, the platform uses:
+- **Raw source documents**
+- **Normalized Markdown and chunk structure**
+- **Atomic claims with evidence and provenance**
+- **Canonical facts and graph materialization**
+- **Wiki pages and knowledge cards as curated views**
+- **Hybrid retrieval artifacts for downstream agents**
 
-- **Template-Based Synthesis** for structured wiki generation from graph data
-- **Dynamic Aggregation** for real-time page assembly from latest approved sources
-- **Knowledge Delta Analysis** to detect and surface what has changed between document versions
+### 1.4 Design Thesis
+The goal is **not** to build a large PDF vector store. The goal is to build a **reliable, maintainable, explainable, evidence-backed knowledge layer** that is easier for people to curate and safer for agentic systems to consume.
 
-### 1.4 Downstream Outputs
-
-- **Fine-tuning dataset:** Auto-generated high-quality training data for domain-specific LLMs, produced from validated knowledge deltas
-- **MCP endpoint:** The knowledge graph is exposed as a Model Context Protocol server, making it available to any agentic system
+### 1.5 Downstream Outputs
+- **Curated wiki and knowledge-card layer:** the primary operational interface for humans
+- **Hybrid retrieval layer:** graph + lexical + vector + wiki-block retrieval
+- **Agent context endpoint:** compact, cited context packs for downstream agents
+- **MCP endpoint:** Model Context Protocol server exposing trusted knowledge resources and tools
+- **Evaluation artifacts:** datasets for measuring extraction, resolution, contradiction detection, and retrieval quality
+- **Optional model training datasets:** only from validated or curator-approved knowledge artifacts
 
 ---
 
-## 2. Component 1: Ingestion & Extraction
+## 2. Architecture Principles
 
-### 2.1 Data Model — Labeled Property Graph (LPG)
+### 2.1 Claims, Not Raw Triplets, Are the Critical Unit
+Triplets remain useful, but **triplets alone are insufficient** for a high-trust knowledge system. The critical operational unit is the **claim**, which must include:
 
-All extracted knowledge is stored in a **Labeled Property Graph**. This is the canonical internal representation. See other humanitarian-knowledge-ontology.md for the full ontology.
+- subject / predicate / object or typed value
+- qualifiers
+- temporal scope
+- evidence span(s)
+- document provenance
+- extraction metadata
+- confidence scores
+- resolution state
+- review / verification state
 
+### 2.2 Provenance Is Mandatory
+Every claim, fact, wiki block, and agent response must be traceable to:
 
+- original source document
+- document version / checksum
+- page / section / chunk / span reference
+- extraction method and version
+- extraction timestamp
+- confidence scores
+- verification status
+- curator decision history where applicable
 
-### 2.2 Content Extraction Pipeline
+### 2.3 Time Is a First-Class Concept
+Many apparent contradictions are actually temporal updates. The data model must support:
 
-#### 2.2.1 Routing Logic
+- `observed_at`
+- `valid_from`
+- `valid_to`
+- `asserted_at`
+- `supersedes`
+- explicit fact and claim status values
 
+### 2.4 The Wiki Is a Curated View, Not the Canonical Store
+Wiki pages and knowledge cards are **generated and curated projections** over the graph, claims, and evidence layers. They must never become the only storage location for accepted knowledge.
+
+### 2.5 The Graph Is a Backbone, Not the Entire Truth Layer
+The graph stores canonicalized, traversable knowledge. However, the **auditable basis** for that knowledge remains the claims and evidence layers.
+
+### 2.6 Retrieval Must Remain Hybrid
+The system must combine:
+
+- **Lexical retrieval** for exact recall and identifiers
+- **Vector retrieval** for semantic recall
+- **Graph retrieval** for entity-centric and multi-hop reasoning
+- **Wiki-block retrieval** for concise, curated summaries
+
+### 2.7 Contradiction Handling Is a Workflow, Not a Boolean
+Contradictions cannot be detected reliably with a single rule. The system must combine:
+
+- entity resolution quality
+- normalization of values and units
+- temporal scoping
+- source weighting
+- ontology-aware rules
+- human review for ambiguous or high-impact cases
+
+### 2.8 Curation Must Happen in Context
+The system should avoid pushing users into a separate ingestion-only admin console for routine decisions. Curation should happen primarily:
+
+- inside wiki pages
+- inside knowledge cards
+- inside lightweight validation queues
+- with evidence and provenance available inline or one click away
+
+---
+
+## 3. End-to-End Pipeline
+
+```text
+Source Document
+  → file registration + checksum + version lineage
+  → layout analysis + parser routing
+  → Markdown normalization + structure extraction
+  → semantic / structure-aware chunking
+  → claim extraction + evidence linking
+  → entity resolution + canonicalization
+  → reconciliation against accepted facts
+      ├─ confirmation
+      ├─ expansion
+      ├─ update / supersession
+      ├─ contradiction
+      └─ insufficient evidence
+  → trust routing
+      ├─ auto-accept
+      ├─ shadow / pending
+      └─ human escalation
+  → graph materialization of accepted facts
+  → wiki / knowledge-card block regeneration
+  → lexical / vector / graph retrieval refresh
+  → agent context assembly and MCP exposure
 ```
-IF document layout is standard (prose, headings, simple tables):
-    → route to Docling
-ELSE IF document has high table density OR non-standard layout:
-    → route to MinerU
+
+---
+
+## 4. Component A: Source Registration & Document Normalization
+
+### 4.1 Purpose
+Transform heterogeneous source files into **normalized, evidence-ready Markdown artifacts** while preserving traceability to the original source.
+
+### 4.2 Source-of-Record Model
+The source-of-record layer stores:
+
+- original files (PDF, DOCX, HTML, Markdown, optionally spreadsheets or email exports)
+- immutable metadata
+- checksums
+- lineage between versions
+- source URI where applicable
+- access controls and storage location
+
+### 4.3 Parsing Strategy
+All downstream extraction must be **Markdown-first**.
+
+#### 4.3.1 Routing Logic
+```text
+IF document layout is standard (prose, headings, simple tables)
+  → route to Docling
+ELSE IF document has high table density, multi-column layout, or high layout complexity
+  → route to MinerU or equivalent escalation parser
+ELSE IF text extraction is poor or scan-heavy
+  → OCR fallback + normalization pipeline
 ```
 
-#### 2.2.2 Parser Specifications
+#### 4.3.2 Parser Specifications
 
 | Parser | Use Case | Output |
 |---|---|---|
-| **Docling** | Standard documents | Markdown preserving table structures and heading hierarchies |
-| **MinerU** | Complex layouts, dense tables, multi-column, embedded charts | Markdown with structural annotations |
+| **Docling** | Standard reports, policies, briefs, situation updates | Markdown preserving heading hierarchy and tables |
+| **MinerU** | Complex layouts, dense tables, multi-column pages, embedded charts | Markdown with structural annotations |
+| **OCR fallback** | Scan-heavy or image-first documents | Recoverable text plus confidence and layout flags |
 
-**Invariant:** All output from both parsers is **Markdown-first**. This ensures a consistent format for downstream embedding and NLP.
+### 4.4 Layout Analysis Signals
+Before routing, the system evaluates:
 
-### 2.3 Atomic Extraction — Semantic Triplets
+- page count
+- text density
+- scanned-page ratio
+- table density
+- multi-column probability
+- image / figure density
+- estimated parsing complexity score
 
-#### 2.3.1 Definition
+### 4.5 Quality Checks
+A parser is **not considered successful** if the resulting Markdown suffers catastrophic loss. Quality checks must flag:
 
-Each parsed document is decomposed into **Semantic Triplets**:
+- empty or near-empty sections
+- broken reading order
+- repeated OCR noise
+- suspiciously low text yield
+- missing tables where layout suggests tables exist
+- page/section mismatches
 
-```
-Subject → Predicate → Object
-```
+### 4.6 Output Artifacts
+Each processed document produces:
 
-Triplets are the atomic unit of the knowledge graph. They enable:
-- Contradiction detection (same subject + predicate, different object across documents)
-- Deduplication (exact match triplets are collapsed)
-- Versioning (timestamp and source document attached to each triplet)
-
-#### 2.3.2 Triplet Schema
-
-```json
-{
-  "subject": { "label": "NodeType", "id": "string", "name": "string" },
-  "predicate": "EDGE_TYPE",
-  "object": { "label": "NodeType", "id": "string", "name": "string" },
-  "metadata": {
-    "source_document_id": "string",
-    "source_document_title": "string",
-    "extracted_at": "ISO8601 timestamp",
-    "extraction_confidence": 0.0–1.0,
-    "page_reference": "integer",
-    "raw_text_snippet": "string"
-  }
-}
-```
-
-#### 2.3.3 Example Triplets
-
-```
-(Camp Alpha) -[HAS_SHELTER_RATIO]-> (1:20)
-  source: Emergency Plan 2025, p.14, confidence: 0.97
-
-(Global Protection SOP) -[APPLIES_TO]-> (All UNHCR Operations)
-  source: HQ Policy 2024, p.2, confidence: 0.99
-
-(SOP v3) -[SUPERSEDES]-> (SOP v2)
-  source: Policy Update Circular, p.1, confidence: 0.95
-```
-
-#### 2.3.4 Entity Resolution
-
-Use **GLinker** (or equivalent entity disambiguation tool) to:
-- Map extracted entity mentions to canonical graph nodes
-- Detect new entities not yet in the graph
-- Flag ambiguous entity references for human review
+- normalized Markdown
+- section tree
+- chunk set
+- table artifacts where relevant
+- layout metadata
+- OCR metadata where used
+- parsing quality report
 
 ---
 
-## 3. Component 2: Knowledge Reconciliation
+## 5. Component B: Claims, Evidence, and Entity Resolution
 
-### 3.1 Purpose
+### 5.1 Purpose
+Convert normalized Markdown into **atomic claims** linked to evidence spans and candidate canonical entities.
 
-Transform a messy, growing collection of parsed triplets into a **single source of truth**, solving two distinct problems:
+### 5.2 Atomic Extraction Model
+Each parsed document is decomposed into **claims**, which may later be rendered as triplets or attributes in the graph.
 
-| Problem | Definition | Solution |
-|---|---|---|
-| **Deduplication** | Prevent the graph from accumulating redundant or conflicting nodes | Delta Engine with triplet comparison |
-| **Transcription** | Convert the graph back into clean, human-readable wiki pages | Template-Based Synthesis |
+#### 5.2.1 Claim Categories
+Claims may represent:
 
-### 3.2 Delta Engine
+- entity typing or existence
+- relation assertions
+- quantitative values
+- qualitative classifications
+- events
+- policy / normative statements
+- summary statements (explicitly marked as summaries)
 
-When a new document is parsed into triplets, the engine runs a comparison against existing graph state. Each triplet resolves to one of three outcomes:
-
+#### 5.2.2 Claim Schema (Conceptual)
+```json
+{
+  "claim_id": "uuid",
+  "claim_type": "relation|attribute|event|classification|summary_statement",
+  "subject": { "label": "NodeType", "id": "string|null", "name": "string" },
+  "predicate": "EDGE_TYPE_OR_ATTRIBUTE",
+  "object": { "label": "NodeType", "id": "string|null", "name": "string|null" },
+  "value": null,
+  "qualifiers": {},
+  "temporal": {
+    "observed_at": null,
+    "valid_from": null,
+    "valid_to": null
+  },
+  "provenance": {
+    "source_document_id": "string",
+    "source_document_title": "string",
+    "document_version": "sha256-or-version-id",
+    "page_reference": 0,
+    "section_path": ["Heading 1", "Heading 2"],
+    "chunk_id": "string",
+    "span_start": 0,
+    "span_end": 0,
+    "raw_text_snippet": "string",
+    "extracted_at": "ISO8601 timestamp",
+    "extractor_name": "string",
+    "extractor_version": "string"
+  },
+  "confidence": {
+    "claim_confidence": 0.0,
+    "entity_resolution_confidence": 0.0,
+    "temporal_confidence": 0.0
+  },
+  "status": "PROPOSED"
+}
 ```
-NEW TRIPLET → outcome: EXPANSION
-  Action: Add new node/edge to graph. Flag as 🤖 machine-generated.
 
-EXISTING TRIPLET, SAME VALUE → outcome: CONFIRMATION
-  Action: Increment source count. No wiki change.
+### 5.3 Evidence Layer
+Claims must link to one or more **evidence spans**. The evidence layer stores:
 
-EXISTING TRIPLET, DIFFERENT VALUE → outcome: CONTRADICTION
-  Action: Do NOT overwrite. Create a ConflictRecord. Route to human review.
+- exact or approximate text span
+- document and chunk references
+- page number
+- capture method
+- evidence confidence if approximate
+
+### 5.4 Entity Resolution
+Use **GLinker or equivalent entity disambiguation/resolution tooling** to:
+
+- map mentions to canonical entities
+- score candidate matches
+- register new entities when confidence is sufficient and policy allows
+- preserve unresolved or ambiguous mentions when confidence is insufficient
+
+### 5.5 Resolution Rules
+- Do **not** force canonicalization when ambiguity remains high
+- Preserve aliases and language variants
+- Maintain merge / split history for canonical entities
+- Record the confidence and features used for resolution
+
+---
+
+## 6. Component C: Reconciliation, Contradictions, and Trust Routing
+
+### 6.1 Purpose
+Transform a growing collection of claims into a **controlled and explainable source of truth** by comparing incoming claims against accepted facts and routing differences appropriately.
+
+### 6.2 Delta Engine Outcomes
+When a new claim arrives, the reconciliation engine resolves it to one of the following outcomes:
+
+```text
+NEW CLAIM, NO RELEVANT FACT → EXPANSION
+Action: Candidate for new fact creation
+
+MATCHING CLAIM, SAME MEANING / VALUE → CONFIRMATION
+Action: Increase support/source count. No visible content change required
+
+MATCHING CLAIM, NEWER OR TIME-SCOPED DIFFERENCE → UPDATE / SUPERSESSION
+Action: Create supersession candidate, do not silently overwrite
+
+MATCHING CLAIM, DIFFERENT VALUE / MEANING → CONTRADICTION
+Action: Create ConflictRecord and route by severity
+
+LOW EVIDENCE OR LOW RESOLUTION QUALITY → INSUFFICIENT_EVIDENCE
+Action: Queue for review without materializing as accepted knowledge
 ```
 
-#### 3.2.1 ConflictRecord Schema
+### 6.3 Contradiction Detection Stack
+Contradictions are detected using a combination of:
 
+- subject / predicate / object matching
+- entity resolution confidence
+- value normalization (units, dates, currencies, identifiers)
+- temporal reasoning
+- source trust weighting
+- ontology-aware conflict rules
+- semantic similarity / entailment checks where appropriate
+
+### 6.4 Conflict Types
+| Conflict Type | Description |
+|---|---|
+| **QUANTITATIVE** | Numeric or metric disagreement |
+| **NORMATIVE** | Policy, legal, or obligation disagreement |
+| **CONTACT** | Named person / contact detail disagreement |
+| **STRUCTURAL** | Hierarchy, ownership, governance, or supersession mismatch |
+| **TEMPORAL** | Conflicts that may be explainable as time-bounded changes |
+| **CLASSIFICATION** | Category or typing disagreement |
+
+### 6.5 ConflictRecord Schema
 ```json
 {
   "conflict_id": "uuid",
   "subject": "entity_id",
-  "predicate": "EDGE_TYPE",
+  "predicate": "EDGE_TYPE_OR_ATTRIBUTE",
   "existing_value": { "object": "...", "source": "document_id", "date": "..." },
   "incoming_value": { "object": "...", "source": "document_id", "date": "..." },
-  "conflict_type": "QUANTITATIVE | NORMATIVE | CONTACT | STRUCTURAL",
-  "severity": "CRITICAL | MINOR",
-  "status": "UNRESOLVED | RESOLVED | ACKNOWLEDGED",
-  "assigned_to_tier": 1 | 2 | 3
+  "conflict_type": "QUANTITATIVE|NORMATIVE|CONTACT|STRUCTURAL|TEMPORAL|CLASSIFICATION",
+  "severity": "CRITICAL|MINOR",
+  "status": "UNRESOLVED|UNDER_REVIEW|RESOLVED|ACKNOWLEDGED|DISMISSED",
+  "assigned_to_tier": 1,
+  "rationale": "string",
+  "candidate_resolution": "string|null"
 }
 ```
 
-### 3.3 Wiki Structure
+### 6.6 Trust Routing Outcomes
+The routing decision depends on:
 
-The wiki is the human-readable projection of the knowledge graph. It is composed of three functional layers.
+- extraction confidence
+- entity resolution confidence
+- contradiction type and severity
+- source trust class
+- ontology/domain policy
 
-#### 3.3.1 The Living Knowledge Layer
+#### 6.6.1 Routing Tiers
+| Tier | Label | Trigger Condition | Action |
+|---|---|---|---|
+| 🟢 **Auto-Accept** | Green | High confidence, no contradiction, eligible schema/domain | Materialize accepted fact, regenerate graph/wiki, mark machine-accepted |
+| 🟡 **Shadow Update** | Yellow | Moderate confidence, low-risk delta, soft contradiction, or ambiguous but plausible update | Show pending or shadow state where policy allows, queue for review |
+| 🔴 **Human Escalation** | Red | Low confidence, strong contradiction, new sensitive entity, policy/legal/protection impact | Block automated materialization, open review task |
 
-- Wiki pages are assembled from **Blocks**, where each Block is a projection of one or more graph nodes/triplets
-- When a new publication is approved and its triplets validated, the relevant Block updates automatically
-- Users never read raw PDFs; they read synthesised, sourced, up-to-date wiki pages
+### 6.7 Important Rule
+The system must **never silently overwrite accepted knowledge**. All updates to accepted knowledge must pass through reconciliation and, where needed, review.
 
-**Page assembly rule:** Each Block declares a graph query. The wiki engine runs that query at render time and populates the Block with the latest approved data.
+---
 
-#### 3.3.2 The Conflict Resolution Layer
+## 7. Component D: Knowledge Graph and Canonical Facts
 
-When a `ConflictRecord` exists for a given triplet and is unresolved, the wiki **displays both truths**:
+### 7.1 Purpose
+Represent reconciled knowledge in a **versioned, ontology-guided graph** suitable for traversal, synthesis, and downstream agentic reasoning.
 
-```
-⚠️  CONFLICT DETECTED
+### 7.2 Data Model — Labeled Property Graph (LPG)
+The graph stores:
 
+- canonical entities
+- aliases
+- accepted facts
+- typed relations
+- events
+- document references
+- contradiction links
+- supersession links
+- knowledge-card anchors where useful
+
+### 7.3 Canonical Fact Model
+A **canonical fact** is the accepted, graph-materialized form of one or more supporting claims. It must retain:
+
+- canonical subject and object or value
+- predicate / attribute
+- qualifiers
+- temporal scope
+- source count
+- review state
+- link back to supporting claims and source documents
+
+### 7.4 Graph Materialization Rules
+- Only **accepted** or explicitly **shadow-visible** knowledge may be rendered into graph-backed user surfaces
+- Keep links to supporting claims and documents
+- Preserve `SUPERSEDES` edges where applicable
+- Preserve unresolved contradictions separately instead of collapsing them
+
+### 7.5 Graph Use Cases
+The graph is used for:
+
+- entity neighborhood retrieval
+- multi-hop reasoning
+- timeline synthesis
+- graph-backed card sections
+- community or thematic summarization
+- contradiction neighborhood exploration
+
+---
+
+## 8. Component E: Wiki, Knowledge Cards, and Human Curation
+
+### 8.1 Purpose
+Convert graph-backed knowledge into **human-readable, evidence-backed, maintainable wiki pages and knowledge cards**.
+
+### 8.2 Wiki Structure
+The wiki is the human-readable projection of the knowledge system and is composed of three functional layers.
+
+#### 8.2.1 Living Knowledge Layer
+- Wiki pages are assembled from **Blocks**, where each block is a projection over graph facts, claims, evidence, or a combination of these
+- Blocks are refreshed from the latest accepted state and may display pending or disputed content when policy allows
+- Users should rarely need to consult raw PDFs first; they should be able to start from the wiki and drill down into evidence only when needed
+
+**Page assembly rule:** Each block declares one or more source queries (graph, claim, evidence, retrieval), and the wiki engine uses these at render time or refresh time.
+
+#### 8.2.2 Conflict Resolution Layer
+When an unresolved `ConflictRecord` exists, the wiki must **display both positions with context**, not silently hide one. For example:
+
+```text
+⚠️ CONFLICT DETECTED
 Global Policy (HQ SOP 2024) states: Shelter Ratio = 1:20
-Regional Guidance (Field Report Q3 2025) states: Shelter Ratio = 1:15 
-                                                  [for Cox's Bazar operations]
-
+Regional Guidance (Field Report Q3 2025) states: Shelter Ratio = 1:15
+Scope note: Regional guidance applies to Cox's Bazar operations only
 Status: Pending human review — assigned to Regional Focal Point
 ```
 
-This prevents silent overwriting of knowledge and makes disagreement visible to users.
+#### 8.2.3 Deep Reference Trace
+Every wiki paragraph or block must support a **View Original / Show Evidence** affordance:
 
-#### 3.3.3 The Deep Reference Trace
+- exact Markdown snippet from the normalized source
+- direct link to original PDF or source file
+- document title and version
+- page number and section path
+- claim/fact identifiers
+- confidence score and extraction date
 
-Every paragraph on every wiki page exposes a **"View Original"** affordance:
+### 8.3 Knowledge Cards
+Knowledge cards are structured page types built from templates. Each card section:
 
-- Clicking opens the exact Markdown snippet from the source file
-- Includes a direct link to the original PDF hosted on the document server
-- Triplet metadata (confidence score, extraction date, page number) is visible
+- declares a retrieval or graph query
+- can mix machine-refreshable and editor-curated content
+- must preserve provenance and freshness information
+- may include contradiction banners and pending badges
 
----
-
-## 4. Component 3: Orchestration & Curation
-
-### 4.1 Design Principle — Uncertainty-Driven Exception Model
-
-The goal is to move away from "Review Everything" toward a model where:
-- The AI handles **90%** of routine knowledge updates autonomously
-- Humans are only engaged for the **10%** of high-stakes or ambiguous cases
-
-### 4.2 Three-Tier Routing System
-
-The routing decision is based on the AI's **self-assessed extraction confidence** and the **type of knowledge change detected**.
-
-#### 4.2.1 Routing Tiers
-
-| Tier | Label | Trigger Condition | Action |
-|---|---|---|---|
-| 🟢 **Auto-Accept** | Green | Confidence ≥ 95% AND entity resolved via GLinker AND data matches expected schema | Immediately expand or update Graph + Wiki. Add 🤖 icon. |
-| 🟡 **Shadow Update** | Yellow | Confidence 70–95% OR minor delta (e.g. statistic changed ≤ 10%) | Update Wiki with "⚠️ Pending Verification" tag. Visible to users. Enters async review queue. |
-| 🔴 **Human Escalation** | Red | Confidence < 70% OR direct policy contradiction OR new entity discovery | Do not update. Enter Curation Queue. Assign to appropriate human tier. |
-
-#### 4.2.2 Conflict Severity Classification
-
-Use the following rules to determine whether a contradiction is **CRITICAL** (routes Red) or **MINOR** (routes Yellow):
-
-| Knowledge Type | Critical Trigger | Minor Trigger |
-|---|---|---|
-| **Quantitative** | Change > 10% in a safety-relevant metric | Change ≤ 10%, non-safety metric |
-| **Legal / Normative** | Change in keywords: "Mandatory," "Shall," "Right," "Prohibited" | Editorial rewording with same meaning |
-| **Contact / Operational** | Replacement of named individual or contact point | Update to secondary/supplementary contact |
-| **Structural** | New policy supersedes existing without explicit SUPERSEDES edge | Addition of new sub-clause |
-
-### 4.3 Anti-Bottleneck Mechanics
-
-#### 4.3.1 Shadow Update Window
-
-During the human review wait time for Yellow-tier items, the wiki displays the new information with a "Pending Verification" tag. Knowledge is available but marked for caution. This prevents curation from blocking information access.
-
-#### 4.3.2 Implicit Verification (Community Trust Score)
-
-```
-IF user reads a wiki page containing 🤖 auto-generated content
-AND does not flag it within [configurable window, default: 14 days]
-THEN increment CommunityTrustScore for that content block
-
-IF CommunityTrustScore >= threshold [configurable, default: 3 unique readers]
-THEN auto-promote content status from "Machine-Generated" to "Community-Verified"
-```
-
-### 4.4 Curation Interface Design
-
+### 8.4 Curation Interface Design
 Curation is broken into **micro-tasks** delivered through two channels.
 
-#### 4.4.1 Atomic Validation Cards
-
-Push a single decision card to the curator:
-
-```
+#### 8.4.1 Atomic Validation Cards
+```text
 📋 VALIDATION REQUIRED
-
 The 2026 Emergency Report states:
   Shelter Ratio in Camp X = 1:15
-
-Current Wiki value:
-  Shelter Ratio in Camp X = 1:20  [source: 2024 Field Assessment]
-
-[ ✅ Approve Update ]  [ ❌ Reject ]  [ ✏️ Edit ]
+Current accepted value:
+  Shelter Ratio in Camp X = 1:20 [source: 2024 Field Assessment]
+[ ✅ Approve Update ] [ ❌ Reject ] [ ✏️ Merge/Edit ] [ ⬆ Escalate ]
 ```
 
-#### 4.4.2 In-Wiki Curation
+#### 8.4.2 In-Wiki Curation
+Do not rely only on a separate curation dashboard. Embed curation into reading:
 
-Do not build a separate curation dashboard. Instead, embed curation directly into the wiki reading experience:
+- each machine-generated or pending block can expose **[Verify]**, **[Reject]**, **[Edit]**, or **[Resolve Conflict]** actions
+- verification should clear or update machine/pending markers according to policy
+- this transforms routine reading into lightweight quality control
 
-- Each auto-generated paragraph has a small **[Verify]** button
-- When a staff member reads a page and clicks Verify on a paragraph, the 🤖 flag clears
-- This transforms routine reading into passive verification
-
-### 4.5 Hierarchy of Trust — Tiered Curation
-
-```
+### 8.5 Hierarchy of Trust — Tiered Curation
+```text
 Tier 0 — AI
-  Scope: Bulk ingestion, auto-accept decisions, shadow updates
-  No human approval needed
+ Scope: Bulk ingestion, auto-accept decisions, shadow updates under policy
 
-Tier 1 — Field Data Focal Point
-  Scope: Operational data (demographics, camp statistics, local maps, contact updates)
-  Approves: Yellow-tier items in their geographic scope
+Tier 1 — Field Data / Domain Focal Point
+ Scope: Operational data, local entities, field statistics, contact updates
 
 Tier 2 — Regional Focal Point
-  Scope: Regional SOPs and strategy documents
-  Approves: Yellow and Red-tier items with regional normative implications
+ Scope: Regional SOPs, strategy documents, regional contradictions, sensitive cross-country issues
 
-Tier 3 — Thematic HQ
-  Scope: Global policy
-  Summoned only for: CRITICAL conflicts involving global policy contradictions
+Tier 3 — Thematic / HQ Authority
+ Scope: Global policy, legal/normative conflicts, high-impact governance decisions
 ```
 
 ---
 
-## 5. Data Models & Schemas
+## 9. Component F: Search, Retrieval, and Agent Interfaces
 
-### 5.1 Document Record
+### 9.1 Purpose
+Expose curated knowledge to both humans and agents without forcing them to reason over raw PDFs by default.
 
+### 9.2 Retrieval Modes
+The platform must support:
+
+- **Document search**
+- **Chunk search**
+- **Claim search**
+- **Entity search**
+- **Wiki-block search**
+- **Conflict search**
+- **Timeline / temporal retrieval**
+- **Graph neighborhood retrieval**
+
+### 9.3 Hybrid Retrieval Strategy
+The retrieval layer must combine:
+
+- lexical search over chunks, claims, wiki blocks, and entity names
+- vector search over chunks, claims, wiki blocks, and optionally entities
+- graph traversal for entity-centric and multi-hop tasks
+- wiki-block retrieval for concise, curated context
+- reranking / score fusion
+
+### 9.4 Context Assembly for Agents
+For downstream agentic use, the system must:
+
+1. classify the task or query intent
+2. choose the relevant retrieval mode(s)
+3. retrieve candidate evidence, claims, graph neighborhoods, and wiki sections
+4. rerank results by relevance, trust, and freshness
+5. assemble a compact context pack with citations and verification metadata
+
+### 9.5 MCP Endpoint (Agentic Access)
+The knowledge platform must be exposed as a **Model Context Protocol (MCP) server** with at minimum the following tools or equivalent capabilities:
+
+| Tool Name | Description |
+|---|---|
+| `get_entity` | Retrieve an entity profile with facts, edges, and verification state |
+| `search_knowledge` | Hybrid search over verified and pending knowledge artifacts |
+| `get_conflicts` | Retrieve unresolved or filtered ConflictRecords |
+| `get_document_claims` | Return all claims extracted from a given document |
+| `get_wiki_page` | Return rendered Markdown for a wiki page by ID or slug |
+| `get_evidence_bundle` | Return supporting evidence for a claim, fact, or wiki block |
+| `get_context_pack` | Build compact, cited context for a downstream task |
+
+---
+
+## 10. Data Models & Schemas
+
+### 10.1 Document Record
 ```json
 {
   "document_id": "uuid",
@@ -323,121 +590,223 @@ Tier 3 — Thematic HQ
   "source_url": "string",
   "published_date": "ISO8601",
   "ingested_at": "ISO8601",
-  "parser_used": "docling | mineru",
+  "document_version": "sha256-or-version-id",
+  "parser_used": "docling|mineru|ocr_fallback",
   "markdown_path": "string",
-  "status": "INGESTED | EXTRACTED | RECONCILED | ARCHIVED",
-  "triplet_count": "integer",
-  "conflict_count": "integer"
+  "status": "REGISTERED|INGESTED|NORMALIZED|EXTRACTED|RECONCILED|ARCHIVED",
+  "claim_count": 0,
+  "conflict_count": 0,
+  "quality_report": {}
 }
 ```
 
-### 5.2 Graph Node
-
+### 10.2 Canonical Entity
 ```json
 {
-  "node_id": "uuid",
-  "label": "Operation | Policy | Sector | PopulationGroup | Location | Document",
+  "entity_id": "uuid",
+  "label": "Operation|Policy|Sector|PopulationGroup|Location|Document|Organization|Person|Event",
   "name": "string",
   "aliases": ["string"],
   "created_at": "ISO8601",
   "last_updated": "ISO8601",
   "source_documents": ["document_id"],
-  "verification_status": "AUTO_ACCEPTED | PENDING | HUMAN_VERIFIED | COMMUNITY_VERIFIED",
-  "community_trust_score": "integer"
+  "verification_status": "AUTO_ACCEPTED|PENDING|HUMAN_VERIFIED|COMMUNITY_VERIFIED|DISPUTED",
+  "community_trust_score": 0,
+  "merge_history": []
 }
 ```
 
-### 5.3 Wiki Block
+### 10.3 Canonical Fact
+```json
+{
+  "canonical_fact_id": "uuid",
+  "subject_entity_id": "uuid",
+  "predicate": "EDGE_TYPE_OR_ATTRIBUTE",
+  "object_entity_id": "uuid|null",
+  "value": null,
+  "qualifiers": {},
+  "temporal": {
+    "valid_from": null,
+    "valid_to": null,
+    "observed_at": null
+  },
+  "verification_status": "AUTO_ACCEPTED|PENDING|HUMAN_VERIFIED|COMMUNITY_VERIFIED|DISPUTED",
+  "source_claim_ids": ["claim_id"],
+  "source_count": 0,
+  "supersedes_fact_id": null
+}
+```
 
+### 10.4 Wiki Block
 ```json
 {
   "block_id": "uuid",
   "page_id": "uuid",
-  "block_type": "FACT | STATISTIC | POLICY_SUMMARY | CONTACT | PROCEDURE",
-  "graph_query": "Cypher or equivalent query string",
+  "block_type": "FACT|STATISTIC|POLICY_SUMMARY|CONTACT|PROCEDURE|TIMELINE|ALERT",
+  "source_queries": ["Cypher or equivalent query string"],
   "rendered_content": "string (Markdown)",
-  "source_triplets": ["triplet_id"],
-  "verification_status": "🤖 AUTO | ⚠️ PENDING | ✅ VERIFIED",
+  "source_claim_ids": ["claim_id"],
+  "source_fact_ids": ["canonical_fact_id"],
+  "verification_status": "AUTO|PENDING|VERIFIED|DISPUTED",
   "last_rendered": "ISO8601",
+  "freshness": {"state": "fresh|stale|aging"},
   "active_conflict_ids": ["conflict_id"]
 }
 ```
 
 ---
 
-## 6. Interface Specifications
+## 11. Interfaces & UX Requirements
 
-### 6.1 Wiki Page — Required UI Elements
-
+### 11.1 Wiki Page — Required UI Elements
 | Element | Behaviour |
 |---|---|
-| Block content | Rendered from graph query at page load |
+| Block content | Rendered from graph / claims / evidence queries |
 | 🤖 icon | Present on auto-accepted, unverified blocks |
-| ⚠️ Conflict banner | Displayed when `active_conflict_ids` is non-empty |
-| [Verify] button | Clears 🤖 status for authenticated users of appropriate tier |
-| [View Original] button | Opens source Markdown snippet + PDF link in side panel |
-| Pending Verification tag | Displayed on Shadow Update (Yellow) content |
+| ⚠️ Conflict banner | Displayed when active conflicts exist |
+| ⚠️ Pending badge | Displayed on shadow/pending content |
+| [Verify] button | Available to authorized users to validate content |
+| [Resolve Conflict] button | Opens conflict review workflow |
+| [View Original] / [Show Evidence] | Opens normalized snippet + PDF/source link + metadata |
+| Freshness indicator | Shows stale/aging/fresh state |
 
-### 6.2 Curation Queue — Required Columns
-
+### 11.2 Curation Queue — Required Columns
 | Column | Description |
 |---|---|
 | Conflict ID | Unique identifier |
-| Type | QUANTITATIVE / NORMATIVE / CONTACT / STRUCTURAL |
+| Type | QUANTITATIVE / NORMATIVE / CONTACT / STRUCTURAL / TEMPORAL / CLASSIFICATION |
 | Severity | CRITICAL / MINOR |
-| Current Value | Existing graph value + source |
+| Current Value | Existing accepted value + source |
 | Proposed Value | Incoming value + source |
 | Assigned Tier | 1 / 2 / 3 |
-| Actions | Approve / Reject / Edit / Escalate |
+| Scope / Context | Temporal, geographic, or policy scope note |
+| Actions | Approve / Reject / Edit / Merge / Escalate |
 
-### 6.3 MCP Endpoint (Agentic Access)
+### 11.3 Agent Response Contract
+Any agent-facing response must include:
 
-The knowledge graph must be exposed as a **Model Context Protocol (MCP) server** with at minimum the following tools:
-
-| Tool Name | Description |
-|---|---|
-| `get_entity` | Retrieve a node and all its edges by entity ID or name |
-| `search_knowledge` | Semantic search over verified wiki blocks |
-| `get_conflicts` | Retrieve all unresolved ConflictRecords |
-| `get_document_triplets` | Return all triplets extracted from a given document |
-| `get_wiki_page` | Return rendered Markdown for a wiki page by ID or slug |
+- answer or retrieved context
+- source references
+- confidence and verification state
+- timestamps / freshness metadata
+- retrieval summary
+- truncation or summarization indicators where applicable
 
 ---
 
-## 7. Trust & Routing Logic
+## 12. Trust, Verification, and Governance Logic
 
-### 7.1 Full Routing Decision Tree
-
-```
-NEW TRIPLET ARRIVES
+### 12.1 Full Routing Decision Tree
+```text
+NEW CLAIM ARRIVES
 │
-├── Does it match an existing triplet (same subject + predicate)?
+├── Is the subject/object resolved with sufficient confidence?
+│   ├── NO → 🔴 HUMAN ESCALATION or unresolved-entity queue
+│   └── YES
+│
+├── Does it map to an existing canonical fact candidate?
+│   ├── NO → evaluate as EXPANSION
+│   │   ├── confidence ≥ 0.95 and policy allows → 🟢 AUTO-ACCEPT
+│   │   ├── confidence 0.70–0.95 → 🟡 SHADOW / PENDING
+│   │   └── confidence < 0.70 → 🔴 HUMAN ESCALATION
 │   │
-│   ├── NO → Is entity resolved by GLinker?
-│   │         ├── YES + confidence ≥ 0.95 → 🟢 AUTO-ACCEPT (EXPANSION)
-│   │         ├── YES + confidence 0.70–0.95 → 🟡 SHADOW UPDATE
-│   │         └── NO (new entity) → 🔴 HUMAN ESCALATION (Tier 1+)
-│   │
-│   └── YES → Does the object value match?
-│             ├── YES → CONFIRMATION (no action, increment source count)
-│             └── NO → Classify conflict severity
-│                       ├── CRITICAL → 🔴 HUMAN ESCALATION
-│                       └── MINOR → 🟡 SHADOW UPDATE
+│   └── YES → Are value / meaning / qualifiers / time equivalent?
+│       ├── YES → CONFIRMATION (increment support/source count)
+│       └── NO → classify update vs contradiction
+│           ├── time-bounded or newer valid fact → UPDATE / SUPERSESSION workflow
+│           ├── minor low-risk contradiction → 🟡 SHADOW / PENDING
+│           └── critical or sensitive contradiction → 🔴 HUMAN ESCALATION
 ```
 
-### 7.2 Verification State Machine
+### 12.2 Verification State Machine
+```text
+[EXTRACTED]
+  → (high confidence + policy eligible) → [AUTO_ACCEPTED 🤖]
+  → (moderate confidence) → [SHADOW_PENDING ⚠️]
+  → (low confidence / sensitive domain) → [ESCALATED 🔴]
 
+[AUTO_ACCEPTED 🤖]
+  → (community trust threshold met) → [COMMUNITY_VERIFIED ✅]
+  → (human verifies) → [HUMAN_VERIFIED ✅]
+  → (contradiction emerges) → [DISPUTED ⚠️]
+
+[SHADOW_PENDING ⚠️]
+  → (curator approves) → [HUMAN_VERIFIED ✅]
+  → (curator rejects) → [REJECTED]
+  → (new evidence strengthens confidence) → [AUTO_ACCEPTED 🤖] or [HUMAN_VERIFIED ✅]
+
+[ESCALATED 🔴]
+  → (tier resolves) → [HUMAN_VERIFIED ✅]
+  → (tier rejects) → [REJECTED]
 ```
-[EXTRACTED] 
-    → (confidence ≥ 0.95) → [AUTO_ACCEPTED 🤖]
-        → (community_trust_score ≥ threshold) → [COMMUNITY_VERIFIED ✅]
-        → (human clicks Verify) → [HUMAN_VERIFIED ✅]
-    → (confidence 0.70–0.95) → [SHADOW_PENDING ⚠️]
-        → (curator approves) → [HUMAN_VERIFIED ✅]
-        → (curator rejects) → [REJECTED]
-    → (confidence < 0.70) → [ESCALATED 🔴]
-        → (tier resolves) → [HUMAN_VERIFIED ✅]
-        → (tier rejects) → [REJECTED]
+
+### 12.3 Community Trust Score
+The platform may support **implicit verification** with caution:
+
+```text
+IF an authenticated user with appropriate role reads a block
+AND does not flag it within a configurable review window
+THEN increment CommunityTrustScore
+IF CommunityTrustScore ≥ threshold AND no open conflicts exist
+THEN content may be promoted from AUTO_ACCEPTED to COMMUNITY_VERIFIED
 ```
 
+This mechanism must be optional, transparent, and policy-governed.
 
+---
+
+## 13. Open-Source & Cloud-Agnostic Deployment Constraints
+
+### 13.1 Required Design Constraint
+The entire platform must be deployable with **open-source software** and remain **cloud agnostic**.
+
+### 13.2 Preferred Stack Constraints
+- **Backend API:** FastAPI
+- **Relational store:** PostgreSQL
+- **Graph DB:** Neo4j Community or equivalent pluggable graph backend
+- **Vector store:** pgvector or Qdrant
+- **Lexical search:** PostgreSQL FTS or OpenSearch
+- **Object storage:** MinIO or any S3-compatible storage
+- **Task queue:** Celery + Redis or equivalent open-source worker stack
+- **Wiki layer:** Wiki.js or custom React-based wiki workspace
+- **Identity:** Keycloak or any OIDC-compatible IdP
+- **Model serving:** self-hosted open-source model serving (e.g. Ollama, vLLM, TGI)
+
+### 13.3 Anti-Lock-In Rules
+- no mandatory dependence on proprietary cloud services
+- no mandatory dependence on proprietary model APIs
+- infrastructure must remain replaceable by adapters
+- all core knowledge and provenance data must remain exportable
+
+---
+
+## 14. Success Criteria
+
+The system is successful when:
+
+### 14.1 Knowledge Quality
+- accepted knowledge remains evidence-backed and auditable
+- contradictions are surfaced instead of silently overwritten
+- entity duplication decreases over time
+- stale or superseded knowledge is clearly marked
+
+### 14.2 Human Workflow Quality
+- curators work primarily in the wiki / card experience
+- reviewers can inspect evidence without hunting through raw PDFs first
+- staff can understand which content is auto-accepted, pending, verified, or disputed
+
+### 14.3 Agent Workflow Quality
+- agents receive compact, cited context rather than raw document dumps
+- responses expose verification and freshness metadata
+- downstream drafting and synthesis become faster and safer
+
+### 14.4 Operational Quality
+- pipeline failures are observable and recoverable
+- reprocessing is version-aware and deterministic
+- stack runs fully on self-managed or any-cloud infrastructure
+
+---
+
+## Final Principle
+
+> The platform is successful when people trust the curated knowledge layer, every accepted statement can be traced to evidence, and agents can consume concise, verified context without relying on brittle raw-document retrieval alone.

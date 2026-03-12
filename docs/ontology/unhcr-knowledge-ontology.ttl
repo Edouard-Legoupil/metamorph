@@ -26,7 +26,7 @@
   owl:versionInfo  "0.1" ;
   dc:creator       "Edouard Legoupil" ;
   dc:date          "2026" ;
-  dcterms:description "Ontology supporting UNHCR's knowledge management and operational data needs, with IATI alignment for financial transparency." .
+  dcterms:description "Ontology supporting UNHCR's knowledge management and operational data needs, with IATI alignment for financial transparency. v0.2 adds: Domain I (Knowledge Provenance), SKOS controlled vocabularies (verification states, conflict classes, severity levels, document types, intervention categories, source trust, review outcomes), and a fully refactored stakeholder pattern separating Person / Role / Position / Organisation." .
 
 
 ########## CORE ##########
@@ -60,10 +60,11 @@
   rdfs:comment "Timestamp of the most recent update to the entity record." .
 
 
-:verificationStatus a owl:DatatypeProperty ;
+:verificationStatus a owl:ObjectProperty ;
   rdfs:domain  :Entity ;
-  rdfs:range   xsd:string ;
-  rdfs:label   "verification status ; Use a Simple Knowledge Organization System -SKOS concept scheme for controlled values (e.g., Verified, Unverified, Pending). Allow controlled vocabulary binding." .
+  rdfs:range   skos:Concept ;
+  rdfs:label   "verification status" ;
+  rdfs:comment "Controlled verification state of an entity. Values drawn from :VerificationStateScheme (e.g., :vsVerified, :vsUnverified, :vsPending, :vsDisputed, :vsRetracted)." .
 
 :hasTag a owl:DatatypeProperty ;
   rdfs:domain  :Entity ;
@@ -1077,11 +1078,58 @@ geo:long a owl:DatatypeProperty ;
 ##############################################
 ########## DOMAIN G —  STAKEHOLDERS ##########
 ##############################################
+#
+#  Modeling pattern:
+#
+#  :Person  — a real human being (staff, consultant, partner contact, etc.)
+#  :Role    — a functional role type (e.g. "Protection Officer", "Cluster Coordinator")
+#             roles are reusable across organisations and contexts
+#  :Position — a funded, org-specific post (a slot that can be vacant or filled)
+#             a position is held within an :Organisation and may carry a :Role
+#  :Organisation — an institutional actor
+#
+#  Key properties:
+#    :holdsRole       Person      → Role          (what function does this person exercise?)
+#    :assignedTo      Person      → Position      (which funded post does this person occupy?)
+#    :occupiesPosition Person     → Position      (preferred alias for assignedTo, foaf-friendly)
+#    :focalFor        Position    → Entity         (the topic/area/cluster this position is focal for)
+#    :hasPosition     Organisation → Position     (which positions does this org have?)
+#    :roleIn          Role        → Organisation  (contextual: this role is exercised inside an org)
+#
+#  Focal-point pattern:
+#    A :FocalPoint is a :Position (not a Person).  The Person fills the position.
+#    Use :focalFor to link the Position to its thematic or geographic scope.
+##############################################
+
+# ---- Classes ----
 
 :Organisation a owl:Class ;
   rdfs:subClassOf :Entity ;
   rdfs:label   "Organisation" ;
   rdfs:comment "Any organisation relevant to UNHCR operations: UN agencies, NGOs, government authorities, donors, private sector." .
+
+:Person a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Person" ;
+  rdfs:comment "A human being — staff member, consultant, associated personnel, or partner contact — relevant to UNHCR operations. Use foaf:name, foaf:mbox for identity. Does NOT subClassOf :Organisation." ;
+  rdfs:subClassOf foaf:Person .
+
+:Role a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Role" ;
+  rdfs:comment "A named functional role type that can be exercised by a person within an organisation or cluster context (e.g., Protection Officer, Field Coordinator, Cluster Co-Lead). Roles are reusable descriptors, not posts." .
+
+:Position a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Position" ;
+  rdfs:comment "A funded organisational post — a specific, named slot within an :Organisation that may be vacant or occupied by a :Person. A Position may carry one or more :Roles as its functional description." .
+
+:FocalPoint a owl:Class ;
+  rdfs:subClassOf :Position ;
+  rdfs:label   "Focal Point" ;
+  rdfs:comment "A designated Position whose holder serves as the primary contact or coordinator for a specific sector, thematic area, geographic zone, or cluster. The FocalPoint position is linked to its scope via :focalFor." .
+
+# ---- Organisation sub-types (unchanged) ----
 
 :UNAgency a owl:Class ;
   rdfs:subClassOf :Organisation ;
@@ -1106,24 +1154,78 @@ geo:long a owl:DatatypeProperty ;
 :GovernmentAuthority a owl:Class ;
   rdfs:subClassOf :Organisation ;
   rdfs:label   "Government Authority" ;
-  rdfs:comment "A government ministry, department, or public authority. Replaces the duplicate :Government class from IATI section." .  
-
-:Position a owl:Class ;
-  rdfs:subClassOf :Organisation ;
-  rdfs:label   "Position" ;
-  rdfs:comment "A Funded position, aka organisation role allowing to hire staff member or associated personnel." .
-
-:FocalPoint a owl:Class ;
-  rdfs:subClassOf :Position ;
-  rdfs:label   "Focal Point" ;
-  rdfs:comment "A staff member designated as the focal point for a sector, topic, or location. Subclass of :Position." .
+  rdfs:comment "A government ministry, department, or public authority." .
 
 :ContactInfo a owl:Class ;
   rdfs:subClassOf :Entity ;
   rdfs:label   "Contact Information" ;
-  rdfs:comment "Contact details associated with an organisation or activity." .
+  rdfs:comment "Contact details associated with an organisation, person, or activity." .
 
-# --- STAKEHOLDERS  Datatype Properties ---
+# ---- Person Datatype Properties ----
+
+:givenName a owl:DatatypeProperty ;
+  rdfs:subPropertyOf foaf:firstName ;
+  rdfs:domain  :Person ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "given name" .
+
+:familyName a owl:DatatypeProperty ;
+  rdfs:subPropertyOf foaf:lastName ;
+  rdfs:domain  :Person ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "family name" .
+
+:workEmail a owl:DatatypeProperty ;
+  rdfs:domain  :Person ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "work email" .
+
+:staffId a owl:DatatypeProperty ;
+  rdfs:domain  :Person ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "staff ID" ;
+  rdfs:comment "UNHCR or partner internal staff or personnel identifier." .
+
+# ---- Role Datatype Properties ----
+
+:roleCode a owl:DatatypeProperty ;
+  rdfs:domain  :Role ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "role code" ;
+  rdfs:comment "Controlled code for the role (e.g. from UNHCR HR classification)." .
+
+:roleLabel a owl:DatatypeProperty ;
+  rdfs:domain  :Role ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "role label" .
+
+# ---- Position Datatype Properties ----
+
+:postCode a owl:DatatypeProperty ;
+  rdfs:domain  :Position ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "post code" ;
+  rdfs:comment "HR post/position code identifying this funded slot." .
+
+:positionTitle a owl:DatatypeProperty ;
+  rdfs:domain  :Position ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "position title" ;
+  rdfs:comment "Official title of the position (e.g., 'Senior Protection Officer')." .
+
+:positionGrade a owl:DatatypeProperty ;
+  rdfs:domain  :Position ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "position grade" ;
+  rdfs:comment "HR grade band of the position (e.g., P3, G6, NPO)." .
+
+:isVacant a owl:DatatypeProperty ;
+  rdfs:domain  :Position ;
+  rdfs:range   xsd:boolean ;
+  rdfs:label   "is vacant" ;
+  rdfs:comment "True if the position is currently unfilled." .
+
+# ---- Contact Datatype Properties ----
 
 :contactOrgName a owl:DatatypeProperty ;
   rdfs:domain  :ContactInfo ;
@@ -1145,8 +1247,89 @@ geo:long a owl:DatatypeProperty ;
   rdfs:range   xsd:string ;
   rdfs:label   "contact address" .
 
-# --- STAKEHOLDERS  Object Properties ---
+# ---- Stakeholder Object Properties ----
 
+# Person ↔ Role
+:holdsRole a owl:ObjectProperty ;
+  rdfs:domain  :Person ;
+  rdfs:range   :Role ;
+  rdfs:label   "holds role" ;
+  rdfs:comment "The functional role(s) a person exercises. A person may hold multiple roles simultaneously (e.g. Field Officer + Cluster Focal Point)." .
+
+# Person ↔ Position
+:assignedTo a owl:ObjectProperty ;
+  rdfs:domain    :Person ;
+  rdfs:range     :Position ;
+  rdfs:label     "assigned to" ;
+  rdfs:comment   "The funded post to which a person has been formally assigned by HR." ;
+  owl:inverseOf  :filledBy .
+
+:occupiesPosition a owl:ObjectProperty ;
+  rdfs:subPropertyOf :assignedTo ;
+  rdfs:domain  :Person ;
+  rdfs:range   :Position ;
+  rdfs:label   "occupies position" ;
+  rdfs:comment "Preferred foaf-compatible alias for :assignedTo. Use this in person-centric queries." .
+
+:filledBy a owl:ObjectProperty ;
+  rdfs:domain    :Position ;
+  rdfs:range     :Person ;
+  rdfs:label     "filled by" ;
+  rdfs:comment   "Inverse of :assignedTo — the person currently filling this position." ;
+  owl:inverseOf  :assignedTo .
+
+# Position ↔ Organisation
+:hasPosition a owl:ObjectProperty ;
+  rdfs:domain    :Organisation ;
+  rdfs:range     :Position ;
+  rdfs:label     "has position" ;
+  rdfs:comment   "The funded positions that belong to this organisation." ;
+  owl:inverseOf  :positionIn .
+
+:positionIn a owl:ObjectProperty ;
+  rdfs:domain    :Position ;
+  rdfs:range     :Organisation ;
+  rdfs:label     "position in" ;
+  rdfs:comment   "Inverse of :hasPosition — the organisation to which this position belongs." ;
+  owl:inverseOf  :hasPosition .
+
+# Position ↔ Role
+:carriesRole a owl:ObjectProperty ;
+  rdfs:domain  :Position ;
+  rdfs:range   :Role ;
+  rdfs:label   "carries role" ;
+  rdfs:comment "The role type(s) associated with this position (i.e. the functional profile expected of its holder)." .
+
+# Role ↔ Organisation (contextual)
+:roleIn a owl:ObjectProperty ;
+  rdfs:domain  :Role ;
+  rdfs:range   :Organisation ;
+  rdfs:label   "role in" ;
+  rdfs:comment "Optional: contextualises a role as being exercised within a specific organisation (useful when the same role type exists in multiple orgs)." .
+
+# FocalPoint scope
+:focalFor a owl:ObjectProperty ;
+  rdfs:domain  :FocalPoint ;
+  rdfs:range   :Entity ;
+  rdfs:label   "focal for" ;
+  rdfs:comment "The thematic area, geographic zone, cluster, sector, or topic for which this FocalPoint position bears primary responsibility. Range is :Entity to allow linking to :ClusterSector, :GeographicEntity, :InterventionType, etc." .
+
+# Person ↔ Organisation
+:memberOf a owl:ObjectProperty ;
+  rdfs:domain    :Person ;
+  rdfs:range     :Organisation ;
+  rdfs:label     "member of" ;
+  rdfs:comment   "The organisation(s) to which a person belongs as staff or associated personnel." ;
+  owl:inverseOf  :hasMember .
+
+:hasMember a owl:ObjectProperty ;
+  rdfs:domain    :Organisation ;
+  rdfs:range     :Person ;
+  rdfs:label     "has member" ;
+  rdfs:comment   "Inverse of :memberOf." ;
+  owl:inverseOf  :memberOf .
+
+# Activity/IATI contact
 :hasContactInfo a owl:ObjectProperty ;
   rdfs:domain  :IATIActivity ;
   rdfs:range   :ContactInfo ;
@@ -1405,6 +1588,935 @@ geo:long a owl:DatatypeProperty ;
   rdfs:range   :EvidenceFinding ;
   rdfs:label   "generated from" ;
   rdfs:comment "Links a lesson learned to the evidence finding it was derived from." .
+
+
+
+
+#####################################################################
+########## DOMAIN I — KNOWLEDGE PROVENANCE & CURATION   ############
+#####################################################################
+#
+#  Purpose: support full knowledge curation workflows — extraction,
+#  chunking, claim tracking, conflict resolution, curator decisions,
+#  and review task management — enabling trustworthy RAG and
+#  agentic knowledge graph construction.
+#
+#  Core chain:
+#    DocumentVersion → ContentChunk → EvidenceSpan → Claim
+#                                              ↓
+#                                       CanonicalFact ← CuratorDecision
+#                                              ↑
+#                                       ConflictRecord
+#
+#  Supporting classes:
+#    Section, WikiBlock, KnowledgeCard, ExtractionRun, ReviewTask
+#####################################################################
+
+
+# ---- I.1  Classes ----
+
+:DocumentVersion a owl:Class ;
+  rdfs:subClassOf :DocumentaryArtifact ;
+  rdfs:label   "Document Version" ;
+  rdfs:comment "A specific, immutable snapshot of a :DocumentaryArtifact at a point in time. Enables provenance tracking across revisions. Each version carries its own hash, ingestion run reference, and status." .
+
+:ContentChunk a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Content Chunk" ;
+  rdfs:comment "A discrete unit of text extracted from a :DocumentVersion for indexing or embedding (e.g., a paragraph, a table row, a slide). Carries character offsets and embedding metadata." .
+
+:Section a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Section" ;
+  rdfs:comment "A logical structural division of a document (chapter, heading level, annex). A Section groups one or more ContentChunks and may nest within other Sections." .
+
+:WikiBlock a owl:Class ;
+  rdfs:subClassOf :ContentChunk ;
+  rdfs:label   "Wiki Block" ;
+  rdfs:comment "A ContentChunk originating from a wiki or collaborative editing platform (e.g., Confluence, MediaWiki). Carries a page ID, revision ID, and author." .
+
+:KnowledgeCard a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Knowledge Card" ;
+  rdfs:comment "A curated, human-readable summary of a :CanonicalFact or cluster of related facts, intended for display in a knowledge base UI or briefing note. Links back to its source CanonicalFacts and reviewer." .
+
+:EvidenceSpan a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Evidence Span" ;
+  rdfs:comment "A fine-grained text span (sentence or passage) within a :ContentChunk that directly supports or contradicts a :Claim. Carries character-level offsets for highlight rendering." .
+
+:Claim a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Claim" ;
+  rdfs:comment "An atomic factual assertion extracted or inferred from one or more EvidenceSpans. A Claim is the unit of knowledge that gets verified, conflicted, or canonicalised. May be machine-extracted (by an :ExtractionRun) or human-authored." .
+
+:CanonicalFact a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Canonical Fact" ;
+  rdfs:comment "A Claim that has been reviewed, verified, and accepted as the authoritative statement of a fact for the knowledge base. A CanonicalFact may supersede earlier conflicting Claims." .
+
+:ConflictRecord a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Conflict Record" ;
+  rdfs:comment "A record capturing the tension between two or more Claims that make incompatible assertions about the same subject. Carries a conflict class (from :ConflictClassScheme) and severity level." .
+
+:CuratorDecision a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Curator Decision" ;
+  rdfs:comment "The documented outcome of a human (or validated AI) curator adjudicating a :ConflictRecord or approving a :Claim. Links to the resulting :CanonicalFact (if accepted) and the curator (:Person)." .
+
+:ExtractionRun a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Extraction Run" ;
+  rdfs:comment "A logged execution of an NLP or AI pipeline that produced :Claims or :ContentChunks from a set of :DocumentVersions. Records model version, parameters, timestamp, and counts." .
+
+:ReviewTask a owl:Class ;
+  rdfs:subClassOf :Entity ;
+  rdfs:label   "Review Task" ;
+  rdfs:comment "A work item assigned to a curator or reviewer to inspect, validate, or resolve a :Claim, :ConflictRecord, or :KnowledgeCard. Carries a status (from :ReviewOutcomeScheme), priority, assignee, and deadline." .
+
+
+# ---- I.2  Datatype Properties ----
+
+# DocumentVersion
+:versionNumber a owl:DatatypeProperty ;
+  rdfs:domain  :DocumentVersion ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "version number" ;
+  rdfs:comment "Human-readable version label (e.g., '2.1', 'final', '2026-03-01')." .
+
+:contentHash a owl:DatatypeProperty ;
+  rdfs:domain  :DocumentVersion ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "content hash" ;
+  rdfs:comment "SHA-256 or MD5 hash of the document content enabling deduplication." .
+
+:ingestedAt a owl:DatatypeProperty ;
+  rdfs:domain  :DocumentVersion ;
+  rdfs:range   xsd:dateTime ;
+  rdfs:label   "ingested at" ;
+  rdfs:comment "Timestamp of ingestion into the knowledge pipeline." .
+
+# ContentChunk
+:chunkIndex a owl:DatatypeProperty ;
+  rdfs:domain  :ContentChunk ;
+  rdfs:range   xsd:integer ;
+  rdfs:label   "chunk index" ;
+  rdfs:comment "Zero-based sequential index of this chunk within its source document version." .
+
+:charOffsetStart a owl:DatatypeProperty ;
+  rdfs:domain  :ContentChunk ;
+  rdfs:range   xsd:integer ;
+  rdfs:label   "character offset start" ;
+  rdfs:comment "Start character position of the chunk in the source document text." .
+
+:charOffsetEnd a owl:DatatypeProperty ;
+  rdfs:domain  :ContentChunk ;
+  rdfs:range   xsd:integer ;
+  rdfs:label   "character offset end" ;
+  rdfs:comment "End character position of the chunk in the source document text." .
+
+:chunkText a owl:DatatypeProperty ;
+  rdfs:domain  :ContentChunk ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "chunk text" ;
+  rdfs:comment "Raw text content of the chunk." .
+
+:embeddingModel a owl:DatatypeProperty ;
+  rdfs:domain  :ContentChunk ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "embedding model" ;
+  rdfs:comment "Identifier of the model used to produce the vector embedding for this chunk." .
+
+# Section
+:sectionHeading a owl:DatatypeProperty ;
+  rdfs:domain  :Section ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "section heading" .
+
+:sectionDepth a owl:DatatypeProperty ;
+  rdfs:domain  :Section ;
+  rdfs:range   xsd:integer ;
+  rdfs:label   "section depth" ;
+  rdfs:comment "Nesting depth of this section in the document outline (1 = top-level chapter)." .
+
+# WikiBlock
+:wikiPageId a owl:DatatypeProperty ;
+  rdfs:domain  :WikiBlock ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "wiki page ID" .
+
+:wikiRevisionId a owl:DatatypeProperty ;
+  rdfs:domain  :WikiBlock ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "wiki revision ID" .
+
+:wikiAuthor a owl:DatatypeProperty ;
+  rdfs:domain  :WikiBlock ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "wiki author" .
+
+# EvidenceSpan
+:spanText a owl:DatatypeProperty ;
+  rdfs:domain  :EvidenceSpan ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "span text" ;
+  rdfs:comment "Verbatim text of the evidence span." .
+
+:spanOffsetStart a owl:DatatypeProperty ;
+  rdfs:domain  :EvidenceSpan ;
+  rdfs:range   xsd:integer ;
+  rdfs:label   "span offset start" .
+
+:spanOffsetEnd a owl:DatatypeProperty ;
+  rdfs:domain  :EvidenceSpan ;
+  rdfs:range   xsd:integer ;
+  rdfs:label   "span offset end" .
+
+# Claim
+:claimText a owl:DatatypeProperty ;
+  rdfs:domain  :Claim ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "claim text" ;
+  rdfs:comment "Normalised, human-readable statement of the claim." .
+
+:extractedAt a owl:DatatypeProperty ;
+  rdfs:domain  :Claim ;
+  rdfs:range   xsd:dateTime ;
+  rdfs:label   "extracted at" ;
+  rdfs:comment "Timestamp at which this claim was extracted." .
+
+:confidenceScore a owl:DatatypeProperty ;
+  rdfs:domain  :Claim ;
+  rdfs:range   xsd:decimal ;
+  rdfs:label   "confidence score" ;
+  rdfs:comment "Model confidence in this claim (0.0–1.0)." .
+
+# CanonicalFact
+:canonicalStatement a owl:DatatypeProperty ;
+  rdfs:domain  :CanonicalFact ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "canonical statement" ;
+  rdfs:comment "The authoritative, curated statement of this fact." .
+
+:canonicalisedAt a owl:DatatypeProperty ;
+  rdfs:domain  :CanonicalFact ;
+  rdfs:range   xsd:dateTime ;
+  rdfs:label   "canonicalised at" .
+
+# ConflictRecord
+:conflictDescription a owl:DatatypeProperty ;
+  rdfs:domain  :ConflictRecord ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "conflict description" ;
+  rdfs:comment "Human-readable description of the nature of the conflict." .
+
+:detectedAt a owl:DatatypeProperty ;
+  rdfs:domain  :ConflictRecord ;
+  rdfs:range   xsd:dateTime ;
+  rdfs:label   "detected at" .
+
+# CuratorDecision
+:decisionRationale a owl:DatatypeProperty ;
+  rdfs:domain  :CuratorDecision ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "decision rationale" ;
+  rdfs:comment "Narrative explanation of why the curator made this decision." .
+
+:decidedAt a owl:DatatypeProperty ;
+  rdfs:domain  :CuratorDecision ;
+  rdfs:range   xsd:dateTime ;
+  rdfs:label   "decided at" .
+
+# ExtractionRun
+:pipelineVersion a owl:DatatypeProperty ;
+  rdfs:domain  :ExtractionRun ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "pipeline version" ;
+  rdfs:comment "Version string of the extraction pipeline or model used." .
+
+:runStartedAt a owl:DatatypeProperty ;
+  rdfs:domain  :ExtractionRun ;
+  rdfs:range   xsd:dateTime ;
+  rdfs:label   "run started at" .
+
+:runCompletedAt a owl:DatatypeProperty ;
+  rdfs:domain  :ExtractionRun ;
+  rdfs:range   xsd:dateTime ;
+  rdfs:label   "run completed at" .
+
+:claimsExtracted a owl:DatatypeProperty ;
+  rdfs:domain  :ExtractionRun ;
+  rdfs:range   xsd:integer ;
+  rdfs:label   "claims extracted" ;
+  rdfs:comment "Count of :Claim instances produced by this run." .
+
+:chunksProcessed a owl:DatatypeProperty ;
+  rdfs:domain  :ExtractionRun ;
+  rdfs:range   xsd:integer ;
+  rdfs:label   "chunks processed" .
+
+# ReviewTask
+:taskDeadline a owl:DatatypeProperty ;
+  rdfs:domain  :ReviewTask ;
+  rdfs:range   xsd:date ;
+  rdfs:label   "task deadline" .
+
+:taskPriority a owl:DatatypeProperty ;
+  rdfs:domain  :ReviewTask ;
+  rdfs:range   xsd:integer ;
+  rdfs:label   "task priority" ;
+  rdfs:comment "Numeric priority (1 = highest). Derived from severity and recency of the underlying conflict or claim." .
+
+:taskNotes a owl:DatatypeProperty ;
+  rdfs:domain  :ReviewTask ;
+  rdfs:range   xsd:string ;
+  rdfs:label   "task notes" .
+
+
+# ---- I.3  Object Properties ----
+
+# DocumentVersion provenance
+:versionOf a owl:ObjectProperty ;
+  rdfs:domain    :DocumentVersion ;
+  rdfs:range     :DocumentaryArtifact ;
+  rdfs:label     "version of" ;
+  rdfs:comment   "Links a DocumentVersion to the parent DocumentaryArtifact it is a snapshot of." ;
+  owl:inverseOf  :hasVersion .
+
+:hasVersion a owl:ObjectProperty ;
+  rdfs:domain    :DocumentaryArtifact ;
+  rdfs:range     :DocumentVersion ;
+  rdfs:label     "has version" ;
+  owl:inverseOf  :versionOf .
+
+:previousVersion a owl:ObjectProperty ;
+  rdfs:domain  :DocumentVersion ;
+  rdfs:range   :DocumentVersion ;
+  rdfs:label   "previous version" ;
+  rdfs:comment "The immediately preceding version of this document snapshot." .
+
+:processedBy a owl:ObjectProperty ;
+  rdfs:domain  :DocumentVersion ;
+  rdfs:range   :ExtractionRun ;
+  rdfs:label   "processed by" ;
+  rdfs:comment "The ExtractionRun that ingested this DocumentVersion." .
+
+# DocumentVersion → ContentChunk
+:hasChunk a owl:ObjectProperty ;
+  rdfs:domain    :DocumentVersion ;
+  rdfs:range     :ContentChunk ;
+  rdfs:label     "has chunk" ;
+  owl:inverseOf  :chunkOf .
+
+:chunkOf a owl:ObjectProperty ;
+  rdfs:domain    :ContentChunk ;
+  rdfs:range     :DocumentVersion ;
+  rdfs:label     "chunk of" ;
+  owl:inverseOf  :hasChunk .
+
+# Section structure
+:hasSection a owl:ObjectProperty ;
+  rdfs:domain  :DocumentVersion ;
+  rdfs:range   :Section ;
+  rdfs:label   "has section" .
+
+:subSectionOf a owl:ObjectProperty ;
+  rdfs:domain  :Section ;
+  rdfs:range   :Section ;
+  rdfs:label   "sub-section of" ;
+  rdfs:comment "Nesting relationship between sections." .
+
+:containsChunk a owl:ObjectProperty ;
+  rdfs:domain  :Section ;
+  rdfs:range   :ContentChunk ;
+  rdfs:label   "contains chunk" .
+
+# ContentChunk → EvidenceSpan
+:hasSpan a owl:ObjectProperty ;
+  rdfs:domain  :ContentChunk ;
+  rdfs:range   :EvidenceSpan ;
+  rdfs:label   "has span" .
+
+:spanFrom a owl:ObjectProperty ;
+  rdfs:domain  :EvidenceSpan ;
+  rdfs:range   :ContentChunk ;
+  rdfs:label   "span from" ;
+  rdfs:comment "The ContentChunk from which this EvidenceSpan is drawn." .
+
+# EvidenceSpan → Claim
+:supports a owl:ObjectProperty ;
+  rdfs:domain  :EvidenceSpan ;
+  rdfs:range   :Claim ;
+  rdfs:label   "supports" ;
+  rdfs:comment "The EvidenceSpan provides textual evidence supporting the Claim." .
+
+:refutes a owl:ObjectProperty ;
+  rdfs:domain  :EvidenceSpan ;
+  rdfs:range   :Claim ;
+  rdfs:label   "refutes" ;
+  rdfs:comment "The EvidenceSpan provides textual evidence contradicting the Claim." .
+
+# Claim provenance
+:extractedBy a owl:ObjectProperty ;
+  rdfs:domain  :Claim ;
+  rdfs:range   :ExtractionRun ;
+  rdfs:label   "extracted by" ;
+  rdfs:comment "The ExtractionRun that produced this Claim." .
+
+:claimVerificationStatus a owl:ObjectProperty ;
+  rdfs:domain  :Claim ;
+  rdfs:range   skos:Concept ;
+  rdfs:label   "claim verification status" ;
+  rdfs:comment "Verification state of this claim, drawn from :VerificationStateScheme." .
+
+:sourceTrust a owl:ObjectProperty ;
+  rdfs:domain  :Claim ;
+  rdfs:range   skos:Concept ;
+  rdfs:label   "source trust" ;
+  rdfs:comment "Trust level of the source document, drawn from :SourceTrustScheme." .
+
+# Claim → CanonicalFact
+:canonicalisedAs a owl:ObjectProperty ;
+  rdfs:domain    :Claim ;
+  rdfs:range     :CanonicalFact ;
+  rdfs:label     "canonicalised as" ;
+  rdfs:comment   "The CanonicalFact that this Claim was promoted to after curation." ;
+  owl:inverseOf  :derivedFromClaim .
+
+:derivedFromClaim a owl:ObjectProperty ;
+  rdfs:domain    :CanonicalFact ;
+  rdfs:range     :Claim ;
+  rdfs:label     "derived from claim" ;
+  owl:inverseOf  :canonicalisedAs .
+
+# ConflictRecord
+:conflictBetween a owl:ObjectProperty ;
+  rdfs:domain  :ConflictRecord ;
+  rdfs:range   :Claim ;
+  rdfs:label   "conflict between" ;
+  rdfs:comment "One of the Claims involved in this conflict (use multiple triples to list all conflicting claims)." .
+
+:conflictClass a owl:ObjectProperty ;
+  rdfs:domain  :ConflictRecord ;
+  rdfs:range   skos:Concept ;
+  rdfs:label   "conflict class" ;
+  rdfs:comment "Type of conflict, drawn from :ConflictClassScheme (e.g., numerical discrepancy, temporal inconsistency, source contradiction)." .
+
+:severity a owl:ObjectProperty ;
+  rdfs:domain  :ConflictRecord ;
+  rdfs:range   skos:Concept ;
+  rdfs:label   "severity" ;
+  rdfs:comment "Severity level drawn from :SeverityScheme." .
+
+# CuratorDecision
+:resolvesConflict a owl:ObjectProperty ;
+  rdfs:domain  :CuratorDecision ;
+  rdfs:range   :ConflictRecord ;
+  rdfs:label   "resolves conflict" .
+
+:acceptsClaim a owl:ObjectProperty ;
+  rdfs:domain  :CuratorDecision ;
+  rdfs:range   :Claim ;
+  rdfs:label   "accepts claim" ;
+  rdfs:comment "The Claim(s) the curator adjudicated as acceptable." .
+
+:rejectsClaim a owl:ObjectProperty ;
+  rdfs:domain  :CuratorDecision ;
+  rdfs:range   :Claim ;
+  rdfs:label   "rejects claim" .
+
+:producesCanonical a owl:ObjectProperty ;
+  rdfs:domain  :CuratorDecision ;
+  rdfs:range   :CanonicalFact ;
+  rdfs:label   "produces canonical" ;
+  rdfs:comment "The CanonicalFact that resulted from this curator decision." .
+
+:reviewOutcome a owl:ObjectProperty ;
+  rdfs:domain  :CuratorDecision ;
+  rdfs:range   skos:Concept ;
+  rdfs:label   "review outcome" ;
+  rdfs:comment "The outcome classification drawn from :ReviewOutcomeScheme." .
+
+:decidedBy a owl:ObjectProperty ;
+  rdfs:domain  :CuratorDecision ;
+  rdfs:range   :Person ;
+  rdfs:label   "decided by" ;
+  rdfs:comment "The curator (Person) who made this decision." .
+
+# ReviewTask
+:reviewTaskFor a owl:ObjectProperty ;
+  rdfs:domain  :ReviewTask ;
+  rdfs:range   :Entity ;
+  rdfs:label   "review task for" ;
+  rdfs:comment "The entity under review (Claim, ConflictRecord, KnowledgeCard, CanonicalFact)." .
+
+:assignedToReviewer a owl:ObjectProperty ;
+  rdfs:domain  :ReviewTask ;
+  rdfs:range   :Person ;
+  rdfs:label   "assigned to reviewer" .
+
+:taskStatus a owl:ObjectProperty ;
+  rdfs:domain  :ReviewTask ;
+  rdfs:range   skos:Concept ;
+  rdfs:label   "task status" ;
+  rdfs:comment "Current status drawn from :ReviewOutcomeScheme (Open, InProgress, Resolved, Deferred)." .
+
+:resultsIn a owl:ObjectProperty ;
+  rdfs:domain  :ReviewTask ;
+  rdfs:range   :CuratorDecision ;
+  rdfs:label   "results in" ;
+  rdfs:comment "The CuratorDecision that closed this ReviewTask." .
+
+# KnowledgeCard
+:summarises a owl:ObjectProperty ;
+  rdfs:domain  :KnowledgeCard ;
+  rdfs:range   :CanonicalFact ;
+  rdfs:label   "summarises" ;
+  rdfs:comment "The CanonicalFact(s) that this KnowledgeCard synthesises." .
+
+:cardReviewedBy a owl:ObjectProperty ;
+  rdfs:domain  :KnowledgeCard ;
+  rdfs:range   :Person ;
+  rdfs:label   "card reviewed by" .
+
+# ExtractionRun
+:ranOn a owl:ObjectProperty ;
+  rdfs:domain  :ExtractionRun ;
+  rdfs:range   :DocumentVersion ;
+  rdfs:label   "ran on" ;
+  rdfs:comment "The DocumentVersion(s) processed in this extraction run." .
+
+:runBy a owl:ObjectProperty ;
+  rdfs:domain  :ExtractionRun ;
+  rdfs:range   :Person ;
+  rdfs:label   "run by" ;
+  rdfs:comment "The person or automated agent that triggered the extraction run." .
+
+
+#####################################################################
+########## DOMAIN J — CONTROLLED VOCABULARIES (SKOS)    ############
+#####################################################################
+#
+#  Seven concept schemes covering the enumerated value spaces used
+#  throughout this ontology.  Each scheme is self-contained; concepts
+#  carry skos:notation for code-level interoperability and
+#  skos:definition for human readability.
+#
+#  Schemes:
+#    :VerificationStateScheme    — claim / entity verification states
+#    :ConflictClassScheme        — types of knowledge conflict
+#    :SeverityScheme             — generic severity / risk levels
+#    :DocumentTypeScheme         — document type taxonomy
+#    :InterventionCategoryScheme — humanitarian intervention categories
+#    :SourceTrustScheme          — source reliability tiers
+#    :ReviewOutcomeScheme        — review task and decision outcomes
+#####################################################################
+
+# ---- J.1  Verification States ----
+
+:VerificationStateScheme a skos:ConceptScheme ;
+  rdfs:label   "Verification State Scheme" ;
+  skos:prefLabel "UNHCR Verification States" ;
+  rdfs:comment "Controlled vocabulary for the verification status of claims, entities, or facts." .
+
+:vsVerified a skos:Concept ;
+  skos:inScheme :VerificationStateScheme ;
+  skos:prefLabel "Verified" ;
+  skos:notation "VS-VER" ;
+  skos:definition "The claim or entity has been confirmed by a qualified curator against primary sources." ;
+  skos:topConceptOf :VerificationStateScheme .
+
+:vsUnverified a skos:Concept ;
+  skos:inScheme :VerificationStateScheme ;
+  skos:prefLabel "Unverified" ;
+  skos:notation "VS-UNV" ;
+  skos:definition "The claim or entity has not yet been verified; it is machine-extracted or newly submitted." ;
+  skos:topConceptOf :VerificationStateScheme .
+
+:vsPending a skos:Concept ;
+  skos:inScheme :VerificationStateScheme ;
+  skos:prefLabel "Pending" ;
+  skos:notation "VS-PND" ;
+  skos:definition "A review task exists for this claim; verification is in progress." ;
+  skos:topConceptOf :VerificationStateScheme .
+
+:vsDisputed a skos:Concept ;
+  skos:inScheme :VerificationStateScheme ;
+  skos:prefLabel "Disputed" ;
+  skos:notation "VS-DIS" ;
+  skos:definition "The claim conflicts with one or more other claims; a ConflictRecord has been raised." ;
+  skos:topConceptOf :VerificationStateScheme .
+
+:vsRetracted a skos:Concept ;
+  skos:inScheme :VerificationStateScheme ;
+  skos:prefLabel "Retracted" ;
+  skos:notation "VS-RET" ;
+  skos:definition "The claim has been formally retracted by a curator and should not be used." ;
+  skos:topConceptOf :VerificationStateScheme .
+
+:vsSuperseded a skos:Concept ;
+  skos:inScheme :VerificationStateScheme ;
+  skos:prefLabel "Superseded" ;
+  skos:notation "VS-SUP" ;
+  skos:definition "The claim was once verified but has been replaced by a more recent CanonicalFact." ;
+  skos:broader :vsVerified .
+
+
+# ---- J.2  Conflict Classes ----
+
+:ConflictClassScheme a skos:ConceptScheme ;
+  rdfs:label   "Conflict Class Scheme" ;
+  skos:prefLabel "UNHCR Knowledge Conflict Classes" ;
+  rdfs:comment "Taxonomy of conflict types that can arise between Claims in the knowledge base." .
+
+:ccNumericalDiscrepancy a skos:Concept ;
+  skos:inScheme :ConflictClassScheme ;
+  skos:prefLabel "Numerical Discrepancy" ;
+  skos:notation "CC-NUM" ;
+  skos:definition "Two claims report different numeric values for the same measurable phenomenon (e.g., population figures)." ;
+  skos:topConceptOf :ConflictClassScheme .
+
+:ccTemporalInconsistency a skos:Concept ;
+  skos:inScheme :ConflictClassScheme ;
+  skos:prefLabel "Temporal Inconsistency" ;
+  skos:notation "CC-TMP" ;
+  skos:definition "Claims assign conflicting dates or time ranges to the same event or status." ;
+  skos:topConceptOf :ConflictClassScheme .
+
+:ccSourceContradiction a skos:Concept ;
+  skos:inScheme :ConflictClassScheme ;
+  skos:prefLabel "Source Contradiction" ;
+  skos:notation "CC-SRC" ;
+  skos:definition "Different sources make mutually exclusive factual assertions on the same subject." ;
+  skos:topConceptOf :ConflictClassScheme .
+
+:ccClassificationMismatch a skos:Concept ;
+  skos:inScheme :ConflictClassScheme ;
+  skos:prefLabel "Classification Mismatch" ;
+  skos:notation "CC-CLS" ;
+  skos:definition "Claims assign different categories or types to the same entity (e.g., refugee vs IDP)." ;
+  skos:topConceptOf :ConflictClassScheme .
+
+:ccGeographicAmbiguity a skos:Concept ;
+  skos:inScheme :ConflictClassScheme ;
+  skos:prefLabel "Geographic Ambiguity" ;
+  skos:notation "CC-GEO" ;
+  skos:definition "Claims reference incompatible geographic locations or boundaries for the same entity." ;
+  skos:topConceptOf :ConflictClassScheme .
+
+:ccDuplication a skos:Concept ;
+  skos:inScheme :ConflictClassScheme ;
+  skos:prefLabel "Duplication" ;
+  skos:notation "CC-DUP" ;
+  skos:definition "Two claims are near-identical extractions of the same underlying fact and should be merged." ;
+  skos:topConceptOf :ConflictClassScheme .
+
+
+# ---- J.3  Severity Levels ----
+
+:SeverityScheme a skos:ConceptScheme ;
+  rdfs:label   "Severity Level Scheme" ;
+  skos:prefLabel "UNHCR Severity Levels" ;
+  rdfs:comment "Generic severity / criticality classification applicable to ConflictRecords, ProtectionIncidents, and other prioritised entities." .
+
+:svCritical a skos:Concept ;
+  skos:inScheme :SeverityScheme ;
+  skos:prefLabel "Critical" ;
+  skos:notation "SV-4" ;
+  skos:definition "Immediate risk of severe harm or major operational/legal consequence; requires urgent escalation." ;
+  skos:topConceptOf :SeverityScheme .
+
+:svHigh a skos:Concept ;
+  skos:inScheme :SeverityScheme ;
+  skos:prefLabel "High" ;
+  skos:notation "SV-3" ;
+  skos:definition "Significant risk or impact; requires prompt action within 24–48 hours." ;
+  skos:broader :svCritical .
+
+:svMedium a skos:Concept ;
+  skos:inScheme :SeverityScheme ;
+  skos:prefLabel "Medium" ;
+  skos:notation "SV-2" ;
+  skos:definition "Moderate risk or discrepancy; should be addressed in the next review cycle." ;
+  skos:broader :svHigh .
+
+:svLow a skos:Concept ;
+  skos:inScheme :SeverityScheme ;
+  skos:prefLabel "Low" ;
+  skos:notation "SV-1" ;
+  skos:definition "Minor issue; address when bandwidth permits." ;
+  skos:broader :svMedium .
+
+:svInformational a skos:Concept ;
+  skos:inScheme :SeverityScheme ;
+  skos:prefLabel "Informational" ;
+  skos:notation "SV-0" ;
+  skos:definition "No operational impact; logged for awareness only." ;
+  skos:broader :svLow .
+
+
+# ---- J.4  Document Types ----
+
+:DocumentTypeScheme a skos:ConceptScheme ;
+  rdfs:label   "Document Type Scheme" ;
+  skos:prefLabel "UNHCR Document Types" ;
+  rdfs:comment "Controlled vocabulary for the type of a DocumentaryArtifact. Complements subclass hierarchy with a flat code for search/filtering." .
+
+:dtSituationReport a skos:Concept ;
+  skos:inScheme :DocumentTypeScheme ;
+  skos:prefLabel "Situation Report" ;
+  skos:notation "DT-SITREP" ;
+  skos:topConceptOf :DocumentTypeScheme .
+
+:dtAssessment a skos:Concept ;
+  skos:inScheme :DocumentTypeScheme ;
+  skos:prefLabel "Assessment" ;
+  skos:notation "DT-ASSESS" ;
+  skos:topConceptOf :DocumentTypeScheme .
+
+:dtEvaluation a skos:Concept ;
+  skos:inScheme :DocumentTypeScheme ;
+  skos:prefLabel "Evaluation" ;
+  skos:notation "DT-EVAL" ;
+  skos:topConceptOf :DocumentTypeScheme .
+
+:dtPolicy a skos:Concept ;
+  skos:inScheme :DocumentTypeScheme ;
+  skos:prefLabel "Policy" ;
+  skos:notation "DT-POLICY" ;
+  skos:topConceptOf :DocumentTypeScheme .
+
+:dtSOP a skos:Concept ;
+  skos:inScheme :DocumentTypeScheme ;
+  skos:prefLabel "Standard Operating Procedure" ;
+  skos:notation "DT-SOP" ;
+  skos:topConceptOf :DocumentTypeScheme .
+
+:dtGuidance a skos:Concept ;
+  skos:inScheme :DocumentTypeScheme ;
+  skos:prefLabel "Guidance Note" ;
+  skos:notation "DT-GUID" ;
+  skos:topConceptOf :DocumentTypeScheme .
+
+:dtFundingAppeal a skos:Concept ;
+  skos:inScheme :DocumentTypeScheme ;
+  skos:prefLabel "Funding Appeal" ;
+  skos:notation "DT-APPEAL" ;
+  skos:topConceptOf :DocumentTypeScheme .
+
+:dtActivityReport a skos:Concept ;
+  skos:inScheme :DocumentTypeScheme ;
+  skos:prefLabel "Activity Report" ;
+  skos:notation "DT-ACTREP" ;
+  skos:topConceptOf :DocumentTypeScheme .
+
+:dtDataset a skos:Concept ;
+  skos:inScheme :DocumentTypeScheme ;
+  skos:prefLabel "Dataset" ;
+  skos:notation "DT-DATA" ;
+  skos:topConceptOf :DocumentTypeScheme .
+
+:dtTrainingMaterial a skos:Concept ;
+  skos:inScheme :DocumentTypeScheme ;
+  skos:prefLabel "Training Material" ;
+  skos:notation "DT-TRAIN" ;
+  skos:topConceptOf :DocumentTypeScheme .
+
+:dtLegalInstrument a skos:Concept ;
+  skos:inScheme :DocumentTypeScheme ;
+  skos:prefLabel "Legal Instrument" ;
+  skos:notation "DT-LEGAL" ;
+  skos:topConceptOf :DocumentTypeScheme .
+
+
+# ---- J.5  Intervention Categories ----
+
+:InterventionCategoryScheme a skos:ConceptScheme ;
+  rdfs:label   "Intervention Category Scheme" ;
+  skos:prefLabel "UNHCR Intervention Categories" ;
+  rdfs:comment "Top-level humanitarian intervention categories aligned with UNHCR Results Framework pillars." .
+
+:icProtection a skos:Concept ;
+  skos:inScheme :InterventionCategoryScheme ;
+  skos:prefLabel "Protection" ;
+  skos:notation "IC-PROT" ;
+  skos:topConceptOf :InterventionCategoryScheme .
+
+:icShelter a skos:Concept ;
+  skos:inScheme :InterventionCategoryScheme ;
+  skos:prefLabel "Shelter and Settlement" ;
+  skos:notation "IC-SHEL" ;
+  skos:topConceptOf :InterventionCategoryScheme .
+
+:icWASH a skos:Concept ;
+  skos:inScheme :InterventionCategoryScheme ;
+  skos:prefLabel "Water, Sanitation and Hygiene" ;
+  skos:notation "IC-WASH" ;
+  skos:topConceptOf :InterventionCategoryScheme .
+
+:icHealthNutrition a skos:Concept ;
+  skos:inScheme :InterventionCategoryScheme ;
+  skos:prefLabel "Health and Nutrition" ;
+  skos:notation "IC-HLTH" ;
+  skos:topConceptOf :InterventionCategoryScheme .
+
+:icEducation a skos:Concept ;
+  skos:inScheme :InterventionCategoryScheme ;
+  skos:prefLabel "Education" ;
+  skos:notation "IC-EDU" ;
+  skos:topConceptOf :InterventionCategoryScheme .
+
+:icLivelihoods a skos:Concept ;
+  skos:inScheme :InterventionCategoryScheme ;
+  skos:prefLabel "Livelihoods and Economic Inclusion" ;
+  skos:notation "IC-LIVE" ;
+  skos:topConceptOf :InterventionCategoryScheme .
+
+:icCashAssistance a skos:Concept ;
+  skos:inScheme :InterventionCategoryScheme ;
+  skos:prefLabel "Cash-Based Intervention" ;
+  skos:notation "IC-CASH" ;
+  skos:broader :icLivelihoods .
+
+:icDurableSolutions a skos:Concept ;
+  skos:inScheme :InterventionCategoryScheme ;
+  skos:prefLabel "Durable Solutions" ;
+  skos:notation "IC-DSOL" ;
+  skos:topConceptOf :InterventionCategoryScheme .
+
+:icRegistration a skos:Concept ;
+  skos:inScheme :InterventionCategoryScheme ;
+  skos:prefLabel "Registration and Documentation" ;
+  skos:notation "IC-REG" ;
+  skos:broader :icProtection .
+
+:icGBVResponse a skos:Concept ;
+  skos:inScheme :InterventionCategoryScheme ;
+  skos:prefLabel "GBV Prevention and Response" ;
+  skos:notation "IC-GBV" ;
+  skos:broader :icProtection .
+
+
+# ---- J.6  Source Trust Classes ----
+
+:SourceTrustScheme a skos:ConceptScheme ;
+  rdfs:label   "Source Trust Scheme" ;
+  skos:prefLabel "UNHCR Source Trust Classes" ;
+  rdfs:comment "Reliability and credibility tiers for knowledge sources. Informs RAG weighting and conflict resolution priority." .
+
+:stPrimary a skos:Concept ;
+  skos:inScheme :SourceTrustScheme ;
+  skos:prefLabel "Primary Source" ;
+  skos:notation "ST-1" ;
+  skos:definition "Original data collected first-hand by UNHCR or a mandated partner (registration data, official surveys, field reports)." ;
+  skos:topConceptOf :SourceTrustScheme .
+
+:stPeerReviewed a skos:Concept ;
+  skos:inScheme :SourceTrustScheme ;
+  skos:prefLabel "Peer-Reviewed" ;
+  skos:notation "ST-2" ;
+  skos:definition "Academic or institutional publication with formal peer review." ;
+  skos:topConceptOf :SourceTrustScheme .
+
+:stOfficialReport a skos:Concept ;
+  skos:inScheme :SourceTrustScheme ;
+  skos:prefLabel "Official Report" ;
+  skos:notation "ST-3" ;
+  skos:definition "Formally published report from a UN agency, government, or recognised inter-agency body." ;
+  skos:topConceptOf :SourceTrustScheme .
+
+:stGrey a skos:Concept ;
+  skos:inScheme :SourceTrustScheme ;
+  skos:prefLabel "Grey Literature" ;
+  skos:notation "ST-4" ;
+  skos:definition "NGO reports, conference papers, working papers — credible but not formally peer-reviewed." ;
+  skos:topConceptOf :SourceTrustScheme .
+
+:stMediaPress a skos:Concept ;
+  skos:inScheme :SourceTrustScheme ;
+  skos:prefLabel "Media / Press" ;
+  skos:notation "ST-5" ;
+  skos:definition "News articles, press releases, or journalistic content. Use with caution; verify against primary sources." ;
+  skos:topConceptOf :SourceTrustScheme .
+
+:stUnverifiedOpen a skos:Concept ;
+  skos:inScheme :SourceTrustScheme ;
+  skos:prefLabel "Unverified Open Source" ;
+  skos:notation "ST-6" ;
+  skos:definition "Social media, crowd-sourced, or anonymous online content. High risk of misinformation; flag for review." ;
+  skos:topConceptOf :SourceTrustScheme .
+
+
+# ---- J.7  Review Outcomes ----
+
+:ReviewOutcomeScheme a skos:ConceptScheme ;
+  rdfs:label   "Review Outcome Scheme" ;
+  skos:prefLabel "UNHCR Review Outcomes" ;
+  rdfs:comment "Controlled vocabulary for the status and final disposition of ReviewTasks and CuratorDecisions." .
+
+:roOpen a skos:Concept ;
+  skos:inScheme :ReviewOutcomeScheme ;
+  skos:prefLabel "Open" ;
+  skos:notation "RO-OPEN" ;
+  skos:definition "The review task has been created but not yet assigned or started." ;
+  skos:topConceptOf :ReviewOutcomeScheme .
+
+:roInProgress a skos:Concept ;
+  skos:inScheme :ReviewOutcomeScheme ;
+  skos:prefLabel "In Progress" ;
+  skos:notation "RO-INPROG" ;
+  skos:definition "A reviewer is actively working on the task." ;
+  skos:topConceptOf :ReviewOutcomeScheme .
+
+:roAccepted a skos:Concept ;
+  skos:inScheme :ReviewOutcomeScheme ;
+  skos:prefLabel "Accepted" ;
+  skos:notation "RO-ACC" ;
+  skos:definition "The claim or fact was reviewed and accepted as correct; may be promoted to CanonicalFact." ;
+  skos:topConceptOf :ReviewOutcomeScheme .
+
+:roRejected a skos:Concept ;
+  skos:inScheme :ReviewOutcomeScheme ;
+  skos:prefLabel "Rejected" ;
+  skos:notation "RO-REJ" ;
+  skos:definition "The claim was reviewed and found to be incorrect, unreliable, or out of scope." ;
+  skos:topConceptOf :ReviewOutcomeScheme .
+
+:roAmended a skos:Concept ;
+  skos:inScheme :ReviewOutcomeScheme ;
+  skos:prefLabel "Amended" ;
+  skos:notation "RO-AMEND" ;
+  skos:definition "The claim was accepted with modifications; a revised Claim or CanonicalFact was created." ;
+  skos:topConceptOf :ReviewOutcomeScheme .
+
+:roDeferred a skos:Concept ;
+  skos:inScheme :ReviewOutcomeScheme ;
+  skos:prefLabel "Deferred" ;
+  skos:notation "RO-DEF" ;
+  skos:definition "The review could not be completed due to missing information; awaiting further evidence or a senior decision." ;
+  skos:topConceptOf :ReviewOutcomeScheme .
+
+:roEscalated a skos:Concept ;
+  skos:inScheme :ReviewOutcomeScheme ;
+  skos:prefLabel "Escalated" ;
+  skos:notation "RO-ESC" ;
+  skos:definition "The task was escalated to a senior curator or specialist due to complexity or critical severity." ;
+  skos:broader :roDeferred .
+
+# ---- J.8  Cross-domain SKOS binding helper property ----
+
+:hasDocumentType a owl:ObjectProperty ;
+  rdfs:domain  :DocumentaryArtifact ;
+  rdfs:range   skos:Concept ;
+  rdfs:label   "has document type" ;
+  rdfs:comment "Binds a DocumentaryArtifact to a :DocumentTypeScheme concept, enabling code-level filtering independent of the OWL subclass hierarchy." .
+
+:hasInterventionCategory a owl:ObjectProperty ;
+  rdfs:domain  :InterventionType ;
+  rdfs:range   skos:Concept ;
+  rdfs:label   "has intervention category" ;
+  rdfs:comment "Classifies an InterventionType using the :InterventionCategoryScheme." .
 
 
 #########################

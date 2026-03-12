@@ -1,312 +1,932 @@
-# Coding Agent Instructions for Metamorph: Humanitarian Knowledge Platform
+# AGENT.md — Metamorph: Open-Source, Cloud-Agnostic Knowledge Graph + Wiki Platform
 
+## 🎯 Mission
 
-## 🎯 Mission Overview
+You are building **Metamorph**: an **open-source, cloud-agnostic knowledge operating system** that converts document collections (PDF, DOCX, HTML, email exports, spreadsheets where relevant) into a **curated, evidence-backed knowledge layer** for human and agentic workflows.
 
-from _ctypes import PyObj_FromPtr
-You are building Metamorph — an open-source platform that transforms PDFs ("knowledge tombstones") into a living wiki connected to a knowledge graph, specifically designed for humanitarian operations following UNHCR's Knowledge Card System.
+The goal is **not** to build a giant PDF vector tomb. The goal is to create a **reliable, maintainable, explainable knowledge base** composed of:
 
-Your output will be used by the agentic systems thaht will serve Humanitarian staff (for instance when they write proposals, or when they need to renew knowledge cards). It will help them draft document faster, with AI assistance and full source traceability.
+1. **Canonical source assets** (original documents + normalized Markdown)
+2. **Atomic claims and evidence spans** with provenance
+3. **An ontology-guided knowledge graph** with temporal and confidence-aware facts
+4. **Auto-generated wiki pages / knowledge cards** as the primary curation interface
+5. **Hybrid retrieval** (graph + lexical + vector) for downstream assistants and agents
+6. **A trusted context assembly layer** for proposal drafting, reporting, policy analysis, and operational support
 
-## 📚 Reference Documents
+This platform is intended for **high-trust knowledge environments** such as humanitarian operations, policy, protection, operations planning, research synthesis, donor intelligence, and knowledge management.
 
-All prompts reference these three core documents:
+The system must support both:
 
-1. [knowledge-pipeline-blueprint.md](docs/guide/knowledge-pipeline-blueprint.md): Core pipeline architecture: Three-component architecture: Ingestion → Reconciliation → Orchestration, with trust routing
+- **Human workflows**: curators, analysts, field staff, reviewers
+- **Agentic workflows**: retrieval, reasoning, drafting, monitoring, contradiction surfacing, and card refresh
 
-2. [unhcr-knowledge-ontology.ttl](docs/ontology/unhcr-knowledge-ontology.ttl): LPG ontology with 8 domains to build the knowledge graph - Complete Labeled Property Graph ontology — all node types, edge types, and property schemas
+The platform must be:
 
-3. [knowledge-card.yaml](docs/guide/knowledge-card.yaml): Complete Knowledge Card specifications  - Defines the 6 card types (KC-1 through KC-6), their sections, word limits, and graph queries
+- **Fully open source**
+- **Cloud agnostic**
+- **Deployable on-prem or in any cloud**
+- **Model-provider agnostic**
+- **Auditable and source-traceable by design**
 
+---
 
+## 🧠 Core Design Thesis
 
-You must ensure all code aligns with these specifications.
+### Metamorph is a knowledge curation system first, and a retrieval system second.
 
-## 🏗 Technology Cloud-Agnostic Stack
+A pure vector store is useful for recall, but insufficient as a long-term source of truth for domains where users need:
 
-* __Backend API	FastAPI (Python 3.11+)__:	Async support, automatic OpenAPI docs, Pydantic v2 for schema validation
+- explainability
+- provenance
+- stable entity definitions
+- conflict resolution
+- temporal validity
+- reusable summaries
+- multi-hop reasoning across documents
 
-* __Graph Database	Neo4j 5+ (Community Edition)__:		Native graph support, Cypher queries, APOC procedures, perfect for LPG ontology
+Therefore, Metamorph uses a **layered architecture**:
 
-* __Task Queue	Celery + Redis__:		Async processing for long-running PDF extraction
-
-* __Vector Store	pgvector (PostgreSQL 15+)__:		Embeddings for semantic search, hybrid search with graph
-
-* __Object Storage	S3-compatible (MinIO for dev)__:		Cloud-agnostic file storage, separate from graph
-
-* __AI Gateway	LiteLLM__:		Switch between OpenAI, Anthropic, Claude, local models without code changes
-
-* __Frontend	React 18 + TypeScript__:		Wiki-style interface, shadcn/ui components, TailwindCSS
-
-* __Wiki Engine	Wiki.js__:		Mature open-source wiki with REST API, can push approved content
-
-* __Container	Docker + Docker Compose__:	Development consistency, easy deployment
-
-* __Orchestration	Kubernetes (for production)__:	Cloud-agnostic deployment via Helm
-
-* __GLinker__:		Entity resolution and disambiguation
-* __PDF Processing Libraries__:	
-   
-   * __Docling__:	Primary parser for standard humanitarian documents (reports, policies, situation updates)
-   * __MinerU__:	Escalation parser for complex layouts (multi-column, dense tables, embedded charts)
-   * __PyMuPDF (fitz)__:	Layout analysis for routing decisions, quick text extraction
-   * __pytesseract + EasyOCR__:	OCR fallback for scanned documents
-   * __pdfplumber + camelot-py__:	Table extraction (used by Docling internally)
-   * __pandoc + pypandoc__:	Universal document to Markdown conversion (fallback)
-
-
-## 🧠 Core Architecture Principles
-
-### 1. Three-Stage Pipeline 
-
-```
-[Stage 1: Document-Centric]
-    PDF/DOCX → Markdown → Semantic Triplets
-         ↓
-[Stage 2: Entity-Centric]
-    Triplets → Graph Database (LPG) with conflict detection
-         ↓
-[Stage 3: User-Centric]
-    Graph → Wiki Pages (via Templates) + MCP Server
+```text
+Raw documents
+  ↓
+Structured Markdown + layout metadata
+  ↓
+Atomic claims + evidence spans + provenance
+  ↓
+Ontology-guided knowledge graph + entity resolution + conflict detection
+  ↓
+Auto-generated wiki pages / knowledge cards for curation
+  ↓
+Hybrid retrieval + query planning + context assembly
+  ↓
+Human workflows and agentic workflows
 ```
 
+The **wiki / knowledge card layer** is the primary human interface.
+The **graph + evidence layer** is the canonical machine-readable backbone.
+The **retrieval layer** is hybrid and query-aware.
 
-### 2. Atomic Unit = Semantic Triplet
+---
 
-Everything in the system revolves around triplets:
+## 📚 Reference Inputs
+
+All prompts, designs, and code must align with these documents when present:
+
+1. `docs/guide/knowledge-pipeline-blueprint.md`
+   - pipeline architecture
+   - ingestion, reconciliation, orchestration
+   - trust routing
+2. `docs/ontology/unhcr-knowledge-ontology.ttl`
+   - ontology / schema definition
+   - node, edge, and property semantics
+3. `docs/guide/knowledge-card.yaml`
+   - knowledge card definitions
+   - section structure
+   - section-level query requirements
+4. `AGENT.md` (this document)
+   - implementation philosophy
+   - system architecture
+   - feature scope
+   - engineering constraints
+
+If these documents disagree, treat this order of precedence as default unless explicitly instructed otherwise:
+
+1. domain ontology / governance constraints
+2. knowledge-card specifications
+3. architecture principles in this file
+4. local implementation convenience
+
+---
+
+## ✅ Architectural Principles
+
+### 1. Do not treat wiki pages as the canonical store
+
+Wiki pages are **generated and curated views** over the evidence and graph layers.
+The canonical store is:
+
+- the original source document
+- normalized Markdown / extracted structure
+- evidence spans
+- atomic claims
+- graph entities / relations / facts
+- curator decisions / approvals
+
+### 2. Atomic claims are the critical unit of knowledge
+
+A graph triplet alone is not enough.
+Every asserted fact must be representable as a **claim with evidence and provenance**.
+
+### 3. Provenance is mandatory
+
+Every knowledge element shown to a user or passed to an agent must be traceable to:
+
+- original source document
+- document version / checksum
+- page / section / chunk / span reference
+- extraction timestamp
+- extraction method / model version
+- confidence score
+- validation status
+- curator action history where applicable
+
+### 4. Time is a first-class dimension
+
+Many apparent contradictions are not contradictions but temporal change.
+The data model must support:
+
+- `observed_at`
+- `valid_from`
+- `valid_to`
+- `asserted_at`
+- `supersedes`
+- `status` (proposed, accepted, deprecated, disputed, shadow)
+
+### 5. Hybrid retrieval is required
+
+Do **not** replace all retrieval with graph traversal or all retrieval with embeddings.
+Use a **hybrid retrieval stack**:
+
+- lexical / keyword search for exact recall
+- vector search for semantic recall
+- graph traversal for entity-centric and multi-hop reasoning
+- wiki/knowledge-card section retrieval for compact high-trust summaries
+
+### 6. Curation must happen in context
+
+Do not force users to curate raw ingestion artifacts in a separate ops-only dashboard.
+The preferred experience is:
+
+- curator works inside wiki / card views
+- evidence is visible inline or one click away
+- contradictions are shown near affected knowledge blocks
+- approvals / edits / merges happen in the reading experience
+
+### 7. Contradiction handling is a workflow, not a boolean
+
+Contradiction detection must include:
+
+- entity resolution
+- normalization
+- temporal scoping
+- source reliability signals
+- claim conflict rules
+- human resolution queue
+
+### 8. Keep the ontology minimal, versioned, and extensible
+
+Use a strict ontology for high-value stable concepts, but preserve escape hatches for:
+
+- weakly typed claims
+- unknown relation candidates
+- schema evolution
+- ontology review proposals
+
+---
+
+## 🏗 System Layers
+
+## Layer 0 — Source of Record Layer
+
+Stores immutable source assets and source metadata.
+
+### Inputs
+- PDF
+- DOCX
+- HTML
+- TXT / Markdown
+- CSV / XLSX where relevant
+- email exports / archives where relevant
+- manually curated notes where governance permits
+
+### Responsibilities
+- upload and version source files
+- compute checksums
+- store MIME metadata
+- preserve original filenames / origin
+- classify document type
+- manage retention and version lineage
+
+### Requirements
+- object storage must be open-source and S3-compatible where possible
+- files are never stored in the graph database
+- document versioning is explicit
+
+---
+
+## Layer 1 — Document Normalization Layer
+
+Transforms source files into structured, evidence-ready textual representations.
+
+### Objective
+Convert documents into **normalized Markdown + structural metadata** while preserving layout-aware references.
+
+### Outputs
+- normalized Markdown
+- section tree
+- chunk boundaries
+- page references
+- table extraction artifacts
+- OCR confidence where relevant
+- layout metadata
+- image / figure references if needed
+
+### Principles
+- Markdown is the primary human-readable normalized format
+- structure-aware chunking is preferred over naive fixed chunking
+- chunks should preserve section titles and semantic boundaries
+- original layout references must remain addressable
+
+---
+
+## Layer 2 — Evidence and Claim Layer
+
+This is one of the most important layers in the system.
+
+### Objective
+Transform normalized content into **atomic claims** anchored to evidence spans.
+
+### Why this layer exists
+A knowledge graph without claim-level evidence becomes hard to audit and curate.
+A wiki without evidence becomes fragile.
+A contradiction system without atomic claims is noisy.
+
+### Claim model (conceptual)
 
 ```json
 {
-  "subject": {"label": "Donor", "id": "uuid", "name": "USAID"},
+  "claim_id": "uuid",
+  "claim_type": "relation|attribute|event|classification|summary_statement",
+  "subject": {
+    "label": "Donor",
+    "id": "uuid-or-null",
+    "name": "USAID"
+  },
   "predicate": "FUNDS",
-  "object": {"label": "FundingInstrument", "id": "uuid", "name": "2024 HIP"},
-  "metadata": {
-    "source_document_id": "...",
-    "extraction_confidence": 0.97,
-    "page_reference": 14,
-    "raw_text_snippet": "USAID will fund the 2024 Humanitarian Implementation Plan..."
-  }
+  "object": {
+    "label": "FundingInstrument",
+    "id": "uuid-or-null",
+    "name": "2024 Humanitarian Implementation Plan"
+  },
+  "qualifiers": {
+    "amount": "10000000",
+    "currency": "USD",
+    "country": "Sudan"
+  },
+  "temporal": {
+    "observed_at": "2025-02-01",
+    "valid_from": "2025-01-01",
+    "valid_to": null
+  },
+  "provenance": {
+    "document_id": "uuid",
+    "document_version": "sha256:...",
+    "page": 14,
+    "section_path": ["Funding", "Donor Commitments"],
+    "chunk_id": "uuid",
+    "span_start": 802,
+    "span_end": 948,
+    "raw_text": "USAID will fund the 2024 Humanitarian Implementation Plan...",
+    "extractor": "claim-extractor-v3",
+    "extractor_model": "local-llm-name",
+    "extracted_at": "2026-03-11T10:00:00Z"
+  },
+  "confidence": {
+    "claim_confidence": 0.97,
+    "entity_link_confidence": 0.91,
+    "temporal_confidence": 0.82
+  },
+  "status": "proposed"
 }
 ```
 
-### 3. Trust Routing (Uncertainty-Driven)
+### Important rule
+Triplets are useful, but **claims must remain richer than triplets**.
+Claims may later materialize into graph facts, wiki summaries, alerts, or card blocks.
 
-Don't review everything — route by confidence:
+---
 
- * 🟢 Auto-Accept - Confidence: ≥95% - Action: Immediate graph update, 🤖 icon
- * 🟡 Shadow Update - Confidence: 70-95% - Action: Wiki shows ⚠️ pending, enters queue
- * 🔴 Human Escalation - Confidence: <70% or conflict - Action: Blocks update, assigns to curator
+## Layer 3 — Knowledge Graph Layer
 
-### 4. Knowledge Cards Over Raw Graph
+### Objective
+Represent normalized, reconciled knowledge as a graph over a versioned ontology.
 
-The wiki doesn't show raw graph data — it shows Knowledge Cards (KC-1 through KC-6). Each card section is a Block that runs a graph query at render time.
+### Graph contents
+- canonical entities
+- aliases
+- relations
+- typed attributes
+- events
+- document references
+- evidence nodes / references
+- contradiction records
+- curator decisions
+- temporal edges and status markers
 
-### 5. Source Traceability Always
+### Graph principles
+- ontology-guided extraction where possible
+- property graph model is acceptable
+- store both canonicalized facts and unresolved candidates
+- preserve links back to claims / evidence
+- support graph traversal, neighborhood expansion, and community summarization
 
-Every piece of information on every wiki page must be traceable to:
+### Critical distinction
+The graph is **not** the only truth layer.
+The graph stores structured knowledge, but the evidence / claim layer preserves the auditable basis for that knowledge.
 
- * Original source document (PDF link)
+---
 
- * Extraction timestamp
+## Layer 4 — Curation and Wiki Layer
 
- * Confidence score
+### Objective
+Generate **human-friendly entity- and concept-centric pages** from the graph and evidence layers.
 
- * Verification status
+### Main outputs
+- entity wiki pages
+- topic wiki pages
+- event timeline pages
+- operational dashboards / knowledge cards
+- contradiction views
+- stale knowledge alerts
 
-## 📄 PDF PROCESSING STRATEGY
+### Design philosophy
+The wiki is where knowledge becomes usable.
+It is the preferred interface for:
 
-Two-Tier PDF to Markdown Pipeline: Following the blueprint's routing logic, we use two dedicated PDF-to-Markdown tools with escalation:
+- reviewing summaries
+- editing accepted narratives
+- validating pending facts
+- inspecting evidence
+- resolving contradictions
+- maintaining card quality
 
-### Tier 1: Docling (Primary)
+### Every wiki block should support
+- block provenance
+- confidence / verification badge
+- “show evidence” action
+- “show graph context” action
+- “propose edit” action
+- “resolve contradiction” action when relevant
 
- * Purpose: Fast, accurate extraction for standard humanitarian documents
+---
 
- * Best for: Reports, policies, situation updates, standard layouts
+## Layer 5 — Retrieval Layer
 
- * Strengths: Table recognition, heading hierarchy, list preservation, citation extraction
+### Objective
+Provide query-aware retrieval for both users and agents.
 
- * Integration: Python SDK (docling) or CLI
+### Retrieval modalities
+1. **Lexical retrieval**
+   - exact phrase recall
+   - acronym / code recall
+   - policy identifiers
+2. **Vector retrieval**
+   - semantic recall over chunks, evidence, and wiki sections
+3. **Graph retrieval**
+   - entity neighborhood traversal
+   - relation paths
+   - event and timeline exploration
+4. **Wiki-section retrieval**
+   - concise, curated, high-value summaries
+5. **Hybrid reranking**
+   - score fusion across modalities
 
- * Output: Clean Markdown with structural annotations
+### Mandatory principle
+Do not rely on a single retrieval mode.
+Different query classes require different retrieval plans.
 
-### Tier 2: MinerU (Escalation)
+---
 
- * Purpose: Complex layouts that defeat Docling
+## Layer 6 — Context Assembly Layer
 
- * Best for: Multi-column academic papers, dense tables, embedded charts, scanned documents with complex formatting
+### Objective
+Assemble the minimum high-quality context required for an agentic task.
 
- * Strengths: Layout analysis, table structure reconstruction, multi-column reading order
+### Example task types
+- proposal drafting
+- country brief generation
+- policy change detection
+- stakeholder mapping
+- contradiction review support
+- knowledge-card refresh
+- entity profile generation
+- answer generation with citations
 
- * Integration: Python SDK or API
+### Context assembly strategy
+1. classify task / question intent
+2. determine retrieval mode(s)
+3. retrieve candidate evidence, graph neighborhoods, and curated sections
+4. rerank for relevance and trust
+5. assemble compact context with provenance
+6. expose citations and confidence to the generation layer
 
- * Output: Markdown with layout preservation
+### Rule
+Do **not** dump whole wiki pages or large document chunks into prompts unless explicitly necessary.
+Retrieve **targeted sections, claims, and evidence**.
 
-Routing Logic
+---
 
-```python
-def route_to_parser(document_path: str, analysis: LayoutAnalysis) -> str:
-    """
-    Decide which parser to use based on document characteristics.
-    Returns "docling" or "mineru".
-    """
-    
-    # Heuristic thresholds (configurable)
-    if (
-        analysis.table_density > 0.3 or           # Many tables
-        analysis.column_count > 1 or               # Multi-column layout
-        analysis.embedded_charts > 5 or            # Many charts/figures
-        analysis.scanned_pages_ratio > 0.5 or      # Mostly scanned
-        analysis.layout_complexity_score > 0.7     # Custom complexity metric
-    ):
-        return "mineru"
-    
-    return "docling"
+## 🌐 Open-Source, Cloud-Agnostic Technology Stack
+
+Use fully open-source components wherever possible and avoid hard dependencies on proprietary APIs or vendor-managed services.
+
+### Backend API
+- **FastAPI (Python 3.11+)**
+  - async support
+  - OpenAPI generation
+  - Pydantic v2 validation
+
+### Workflow / Task Orchestration
+- **Celery + Redis** for asynchronous jobs
+- keep orchestration replaceable
+
+### Graph Database
+- **Neo4j Community Edition** 
+  - use property graph semantics
+  - choose one via adapter abstraction
+- all graph operations must go through a repository/service layer
+- avoid hard-coding vendor-specific procedures where possible
+
+### Relational Store / Metadata Store
+- **PostgreSQL 15+**
+  - document metadata
+  - claims table(s)
+  - curation state
+  - audit logs
+  - background job metadata
+
+### Vector Search
+- **pgvector** (default as simplicity matters)
+
+### Full-Text / Hybrid Search
+- PostgreSQL FTS for simpler deployments
+
+### Object Storage
+- **MinIO** in development and self-hosted production by default
+- must remain compatible with any S3-compatible object store
+
+### Wiki / Curation UI
+Preferred default:
+- **Wiki.js** for lightweight wiki publishing
+
+Alternative if tighter custom control is required:
+- custom React wiki workspace backed by the Metamorph API
+
+### Frontend
+- **React 18 + TypeScript**
+- **Vite**
+- **TailwindCSS**
+- **shadcn/ui**
+- **TanStack Query**
+- **Zustand** for light UI state
+
+### Model Serving / AI Gateway (fully open source)
+
+- **LiteLLM**  used only as an internal abstraction layer iallowing to configure both cloud and self-hosted open models.
+
+### Embeddings / Reranking
+- **sentence-transformers** for embeddings
+- **bge / e5 / multilingual-e5 / jina embeddings** where appropriate
+- **cross-encoder rerankers** or **bge-reranker** for reranking
+
+### NLP / Information Extraction
+- **spaCy**
+- **GLiNER** for NER or mention detection where relevant
+- **sentence-transformers** / local LLMs for extraction assistance
+- optional **Apache Tika** for broad file ingestion fallback
+
+### Entity Resolution
+- use a pluggable entity resolution service
+- preferred approach: a local resolution pipeline combining aliases, lexical similarity, embedding similarity, graph context, and deterministic domain rules
+- if `GLinker` or another component is used, keep it optional and abstracted
+
+### PDF / Document Processing
+Primary tools:
+- **Docling** for structured document conversion
+- **PyMuPDF** for lightweight layout analysis
+- **pytesseract** and/or **EasyOCR** for OCR fallback
+- **pdfplumber** / **camelot** / **tabula-py** for tables where needed
+- **pandoc / pypandoc** for broad document conversion fallback
+
+Optional escalation parser:
+- **MinerU** may be used if it is available under acceptable open-source terms and operationally suitable
+- if not, implement escalation via Docling + OCR/table/layout fallback stack
+
+### Containerization / Deployment
+- **Docker + Docker Compose** for development
+- **Kubernetes + Helm** for production
+- **Terraform** modules may be provided for multiple clouds, but the application must run fully on self-managed infrastructure
+
+### Observability
+- **Prometheus**
+- **Grafana**
+- **OpenTelemetry**
+- **Loki** or ELK/OpenSearch for logs
+
+### Auth / Access Control
+- OpenID Connect compatible identity layer
+- self-hosted IdP preferred (e.g. **Keycloak**)
+
+---
+
+## 📄 Ingestion and Parsing Strategy
+
+## Objective
+Convert source documents into high-quality normalized Markdown and extraction artifacts with maximum traceability and minimum silent failure.
+
+### Parsing pipeline
+
+```text
+Source Document
+  → file registration + checksum + metadata extraction
+  → lightweight layout analysis
+  → parser routing
+  → OCR fallback when needed
+  → Markdown normalization
+  → section tree + chunks + tables + references
+  → quality checks
+  → evidence-ready chunk package
 ```
 
-Layout Analysis for Routing: Before routing, perform lightweight analysis using PyMuPDF:
-```python
+### Parser strategy
 
-class LayoutAnalysis:
-    def __init__(self, pdf_path: str):
-        self.pdf_path = pdf_path
-        self.page_count = 0
-        self.table_density = 0.0
-        self.column_count = 1
-        self.embedded_charts = 0
-        self.scanned_pages_ratio = 0.0
-        self.layout_complexity_score = 0.0
-    
-    def analyze_first_n_pages(self, n: int = 5):
-        """Analyze first n pages to make routing decision."""
-        # Use PyMuPDF (fitz) for quick analysis
-        import fitz
-        
-        doc = fitz.open(self.pdf_path)
-        self.page_count = len(doc)
-        
-        pages_to_check = min(n, self.page_count)
-        text_pages = 0
-        table_count = 0
-        
-        for i in range(pages_to_check):
-            page = doc[i]
-            
-            # Check if page is scanned (little to no text)
-            text = page.get_text()
-            if len(text.strip()) < 100:
-                continue
-            text_pages += 1
-            
-            # Rough table detection (looking for tabular structures)
-            blocks = page.get_text("dict")
-            table_count += self._detect_tables(blocks)
-            
-            # Detect multi-column via text block positioning
-            if self._is_multi_column(blocks):
-                self.column_count = max(self.column_count, 2)
-        
-        self.scanned_pages_ratio = 1 - (text_pages / pages_to_check)
-        self.table_density = table_count / pages_to_check
-        self.layout_complexity_score = self._calculate_complexity()
-        
-        return self
+#### Tier 1: Structure-aware primary parser
+- Docling by default
+- used for most reports, updates, policies, concept notes, briefs
+
+#### Tier 2: Fallback / escalation stack
+- OCR fallback for scanned or low-text pages
+- table extraction fallback
+- alternative markdown conversion path
+- optional MinerU if operationally validated and license-compatible
+
+### Layout analysis routing signals
+- page count
+- text density
+- scanned-page ratio
+- table density
+- multi-column likelihood
+- image / figure density
+- extraction confidence from prior runs
+
+### Hard rule
+No parser may silently “succeed” if the resulting document has catastrophic quality loss.
+Quality checks must detect:
+- empty sections
+- broken reading order
+- missing tables where expected
+- repeated OCR noise
+- extremely low text yield
+
+### Result package
+Each processed document must produce a package such as:
+
+```json
+{
+  "document_id": "uuid",
+  "document_version": "sha256:...",
+  "markdown_path": "...",
+  "sections": [...],
+  "chunks": [...],
+  "tables": [...],
+  "layout_metadata": {...},
+  "ocr_metadata": {...},
+  "quality_report": {...}
+}
 ```
 
-Parser Router Implementation
+---
 
-```python
-# services/ingestion/parser_router.py
+## 🧩 Chunking Strategy
 
-import asyncio
-from pathlib import Path
-import logging
-from typing import Optional
+### Principle
+Use **semantic and structure-aware chunking**, not arbitrary fixed-length chunking alone.
 
-from .docling_wrapper import DoclingWrapper
-from .mineru_wrapper import MinerUWrapper
-from .layout_analyzer import LayoutAnalyzer
+### Preferred chunk characteristics
+- retains section title / heading path
+- keeps paragraphs semantically coherent
+- preserves table references
+- includes parent context in metadata
+- remains small enough for embedding / extraction efficiency
 
-logger = logging.getLogger(__name__)
+### Chunk metadata must include
+- `chunk_id`
+- `document_id`
+- `document_version`
+- `page_start`, `page_end`
+- `section_path`
+- `char_start`, `char_end`
+- `content_type` (paragraph, table, caption, list, title)
+- `parent_heading`
+- extraction quality flags
 
-class ParserRouter:
-    """
-    Routes documents to appropriate parser based on layout analysis.
-    Implements fallback: try Docling first, escalate to MinerU if needed.
-    """
-    
-    def __init__(self):
-        self.docling = DoclingWrapper()
-        self.mineru = MinerUWrapper()
-        self.analyzer = LayoutAnalyzer()
-        
-        # Configuration
-        self.max_retries = 2
-        self.force_mineru_threshold = 0.7  # complexity score
-    
-    async def process_document(
-        self, 
-        pdf_path: str, 
-        force_parser: Optional[str] = None
-    ) -> dict:
-        """
-        Process PDF through appropriate parser.
-        
-        Returns:
-            Dict with markdown and metadata
-        """
-        # Analyze document for routing
-        analysis = await self.analyzer.analyze(pdf_path)
-        
-        # Determine which parser to use
-        if force_parser:
-            parser_name = force_parser
-        elif analysis.layout_complexity_score > self.force_mineru_threshold:
-            parser_name = "mineru"
-            logger.info(f"Complex layout detected, routing to MinerU")
-        else:
-            parser_name = "docling"
-            logger.info(f"Standard layout, routing to Docling")
-        
-        # Try primary parser
-        try:
-            if parser_name == "docling":
-                result = await self.docling.convert_to_markdown(pdf_path)
-            else:
-                result = await self.mineru.convert_to_markdown(pdf_path)
-            
-            # Add routing metadata
-            result["metadata"]["routing_basis"] = {
-                "parser_chosen": parser_name,
-                "complexity_score": analysis.layout_complexity_score,
-                "table_density": analysis.table_density,
-                "scanned_ratio": analysis.scanned_pages_ratio
-            }
-            
-            return result
-            
-        except Exception as e:
-            logger.warning(f"{parser_name} failed: {e}")
-            
-            # Fallback to alternative parser
-            fallback = "mineru" if parser_name == "docling" else "docling"
-            logger.info(f"Falling back to {fallback}")
-            
-            try:
-                if fallback == "docling":
-                    result = await self.docling.convert_to_markdown(pdf_path)
-                else:
-                    result = await self.mineru.convert_to_markdown(pdf_path)
-                
-                result["metadata"]["fallback_from"] = parser_name
-                return result
-                
-            except Exception as e2:
-                logger.error(f"Both parsers failed: {e2}")
-                raise
+---
+
+## 🧠 Claim Extraction Strategy
+
+### Goal
+Produce **high-precision claims** suitable for downstream reconciliation, not just maximal recall.
+
+### Extraction modes
+1. deterministic extraction where possible
+2. local-LLM-assisted extraction for relations / events / summaries
+3. schema-guided extraction aligned with ontology
+4. fallback weak extraction for unknown concepts
+
+### Claim categories
+- entity existence / typing
+- attribute assertions
+- relation assertions
+- event assertions
+- temporal assertions
+- quantitative assertions
+- policy / obligation assertions
+- summary statements (explicitly marked as summaries, not raw facts)
+
+### Extraction safeguards
+- retain raw evidence
+- store extractor prompt / template version where relevant
+- separate extraction confidence from truth confidence
+- do not collapse uncertain claims into accepted graph facts automatically
+
+---
+
+## 🔗 Entity Resolution and Canonicalization
+
+### Objective
+Resolve mentions into canonical entities while preserving ambiguity where unresolved.
+
+### Resolution stages
+1. string normalization and alias matching
+2. ontology/type constraints
+3. geographic / organizational / domain-specific rules
+4. embedding similarity
+5. graph-context-assisted disambiguation
+6. human escalation for ambiguous cases
+
+### Important rule
+If confidence is insufficient, keep the mention unresolved or shadow-linked.
+Do not force canonicalization.
+
+### Canonical entity record should support
+- canonical name
+- aliases
+- language variants
+- external IDs
+- type history / confidence
+- merge / split history
+- provenance count
+
+---
+
+## ⚖️ Reconciliation and Contradiction Detection
+
+### Objective
+Decide how incoming claims relate to existing accepted knowledge.
+
+### Possible outcomes
+- **confirmation**: supports existing accepted knowledge
+- **expansion**: adds new compatible knowledge
+- **update**: supersedes an older fact
+- **contradiction**: conflicts with accepted or pending knowledge
+- **duplicate**: semantically identical claim already exists
+- **insufficient evidence**: cannot be safely integrated
+
+### Contradiction detection stack
+Contradiction detection is not a single classifier.
+It must combine:
+
+1. **entity resolution quality**
+2. **value normalization**
+   - currencies
+   - units
+   - dates
+   - naming conventions
+3. **temporal scoping**
+4. **source ranking / trust weighting**
+5. **schema-aware conflict rules**
+6. **claim similarity / entailment checks**
+7. **human review**
+
+### Examples of conflict classes
+- direct numeric contradiction
+- temporal supersession
+- classification mismatch
+- geographic scope mismatch
+- duplicate with differing source granularity
+- relation polarity conflict
+- summary-level inconsistency
+
+### Conflict record fields
+- conflict ID
+- affected claim IDs
+- affected graph entities
+- severity
+- conflict class
+- rationale
+- candidate resolution suggestions
+- reviewer state
+- audit log
+
+---
+
+## 🚦 Trust Routing and Review Workflow
+
+### Objective
+Route new knowledge to the appropriate level of automation and review.
+
+### Suggested routing tiers
+
+#### 🟢 Auto-Accept
+Criteria:
+- very high extraction confidence
+- high entity-link confidence
+- no contradiction
+- trusted source class
+- relation type eligible for auto-accept
+
+Action:
+- materialize claim into accepted graph fact
+- regenerate impacted wiki blocks
+- mark as machine-accepted
+
+#### 🟡 Shadow / Pending
+Criteria:
+- moderate confidence
+- ambiguous canonicalization
+- low-risk relation class
+- soft contradiction or stale fact concern
+
+Action:
+- show in wiki with pending badge or shadow state where governance allows
+- queue for curator verification
+- do not overwrite accepted fact silently
+
+#### 🔴 Human Escalation
+Criteria:
+- strong contradiction
+- low confidence
+- high-impact domain
+- ontology ambiguity
+- policy / legal / protection sensitivity
+
+Action:
+- block automated materialization
+- open review task
+- notify responsible curation lane
+
+### Note
+Shadow knowledge must be clearly distinguishable from accepted knowledge.
+
+---
+
+## 📚 Wiki / Knowledge Card Design
+
+### Objective
+Turn graph-backed knowledge into maintainable, user-friendly, evidence-backed pages.
+
+### Page families
+- Key entity pages based on knowledge-card templates (KC-1..KC-6)
+
+### Page construction principles
+- generated from templates and block definitions
+- blocks query graph + claim + evidence layers
+- narrative sections can be curated
+- structured sections should remain machine-refreshable
+- each block must expose freshness and provenance
+
+### Block types
+- canonical fact block
+- metric / trend block
+- timeline block
+- relationship map block
+- summary block
+- contradiction banner block
+- evidence table block
+- stale knowledge alert block
+
+### Curation actions
+- accept pending claim
+- reject pending claim
+- merge conflicting claims into curated statement
+- mark accepted summary as stale
+- create editorial note
+- split entity
+- merge entity
+- propose ontology extension
+
+### Hard rule
+Do not treat generated narrative as self-authenticating truth.
+Generated narrative must remain linked to evidence and curator status.
+
+---
+
+## 🔍 Search and Retrieval Features
+
+### Search modes
+- document search
+- chunk search
+- claim search
+- entity search
+- wiki search
+- contradiction search
+- temporal search
+- neighborhood search
+
+### Hybrid retrieval flow
+
+```text
+User / agent query
+  → query classification
+  → retrieval plan
+     ├─ lexical search
+     ├─ vector search
+     ├─ graph traversal
+     └─ wiki-section retrieval
+  → score fusion / reranking
+  → context assembly
+  → response / downstream task
 ```
 
+### Retrieval objects that may be returned
+- source documents
+- markdown chunks
+- atomic claims
+- graph subgraphs
+- wiki sections
+- contradiction records
+- evidence bundles
 
-## 📁 Project Structure
+---
+
+## 🤖 Agentic Interfaces
+
+### Objective
+Expose curated knowledge to agents without forcing them to reason over raw PDFs by default.
+
+### Interfaces
+- REST API
+- optional GraphQL API
+- MCP-compatible server for agent tooling
+- bulk export for offline pipelines
+
+### Agent-facing capabilities
+- retrieve entity profile with accepted facts + pending flags
+- retrieve evidence bundle for a claim
+- retrieve timeline of changes
+- retrieve contradiction set for an entity
+- generate compact context pack for a task
+- retrieve knowledge card sections by template ID
+
+### Required response metadata
+Every agent-facing answer bundle should include:
+- source references
+- confidence
+- validation status
+- timestamps
+- retrieval method summary
+- truncation / summarization indicators if applicable
+
+---
+
+## 🏷 Data Model Concepts
+
+## Core records
+
+### Document
+- immutable source metadata
+- storage path
+- checksum
+- version lineage
+- processing status
+
+### Chunk
+- normalized text fragment with structure and offsets
+
+### EvidenceSpan
+- exact or near-exact segment supporting a claim
+
+### Claim
+- atomic proposition with provenance and confidence
+
+### CanonicalFact
+- accepted / curated graph-materialized fact
+
+### Entity
+- canonical node with alias and provenance history
+
+### ConflictRecord
+- structured representation of contradiction or supersession concern
+
+### WikiBlock
+- renderable knowledge unit tied to queries and evidence
+
+### CuratorDecision
+- acceptance / rejection / edit / merge / deprecate action with audit trail
+
+---
+
+## 📁 Suggested Project Structure
 
 ```text
 metamorph/
@@ -315,573 +935,496 @@ metamorph/
 │   │   ├── api/
 │   │   │   ├── v1/
 │   │   │   │   ├── endpoints/
-│   │   │   │   │   ├── documents.py      # Upload, status
-│   │   │   │   │   ├── cards.py          # KC-1 through KC-6 CRUD
-│   │   │   │   │   ├── wiki.py           # Wiki.js integration
-│   │   │   │   │   ├── search.py         # Hybrid search
-│   │   │   │   │   ├── conflicts.py      # Conflict resolution
-│   │   │   │   │   └── mcp.py            # Model Context Protocol
+│   │   │   │   │   ├── documents.py
+│   │   │   │   │   ├── claims.py
+│   │   │   │   │   ├── entities.py
+│   │   │   │   │   ├── facts.py
+│   │   │   │   │   ├── conflicts.py
+│   │   │   │   │   ├── cards.py
+│   │   │   │   │   ├── wiki.py
+│   │   │   │   │   ├── search.py
+│   │   │   │   │   ├── retrieval.py
+│   │   │   │   │   └── mcp.py
 │   │   │   │   └── dependencies.py
 │   │   │   └── __init__.py
 │   │   ├── core/
-│   │   │   ├── config.py                  # Pydantic settings
-│   │   │   ├── security.py                 # API keys, auth
-│   │   │   └── logging.py                  # Structured logging
+│   │   │   ├── config.py
+│   │   │   ├── security.py
+│   │   │   ├── logging.py
+│   │   │   ├── exceptions.py
+│   │   │   └── telemetry.py
 │   │   ├── models/
-│   │   │   ├── graph/                      # Neo4j node/edge models
-│   │   │   │   ├── base.py
-│   │   │   │   ├── geographic.py
-│   │   │   │   ├── crisis.py
-│   │   │   │   ├── population.py
-│   │   │   │   ├── operational.py
-│   │   │   │   ├── policy.py
-│   │   │   │   ├── finance.py
-│   │   │   │   ├── stakeholders.py
-│   │   │   │   └── knowledge.py
-│   │   │   ├── triplets.py                  # Triplet schema
-│   │   │   ├── conflicts.py                  # ConflictRecord
-│   │   │   └── cards.py                       # Knowledge card models
+│   │   │   ├── documents.py
+│   │   │   ├── chunks.py
+│   │   │   ├── evidence.py
+│   │   │   ├── claims.py
+│   │   │   ├── entities.py
+│   │   │   ├── facts.py
+│   │   │   ├── conflicts.py
+│   │   │   ├── cards.py
+│   │   │   └── wiki.py
 │   │   ├── services/
 │   │   │   ├── ingestion/
-│   │   │   │   ├── __init__.py
-│   │   │   │   ├── parser_router.py          # Docling vs MinerU
+│   │   │   │   ├── file_registry.py
+│   │   │   │   ├── layout_analyzer.py
+│   │   │   │   ├── parser_router.py
 │   │   │   │   ├── docling_wrapper.py
-│   │   │   │   ├── mineru_wrapper.py
-│   │   │   │   └── layout_analyzer.py
+│   │   │   │   ├── ocr_pipeline.py
+│   │   │   │   ├── markdown_normalizer.py
+│   │   │   │   └── quality_checks.py
+│   │   │   ├── chunking/
+│   │   │   │   ├── section_chunker.py
+│   │   │   │   └── chunk_metadata.py
 │   │   │   ├── extraction/
-│   │   │   │   ├── __init__.py
-│   │   │   │   ├── triplet_extractor.py      # LLM-based
-│   │   │   │   ├── entity_resolver.py        # GLinker
-│   │   │   │   └── confidence_scorer.py
+│   │   │   │   ├── claim_extractor.py
+│   │   │   │   ├── ontology_guided_extractor.py
+│   │   │   │   ├── evidence_linker.py
+│   │   │   │   ├── confidence_scorer.py
+│   │   │   │   └── summary_extractor.py
+│   │   │   ├── resolution/
+│   │   │   │   ├── entity_resolver.py
+│   │   │   │   ├── alias_registry.py
+│   │   │   │   └── canonicalizer.py
 │   │   │   ├── reconciliation/
-│   │   │   │   ├── __init__.py
-│   │   │   │   ├── delta_engine.py           # Triplet comparison
+│   │   │   │   ├── delta_engine.py
 │   │   │   │   ├── conflict_classifier.py
-│   │   │   │   └── shadow_updater.py
-│   │   │   ├── routing/
-│   │   │   │   ├── __init__.py
-│   │   │   │   ├── trust_router.py           # Tier decision
-│   │   │   │   └── tier_assigner.py
+│   │   │   │   ├── supersession_engine.py
+│   │   │   │   └── trust_router.py
+│   │   │   ├── graph/
+│   │   │   │   ├── graph_repository.py
+│   │   │   │   ├── fact_materializer.py
+│   │   │   │   ├── graph_queries.py
+│   │   │   │   └── graph_summaries.py
 │   │   │   ├── wiki/
-│   │   │   │   ├── __init__.py
-│   │   │   │   ├── block_assembler.py        # Graph → Markdown
-│   │   │   │   ├── card_templates.py         # KC-1..6 templates
-│   │   │   │   └── wikijs_client.py          # Publishing
-│   │   │   ├── search/
-│   │   │   │   ├── __init__.py
-│   │   │   │   ├── vector_store.py           # pgvector
-│   │   │   │   └── hybrid_search.py
-│   │   │   ├── alerts/
-│   │   │   │   ├── __init__.py
-│   │   │   │   └── delta_alert_service.py
-│   │   │   └── proposal/
-│   │   │   │   ├── __init__.py
-│   │   │   │   └── proposal_agent.py          # Card assembly
+│   │   │   │   ├── block_assembler.py
+│   │   │   │   ├── page_templates.py
+│   │   │   │   ├── wikijs_client.py
+│   │   │   │   └── freshness_service.py
+│   │   │   ├── retrieval/
+│   │   │   │   ├── lexical_search.py
+│   │   │   │   ├── vector_search.py
+│   │   │   │   ├── graph_retrieval.py
+│   │   │   │   ├── hybrid_search.py
+│   │   │   │   ├── reranker.py
+│   │   │   │   └── context_assembler.py
+│   │   │   ├── agents/
+│   │   │   │   ├── proposal_agent.py
+│   │   │   │   ├── card_refresh_agent.py
+│   │   │   │   └── contradiction_review_agent.py
+│   │   │   └── audit/
+│   │   │       └── audit_log_service.py
 │   │   ├── worker/
-│   │   │   ├── __init__.py
-│   │   │   ├── tasks.py                       # Celery tasks
-│   │   │   └── celery_app.py
+│   │   │   ├── celery_app.py
+│   │   │   ├── tasks_ingestion.py
+│   │   │   ├── tasks_extraction.py
+│   │   │   ├── tasks_reconciliation.py
+│   │   │   └── tasks_wiki.py
 │   │   └── main.py
 │   ├── tests/
 │   │   ├── unit/
 │   │   ├── integration/
-│   │   └── fixtures/                           # Sample PDFs
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── .env.example
+│   │   ├── e2e/
+│   │   └── fixtures/
+│   ├── pyproject.toml
+│   └── Dockerfile
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── Upload/
-│   │   │   ├── Documents/
 │   │   │   ├── Review/
-│   │   │   │   ├── MarkdownEditor.tsx
-│   │   │   │   ├── ValidationCard.tsx
-│   │   │   │   └── ConflictResolver.tsx
 │   │   │   ├── Wiki/
-│   │   │   │   ├── PageViewer.tsx
-│   │   │   │   ├── BlockRenderer.tsx
-│   │   │   │   └── VerifyButton.tsx
-│   │   │   ├── Curator/
-│   │   │   │   ├── CardWorkspace.tsx
-│   │   │   │   ├── SectionEditor.tsx
-│   │   │   │   └── QueueDashboard.tsx
-│   │   │   └── Search/
+│   │   │   ├── Cards/
+│   │   │   ├── Search/
+│   │   │   ├── Conflicts/
+│   │   │   └── Evidence/
 │   │   ├── hooks/
 │   │   ├── lib/
-│   │   ├── types/
-│   │   └── App.tsx
+│   │   ├── pages/
+│   │   ├── state/
+│   │   └── types/
 │   ├── package.json
-│   ├── vite.config.ts
 │   └── Dockerfile
 ├── infrastructure/
 │   ├── docker-compose.yml
-│   ├── docker-compose.prod.yml
-│   ├── helm/                                    # Kubernetes charts
-│   │   └── metamorph/
+│   ├── helm/
 │   ├── terraform/
-│   │   ├── aws/
-│   │   ├── gcp/
-│   │   └── azure/
 │   └── monitoring/
-│       ├── prometheus.yml
-│       └── grafana-dashboards/
 ├── docs/
-│   ├── api/                                      # OpenAPI docs
-│   ├── ontology/                                 # Graph schema docs
-│   └── user-guide/
-└── scripts/
-    ├── seed_graph.py                              # Initial ontology load
-    └── migrate.py                                  # DB migrations
+│   ├── adr/
+│   ├── ontology/
+│   ├── api/
+│   ├── user-guide/
+│   └── examples/
+├── scripts/
+│   ├── bootstrap_dev.sh
+│   ├── seed_ontology.py
+│   ├── rebuild_wiki.py
+│   └── reindex_vectors.py
+└── AGENT.md
 ```
 
+---
 
-## 🧩 Coding Standards & Practices
+## 🔄 End-to-End Workflows
 
-python (Backend) Style
-
- * Black for formatting (line length 100)
-
- * isort for import sorting
-
- * mypy with strict mode (no Any unless absolutely necessary)
-
- * ruff for linting
-
-Typing
-```python
-
-from typing import Optional, List, Dict, Any, Union
-from uuid import UUID
-from datetime import datetime
-from pydantic import BaseModel, Field, validator
-
-class Triplet(BaseModel):
-    subject: EntityRef
-    predicate: str  # Should be Literal["FUNDS", "LOCATED_IN", ...] but dynamic
-    object: Union[EntityRef, LiteralValue]
-    metadata: ExtractionMetadata
-    
-    class Config:
-        frozen = True  # Triplets are immutable
-```
-### Async First
-
- * Use async def for FastAPI endpoints
-
- * Use asyncio.to_thread for CPU-bound operations (OCR, PDF parsing)
-
- * Database drivers: asyncpg for PostgreSQL, neo4j async driver
-
-### Error Handling
-
-```python
-from app.core.exceptions import (
-    ProcessingError, 
-    ExtractionError,
-    ConflictError,
-    NotFoundError
-)
-
-@router.post("/upload")
-async def upload_document(file: UploadFile):
-    try:
-        result = await ingestion_service.process(file)
-        return {"job_id": result.job_id}
-    except ExtractionError as e:
-        raise HTTPException(400, f"Extraction failed: {e}")
-    except Exception as e:
-        logger.error(f"Unexpected error: {e}", exc_info=True)
-        raise HTTPException(500, "Internal server error")
-```
-
-### Logging (Structured)
-```python
-
-import structlog
-logger = structlog.get_logger()
-
-logger.info(
-    "document_uploaded",
-    document_id=str(doc_id),
-    file_size=file.size,
-    file_type=file.type,
-    user=current_user.id
-)
-```
-
-TypeScript/React (Frontend) Style
-
- * ESLint with Airbnb config
-
- * Prettier for formatting
-
- * TypeScript strict mode
-
-Component Structure
-tsx
-```
-// components/Review/ValidationCard.tsx
-import { FC, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Conflict, ConflictResolution } from '@/types';
-
-interface ValidationCardProps {
-  conflict: Conflict;
-  onResolve: (resolution: ConflictResolution) => void;
-}
-
-export const ValidationCard: FC<ValidationCardProps> = ({ 
-  conflict, 
-  onResolve 
-}) => {
-  const [loading, setLoading] = useState(false);
-  
-  const handleApprove = async () => {
-    setLoading(true);
-    await onResolve({ action: 'approve', conflictId: conflict.id });
-    setLoading(false);
-  };
-  
-  return (
-    <Card className="p-4 border-l-4 border-l-yellow-500">
-      {/* Component JSX */}
-    </Card>
-  );
-};
-```
-
-
-### State Management
-
- * React Query for server state (caching, mutations, polling)
-
- * Zustand for UI state (filters, modals, sidebar)
-
- * Avoid Redux unless absolutely necessary
-
-Styling
-
- * TailwindCSS with custom theme
-
- * shadcn/ui for component library
-
- * Dark mode support required
-
-
-
-##  🔄 Key Workflows
-
-### 1. Document Processing Pipeline
+## 1. Document-to-Knowledge Workflow
 
 ```text
-Upload PDF 
-    → Parser Router (Docling vs MinerU)
-    → Markdown Generation
-    → Triplet Extraction (LLM)
-    → Entity Resolution (GLinker)
-    → Delta Engine (compare with graph)
-        ├── EXPANSION → Trust Router → Auto/Shadow/Human
-        ├── CONFIRMATION → Increment source count
-        └── CONTRADICTION → ConflictRecord → Shadow/Human
-    → Wiki Block Update (if approved)
+Upload document
+  → register source + checksum + storage path
+  → analyze layout
+  → parse to Markdown
+  → quality checks
+  → structure-aware chunking
+  → claim extraction + evidence linking
+  → entity resolution
+  → reconciliation against accepted knowledge
+      ├─ confirmation
+      ├─ expansion
+      ├─ supersession/update
+      ├─ contradiction
+      └─ insufficient evidence
+  → trust routing
+      ├─ auto-accept
+      ├─ shadow/pending
+      └─ human escalation
+  → materialize accepted facts to graph
+  → regenerate impacted wiki blocks / cards
+  → refresh retrieval indexes
+  → emit audit events / alerts
 ```
 
-### 2. Knowledge Card Authoring
+## 2. Knowledge Card Refresh Workflow
 
 ```text
-Curator opens KC-2 (Field Context)
-    → System pre-populates from graph:
-        * Population figures (latest)
-        * Protection incidents (last 12 months)
-        * Active projects (by sector)
-    → Curator edits, adds narrative
-    → Submits for review
-    → Tier-based approval (field → regional → HQ)
-    → On approval: status = APPROVED, valid_until = now + 12mo
-    → Card available for proposal generation
+Scheduled or triggered refresh
+  → detect stale blocks / updated facts / new contradictions
+  → recompute card sections from graph + accepted claims
+  → preserve editorial sections where required
+  → attach freshness markers
+  → publish updated draft or accepted version based on governance
 ```
 
-### 3. Conflict Resolution
+## 3. Conflict Resolution Workflow
 
 ```text
-ConflictRecord created (CRITICAL/MINOR)
-    → Assigned to Tier 1/2/3
-    → Curator sees in queue or in-wiki
-    → Views current vs proposed with sources
-    → Actions:
-        * Approve: Update graph, close conflict
-        * Reject: Keep current, close with note
-        * Edit: Create merged version
-        * Escalate: Move to higher tier
-    → On resolution, update affected wiki blocks
-    → Notify original document uploader
+Conflict detected
+  → create ConflictRecord
+  → classify severity and scope
+  → route to appropriate curator lane
+  → show current accepted fact, proposed fact, evidence, timeline
+  → curator action
+      ├─ accept new fact
+      ├─ reject new claim
+      ├─ merge into curated statement
+      ├─ mark as temporal supersession
+      ├─ split/merge entity
+      └─ escalate
+  → update graph / wiki / audit logs
+  → notify downstream subscriptions where relevant
 ```
+
+## 4. Agent Context Assembly Workflow
+
+```text
+Agent task request
+  → classify intent
+  → choose retrieval strategy
+  → retrieve claims / wiki sections / graph neighborhoods / evidence
+  → rerank and compress
+  → build context pack with citations and confidence
+  → send to generation component
+  → persist task trace if enabled
+```
+
+---
 
 ## 🧪 Testing Strategy
 
-### Unit Tests
+### Unit tests
+- parser routing logic
+- markdown normalization
+- chunking behavior
+- claim extraction schema validation
+- evidence linking correctness
+- entity resolution scoring
+- conflict classification
+- trust routing rules
+- wiki block assembly
+- retrieval fusion logic
 
- * Test each service in isolation
+### Integration tests
+- source upload to graph materialization
+- PDF parsing with representative fixtures
+- OCR fallback behavior
+- graph reconciliation with seeded ontology
+- wiki generation from accepted facts
+- retrieval across lexical, vector, and graph channels
 
- * Mock external APIs (LiteLLM, GLinker, Wiki.js)
+### End-to-end tests
+- upload a new document
+- process claims
+- review pending conflict
+- approve / reject
+- verify wiki update
+- verify search and agent retrieval output
 
- * Test confidence scoring logic
+### Evaluation tests
+In addition to software tests, implement **knowledge quality evaluation**:
+- extraction precision / recall on gold datasets
+- entity resolution accuracy
+- contradiction false positive rate
+- citation completeness rate
+- average time-to-curation
+- context usefulness for target agent tasks
 
- * Test conflict classification rules
+---
 
-### Integration Tests
+## 📏 Success Metrics
 
- * Test document ingestion end-to-end with sample PDFs
+The system is successful when:
 
- * Test triplet extraction against known documents
+### Knowledge quality
+- accepted facts remain evidence-backed and auditable
+- contradiction false positives are manageable
+- entity duplication decreases over time
+- stale or superseded knowledge is surfaced quickly
 
- * Test graph queries return expected results
+### User workflow
+- curators work primarily in the wiki / card interface
+- reviewers can resolve most issues without reopening raw PDFs immediately
+- field staff can trust the visible verification status and provenance
 
- * Test wiki block rendering with mock data
+### Agent workflow
+- agents retrieve concise high-value context instead of raw document dumps
+- answers include source references and confidence information
+- proposal drafting and card refresh workflows accelerate materially
 
-### End-to-End Tests (Playwright)
+### Operational quality
+- ingestion failures are observable and recoverable
+- reprocessing is deterministic and version-aware
+- stack runs fully on self-managed infrastructure
 
- * User uploads PDF
+---
 
- * Processing completes
+## 🔐 Security, Governance, and Audit
 
- * Review interface loads
+### Requirements
+- role-based access control
+- tenant / workspace separation where relevant
+- immutable audit logs for curation actions
+- model invocation logs where policy permits
+- document access controls propagated to retrieval results
+- redaction / restricted-content handling if required by domain
 
- * Curator approves card
+### Auditability
+Every important action must be traceable:
+- upload
+- parsing
+- extraction
+- entity resolution
+- acceptance / rejection
+- wiki publication
+- agent retrieval bundle creation
 
- * Wiki page updates
+---
 
- * Search finds content
+## 🔧 Engineering Standards
 
-### Test Fixtures
+### Python
+- Python 3.11+
+- formatting: `black`
+- linting: `ruff`
+- imports: `isort`
+- typing: `mypy --strict`
+- dependency management: `uv` or Poetry acceptable
 
-```text
-tests/fixtures/
-├── pdfs/
-│   ├── simple_report.pdf
-│   ├── scanned_document.pdf
-│   ├── complex_tables.pdf
-│   └── multi_column.pdf
-├── triplets/
-│   └── expected_extractions.json
-└── graph/
-    └── seed_data.cypher
-```
+### TypeScript
+- strict mode enabled
+- ESLint + Prettier
+- avoid `any`
 
-🚀 Development Prompt
+### API conventions
+- async-first endpoints
+- typed schemas everywhere
+- explicit error types
+- idempotent reprocessing endpoints where possible
 
-Phase 0: Foundation 
- * [Prompt 0.1: Graph Database Schema](prompt/Prompt 0.1: Graph Database Schema.md)
- * [Prompt 0.2: Semantic Triplet Extraction Schema](prompt/Prompt 0.2: Semantic Triplet Extraction Schema.md)
+### Coding standards
+- public functions require docstrings
+- comments explain **why**, not **what**
+- avoid hard-coded vendor assumptions
+- all infrastructure bindings must be adapter-based where realistic
 
-Phase 1: Ingestion Pipeline 
- * [Prompt 1.1: Document Ingestion with Parser Routing](prompt/Prompt 1.1: Document Ingestion with Parser Routing.md)
- * [Prompt 1.2: Semantic Triplet Extraction with LLM](prompt/Prompt 1.2: Semantic Triplet Extraction with LLM.md)
- * [Prompt 1.3: Entity Resolution with GLinker Integration](prompt/Prompt 1.3: Entity Resolution with GLinker Integration.md)
+---
 
-Phase 2: Reconciliation   
- * [Prompt 2.1: Delta Engine with Conflict Detection](prompt/Prompt 2.1: Delta Engine with Conflict Detection.md)
- * [Prompt 2.2: Wiki Block Assembly from Graph Queries](prompt/Prompt 2.2: Wiki Block Assembly from Graph Queries.md)
- * [Prompt 2.3: Knowledge Card Template Implementation](prompt/Prompt 2.3: Knowledge Card Template Implementation.md)
+## 🧯 Common Pitfalls to Avoid
 
-Phase 3: Knowledge Cards 
- * [Prompt 3.1: Three-Tier Routing System](prompt/Prompt 3.1: Three-Tier Routing System.md)
- * [Prompt 3.2: Community Trust & Implicit Verification](prompt/Prompt 3.2: Community Trust & Implicit Verification.md)
- * [Prompt 3.3: Curation Interface (In-Wiki & Queue)](prompt/Prompt 3.3: Curation Interface (In-Wiki & Queue).md)
+1. **Treating the graph as the only source of truth**
+   - the evidence and claim layers matter just as much
+2. **Treating wiki pages as canonical data storage**
+   - wiki is a curation and presentation layer
+3. **Dropping provenance during normalization or summarization**
+   - if a statement cannot be traced, it should not become trusted knowledge
+4. **Overwriting accepted facts without reconciliation**
+   - always reconcile through update / contradiction workflows
+5. **Ignoring time**
+   - many conflicts are temporal, not factual disagreements
+6. **Relying on a single retrieval mode**
+   - hybrid retrieval is required
+7. **Forcing entity resolution in ambiguous cases**
+   - unresolved is better than wrong
+8. **Allowing generated summaries to drift away from evidence**
+   - summaries must remain anchored and refreshable
+9. **Using proprietary model providers as a hard dependency**
+   - self-hosted open-source inference is the default assumption
+10. **Building a system that only ingestion engineers can operate**
+   - curators need a humane wiki-centric workflow
 
-Phase 4: Curation Interface
- * [Prompt 4.1: Curator Workspace for Knowledge Cards](prompt/Prompt 4.1: Curator Workspace for Knowledge Cards.md)
- * [Prompt 4.2: Delta Alert System for Card Updates](prompt/Prompt 4.2: Delta Alert System for Card Updates.md)
+---
 
-Phase 5: MCP
- * [Prompt 5.1: Model Context Protocol (MCP) Server](prompt/Prompt 5.1: Model Context Protocol (MCP) Server.md)
+## 🚀 Phased Implementation Roadmap
 
+## Phase 0 — Foundations
+- source registration
+- document storage
+- ontology load
+- graph adapter
+- PostgreSQL metadata schema
+- authentication / authorization
+- observability baseline
 
-## 🔧 Configuration & Environment
+## Phase 1 — Document normalization
+- parser routing
+- Markdown normalization
+- chunking
+- OCR fallback
+- parsing quality reports
 
-### Required Environment Variables
+## Phase 2 — Claim and evidence extraction
+- claim schema
+- evidence linking
+- confidence scoring
+- initial ontology-guided extraction
+
+## Phase 3 — Entity resolution and reconciliation
+- canonicalization
+- delta engine
+- contradiction detection
+- trust routing
+- fact materialization
+
+## Phase 4 — Wiki and knowledge cards
+- page templates
+- wiki block assembler
+- card rendering
+- inline evidence and review actions
+
+## Phase 5 — Hybrid retrieval and agent interfaces
+- lexical/vector/graph retrieval
+- reranking
+- context assembler
+- MCP / agent APIs
+
+## Phase 6 — Evaluation and optimization
+- knowledge quality benchmarks
+- latency and cost optimization
+- curation UX refinement
+- governance hardening
+
+---
+
+## 🧾 Example Environment Variables
 
 ```bash
-# Database
-NEO4J_URI=bolt://neo4j:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=password
+# Core services
+APP_ENV=development
+API_HOST=0.0.0.0
+API_PORT=8000
 
-POSTGRES_DSN=postgresql://user:pass@postgres:5432/metamorph
+# PostgreSQL
+POSTGRES_DSN=postgresql://metamorph:metamorph@postgres:5432/metamorph
 
+# Redis
 REDIS_URL=redis://redis:6379/0
 
-# Storage
-STORAGE_PROVIDER=s3  # or local
+# Graph
+GRAPH_BACKEND=neo4j
+NEO4J_URI=bolt://neo4j:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=change-me
+
+# Object storage
 S3_ENDPOINT=http://minio:9000
 S3_ACCESS_KEY=minioadmin
 S3_SECRET_KEY=minioadmin
 S3_BUCKET=metamorph-documents
+S3_REGION=us-east-1
 
-# AI (LiteLLM)
-LITELLM_PROXY_URL=http://litellm:4000
-LITELLM_MODEL_PREFERENCE=gpt-4,claude-3,ollama/llama3
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-...
-OLLAMA_BASE_URL=http://ollama:11434
+# Vector search
+VECTOR_BACKEND=pgvector
+QDRANT_URL=http://qdrant:6333
 
-# Wiki.js
+# Search
+SEARCH_BACKEND=postgres
+OPENSEARCH_URL=http://opensearch:9200
+
+# Wiki
+WIKI_BACKEND=wikijs
 WIKIJS_URL=http://wikijs:3000
-WIKIJS_API_KEY=...
+WIKIJS_API_KEY=change-me
 
-# Security
-SECRET_KEY=...
-API_KEY_HEADER=X-API-Key
-CORS_ORIGINS=["http://localhost:3000"]
+# Identity
+OIDC_ISSUER_URL=http://keycloak:8080/realms/metamorph
+OIDC_CLIENT_ID=metamorph
+OIDC_CLIENT_SECRET=change-me
+
+# Model serving (self-hosted)
+LLM_BACKEND=vllm
+VLLM_BASE_URL=http://vllm:8001
+OLLAMA_BASE_URL=http://ollama:11434
+EMBEDDING_MODEL=multilingual-e5-large
+RERANK_MODEL=bge-reranker-large
+
+# OCR / parsing
+TESSERACT_LANGS=eng+fra+ara
+
+# Telemetry
+OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 ```
 
+---
 
-### Docker Compose Configuration
+## 📘 Documentation Requirements
 
-```yaml
-# docker-compose.yml additions for PDF processing
+### Required documentation
+- ADRs for major architecture decisions
+- ontology documentation
+- claim schema documentation
+- conflict resolution playbook
+- card template specification
+- retrieval strategy guide
+- operator runbooks
+- curator user guide
 
-services:
-  # ... existing services ...
-  
-  docling:
-    build:
-      context: .
-      dockerfile: Dockerfile.docling
-    volumes:
-      - ./uploads:/uploads
-      - ./models:/models  # Cache OCR models
-    environment:
-      - OCR_LANGUAGE=eng+fra+ara  # Common humanitarian languages
-      - TABLE_STRUCTURE=true
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-        reservations:
-          memory: 2G
-  
-  mineru:
-    image: mineru/mineru:latest  # Adjust based on actual MinerU distribution
-    volumes:
-      - ./uploads:/uploads
-      - ./models/mineru:/root/.cache/mineru
-    environment:
-      - MINERU_USE_GPU=false  # Set true if GPU available
-      - MINERU_MEMORY_LIMIT=8G
-    deploy:
-      resources:
-        limits:
-          memory: 8G
-        reservations:
-          memory: 4G
+### ADR examples
+- graph backend choice
+- vector backend choice
+- wiki integration strategy
+- self-hosted model serving strategy
+- contradiction routing policy
 
-Parser-Specific Dockerfile
-dockerfile
+---
 
-# Dockerfile.docling
-FROM python:3.11-slim
+## ✅ Final Implementation Rules
 
-# Install system dependencies for Docling
-RUN apt-get update && apt-get install -y \
-    tesseract-ocr \
-    tesseract-ocr-eng \
-    tesseract-ocr-fra \
-    tesseract-ocr-ara \
-    poppler-utils \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-# Install Docling with extras
-RUN pip install docling[all]  # Includes table extraction, OCR
-
-# Copy wrapper code
-COPY services/ingestion/docling_wrapper.py .
-COPY services/ingestion/parser_router.py .
-
-# Create model cache directory
-RUN mkdir -p /models
-
-CMD ["python", "-c", "import time; time.sleep(infinity)"]  # Run as service
-```
-
-
-## 📝 Documentation Requirements
-
-### Code Documentation
-
- * Docstrings: Google style for all public functions
-
- * Type hints: Complete coverage
-
- * Complex logic: Add comments explaining "why", not "what"
-
-### API Documentation
-
- * FastAPI generates OpenAPI (available at /docs)
-
- * Add detailed descriptions to all endpoints
-
- * Include example requests/responses
-
- * Document error codes
-
-Architecture Decision Records (ADRs)
-
-For significant decisions, create ADRs in docs/adr/:
-
-```markdown
-
-# ADR-001: Use Neo4j over ArangoDB
-
-## Context
-We need a graph database supporting the LPG ontology...
-
-## Decision
-Neo4j because:
-- Mature Cypher query language
-- APOC procedures for graph algorithms
-- Strong community and tooling
-
-## Consequences
-- Must manage APOC compatibility
-- License is GPL (but AGPL ok for open source)
-```
-
-
-## 🚨 Common Pitfalls to Avoid
-
-1. Storing Documents in the Graph: The graph stores metadata and triplets, not the documents themselves. Documents go in S3-compatible storage.
-
-2. Overwriting Data Without Conflict Detection: Never silently overwrite existing graph data. Always go through delta engine → conflict detection → routing.
-
-3. Ignoring Confidence Scores: Confidence scores aren't optional. Every triplet must have one. Use them for routing decisions.
-
-4. Building a Separate Curation Dashboard: Curation should happen in the wiki, not in a separate admin panel. Embed Verify buttons, conflict banners, and quick actions directly in the reading experience.
-
-5. Hardcoding AI Providers: Always use LiteLLM abstraction. Never call OpenAI/Anthropic directly. This keeps the system cloud-agnostic.
-
-6. Forgetting Source Traceability: Every wiki paragraph must link back to source documents. If it can't, it shouldn't be in the wiki.
-
-7. Skipping the Shadow Update Window: Yellow-tier items should appear in the wiki immediately (with warning), not wait for human approval. This prevents curation bottlenecks.
-
-8. Not Handling Parser Failures Gracefully: Always implement fallback between Docling and MinerU. Never assume a single parser will succeed.
-
-## 🎯 Success Criteria
-
-The system is successful when:
-
- * A new document is uploaded and within minutes, its content appears in the relevant wiki pages (with appropriate verification badges)
-
- * 80% of knowledge card sections pre-populated from the graph
-
- * When a new policy supersedes an old one, all affected wiki pages show conflict banners within 1 hour
-
- * A field officer reads a wiki page and can verify a paragraph with one click, contributing to community trust scores
-
- * An AI agent can query the MCP server and get structured knowledge with confidence scores and sources
-
-
+1. Build for **trust, traceability, and maintainability**, not just ingestion throughput.
+2. Preserve the distinction between **raw source**, **evidence**, **claims**, **facts**, and **wiki views**.
+3. Keep the system **open-source and cloud-agnostic by default**.
+4. Prefer **self-hosted open models** and pluggable inference abstractions.
+5. Use the **wiki / knowledge-card layer as the human curation interface**.
+6. Use **hybrid retrieval** for all serious downstream agentic workflows.
+7. Treat contradiction resolution as a **first-class product capability**.
+8. Never lose provenance.
+9. Never silently overwrite accepted knowledge.
+10. Optimize for a future in which the curated wiki / card layer becomes the trusted operational context for humans and agents alike.
