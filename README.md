@@ -49,17 +49,6 @@ Cards are read in a defined order: field context first to establish the situatio
 
 ---
 
-## Key References
-
-
-1. [knowledge-pipeline-blueprint.md](docs/guide/knowledge-pipeline-blueprint.md): Core pipeline architecture: Three-component architecture: Ingestion → Reconciliation → Orchestration, with trust routing
-
-2. [unhcr-knowledge-ontology.ttl](docs/ontology/unhcr-knowledge-ontology.ttl): LPG ontology with 8 domains to build the knowledge graph - Complete Labeled Property Graph ontology — all node types, edge types, and property schemas
-
-3. [knowledge-card.yaml](docs/guide/knowledge-card.yaml): Complete Knowledge Card specifications  - Defines the 6 card types (KC-1 through KC-6), their sections, word limits, and graph queries
-
-
----
 
 ## Design Principles
 
@@ -74,6 +63,10 @@ Cards are read in a defined order: field context first to establish the situatio
 
 ## Vibe coding
 
-See [AGENT.md](AGENT.md)
+This project follows an approach where  detailed specifications prompts are used to guide the development of the target functional software. It is assumed that the AI codng agent that transform those prompts into code is infinitely faster and more consistent than any human counterpart. 
+
+During the development of the solution, code is retro-engineered to understand the logic of the code and to retroactively improve the prompt accuracy. Different coding models are used in rotation to avoid model lock-in and to enforce robustness of the solution. The system is developed in a test-driven manner, where tests are written before the code. This approach shall enforce maintainability acrosss potential future evolutions of the system.
+
+See [AGENT.md](AGENT.md) and the [prompt](docs/prompt) directory for more details.
 
 

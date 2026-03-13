@@ -1,115 +1,137 @@
 # 🚀 Get Started with Metamorph (Developer Quickstart)
 
-Welcome! This guide walks you through getting Metamorph running locally with a full knowledge pipeline: database and knowledge graph bootstrapping, ingestion, and curation tools.
+Welcome! This guide walks you through getting Metamorph running locally with a full knowledge pipeline—either with Docker containers (recommended) or without Docker, for native developer workflows, full hot-reload, and custom environments.
 
 ---
 
 ## 🛠️ Prerequisites
 - Computer: Linux, Mac, or Windows
-- Docker Desktop (recommended)
 - Python 3.10+
 - Node.js 18+
 - Git
-- (Optional) Poetry or pipenv
+- (Optional, but recommended): Poetry or pipenv for backend
+def
+- Docker Desktop (for one-command bringup, but you can run services locally instead)
 
 ---
 
-## 🗄️ 1. Database Initialization
-### PostgreSQL
-- Start local database with Docker Compose:
+## 🗄️ 1. Database and Services (Local or Docker)
+### Option A: Use Docker Compose (quickest, see below)
+### Option B: Run Everything Natively (no Docker)
+
+If you wish to develop and run Metamorph outside containers, start each service yourself:
+
+#### 1. PostgreSQL
+- Install locally (`brew install postgresql` or your OS method)
+- Create the database:
   ```bash
-  docker compose up --build
-  ```
-- Then initialize all schemas:
-  ```bash
+  createdb metamorph
   psql metamorph < scripts/init_db.sql
   ```
-  (This will create all tables/indexes needed. See [DATABASE_BLUEPRINT.md](docs/guide/DATABASE_BLUEPRINT.md) for details.)
+- Enable pgvector extension:
+  ```bash
+  psql -d metamorph -c "CREATE EXTENSION IF NOT EXISTS vector;"
+  ```
 
-### MinIO, Redis, Neo4j
-- All supporting services are started with Docker Compose as well.
-- Neo4j default: [`bolt://localhost:7687`] (login: neo4j / password)
+#### 2. Neo4j
+- Download from https://neo4j.com/download or use Desktop app.
+- Run with:
+  ```bash
+  neo4j console --home-dir $NEO4J_HOME --config-dir $NEO4J_HOME/conf
+  ```
+- Set initial password.
+- Default bolt URL is `bolt://localhost:7687`.
+- To bootstrap the ontology, see below.
+
+#### 3. Redis (for Celery and cache)
+- Install with `brew install redis` or OS package manager.
+- Start: `redis-server`
+
+#### 4. MinIO (object storage, optional for dev/test)
+- Download from https://min.io/download (run `minio server /tmp/minio` with test credentials)
+- Or replace S3 storage config with local dirs for dev only.
 
 ---
 
-## 🌐 2. Knowledge Graph & Ontology Bootstrap
-### Ontology Init
-- Populate the main ontology into your graph database:
+## 📝 2. Environment Variables
+- Copy `.env.example` → `.env` in repo root and backend as needed
+- Set DB=postgres URIs, NEO4J, REDIS, and S3/MINIO envs to your local services (not Docker container names!).
+- Example for local Postgres:
+  ```env
+  POSTGRES_DSN=postgresql://localhost:5432/metamorph
+  ```
+  See README.md for the full variable set.
+
+---
+
+## 🐍 3. Backend (FastAPI)
+- Create a Python 3.10+ virtual environment (venv, poetry, or pipenv)
+- Install dependencies:
+  ```bash
+  poetry install  # or pip install -r requirements.txt
+  ```
+- Run the API (with auto-reload):
+  ```bash
+  poetry run uvicorn app.main:app --reload
+  # or uvicorn app.main:app --reload
+  ```
+- API runs by default at http://localhost:8000; docs at `/docs` endpoint.
+
+---
+
+## 🖥️ 4. Frontend (React/Vite/TypeScript)
+- Navigate to frontend directory:
+  ```bash
+  cd frontend
+  npm install
+  npm run dev
+  ```
+- Frontend runs by default at http://localhost:3000
+- Configure VITE_ or NEXT_PUBLIC_ variables in `.env` if applicable for proxying to your API/backend.
+
+---
+
+## 📊 5. Knowledge Graph Ontology and Pipeline Bootstrap
+- Ontology bootstrapping (Neo4j):
   ```bash
   python scripts/bootstrap_knowledge_graph.py --ontology docs/ontology/unhcr-knowledge-ontology.ttl --neo4j-url bolt://localhost:7687
   ```
-  This script will create class nodes, property/relationship types, and controlled vocabularies in Neo4j based on the UNHCR ontology.
-
-### Progressive Graph Building
-- Apply progressive rounds as described in [docs/ontology/README.md](docs/ontology/README.md):
-  - **Round 1** — Masterdata: country, region, org, population anchors
-  - **Round 2** — Operational context: situations, partners, activities
-  - **Round 3** — Evidence, transactions, claims
-- For each round, run:
+- Progressive graph build, per round:
   ```bash
   python scripts/build_graph_round.py --round 1
   python scripts/build_graph_round.py --round 2
   python scripts/build_graph_round.py --round 3
   ```
-  _Each script inserts only entities/relations relevant to its round; rounds must be run in order for the graph to resolve correctly._
+- These steps are identical in both Docker and native workflows; just ensure your `NEO4J_URI` matches your local instance.
 
 ---
 
-## 📝 3. Environment Variables
-- Copy `.env.example` → `.env` in both root and backend.
-- Set credentials and URIs for Postgres, MinIO, and Neo4j.
+## 🏃 6. Running Tests and QA
+- Backend: `pytest` OR `poetry run pytest`
+- Frontend: `npm test` or `npx playwright test`
+- In both, use local URLs/credentials for API and database access.
+- Both sides support hot reload; you can attach debuggers, run Playwright/E2E, and test increments as you build.
 
 ---
 
-## 🐳 4. Start All Services
-  ```bash
-  docker compose up --build
-  ```
-- Backend docs: http://localhost:8000/docs
-- Frontend UI: http://localhost:3000/
+## 🧩 7. Troubleshooting
+- If services fail to connect, check `.env` for local addresses, not Docker hostnames.
+- Make sure each database/service is running and has been initialized.
+- Logs from API (`uvicorn`), frontend, and DB/graph/redis will all show on your standard out.
+- For more details, see README.md, DATABASE.md, and API.md for full config, and check the relevant issues or docs for the specific service you’re operating outside of Docker.
 
 ---
 
-## 🛠 5. Developer Tools
-- Backend (optional): poetry or pipenv then `uvicorn app.main:app --reload`
-- Frontend: `npm install` then `npm run dev`
+## 🗄️ Alternative: Docker Compose Full Bring-Up
+Running everything in Docker remains the fastest onboarding. If you wish to return to it, just:
+```bash
+docker compose up --build
+```
+This will start all services, with all network/config/database persistence handled by Docker. See original documentation above for details!
 
 ---
 
-## 🏗️ 6. Knowledge Pipeline QA
-- Init DB:
-  ```bash
-  psql metamorph < scripts/init_db.sql
-  ```
-- Bootstrap ontology:
-  ```bash
-  python scripts/bootstrap_knowledge_graph.py --ontology docs/ontology/unhcr-knowledge-ontology.ttl
-  ```
-- Progressive build:
-  ```bash
-  python scripts/build_graph_round.py --round 1
-  python scripts/build_graph_round.py --round 2
-  python scripts/build_graph_round.py --round 3
-  ```
-- After each phase, use the Metamorph UI/dashboards to inspect, curate, and audit knowledge.
+## 🎉 Congratulations!
+You can now develop, run, test, and QA Metamorph locally—inside Docker containers or outside, with all the benefits of local dev, hot reload, IDE integration, isolated services, and rapid TDD.
 
----
-
-## 🧹 7. Troubleshooting & Support
-- DB errors: Check container logs, rerun `init_db.sql` as needed.
-- Graph/Neo4j/ontology errors: Ensure Python dependencies are installed, Neo4j is running, and credentials are correct.
-- See [docs/ontology/README.md](docs/ontology/README.md) and [docs/guide/DATABASE_BLUEPRINT.md](docs/guide/DATABASE_BLUEPRINT.md) for more.
-
----
-
-## 🎉 Done
-You now have a bootstrapped, progressive, reproducible Metamorph deployment—everything from schema to knowledge graph to agentic curation tools is ready!
-
----
-
-## 📖 Script Reference
-- `scripts/init_db.sql` — Postgres schema
-- `scripts/bootstrap_knowledge_graph.py` — Creates class/relationship/vocab structure from ontology
-- `scripts/build_graph_round.py` — Progressive entity/relation builder per ontology rounds
-- `docs/ontology/README.md` — Build details, data source mapping, graph best practices
-- `docs/guide/DATABASE_BLUEPRINT.md` — All schema details
+For next steps, service-specific docs, or detailed configuration, see README.md and other docs in docs/guide.

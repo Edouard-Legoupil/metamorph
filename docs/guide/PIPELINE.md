@@ -1,7 +1,6 @@
 # Metamorph Knowledge Pipeline & Ontology
 
 ## 1. Overview
-
 This document describes the evidence-backed, layered knowledge pipeline from document ingestion to agentic context. Each stage enforces auditability, explainability, and governance.
 
 ### Pipeline Layers
@@ -63,20 +62,22 @@ flowchart TD
 
 ---
 
-## 5. Pipeline QA, Rounds/Progressive Graph Building
+## 5. Curation and Retroaction (Human Feedback Injection)
+When a human curator edits a wiki/card block, approves or rejects a claim, or resolves a conflict, the resulting decision is immediately recorded in an immutable audit log. The corresponding claim, canonical fact, or entity in both the relational database and the graph database is updated to reflect the new status (APPROVED, SUPERSEDED, REJECTED, etc.), preserving full provenance and version history. All affected wiki/card blocks and retrieval indices are refreshed. Agentic/API answers always reflect these changes, and the full curation and audit log is queryable from any accepted knowledge state. All steps and endpoints enabling this feedback loop are described in CURATION.md and API.md.
 
+---
+
+## 6. Pipeline QA, Rounds/Progressive Graph Building
 Knowledge graph build proceeds in incremental “rounds”—each round bootstraps layers of masterdata/context/evidence:
 - **Round 1:** Masterdata – countries, regions, orgs, contexts, policies, population/anchor
 - **Round 2:** Ops context – situations, partners, activities
 - **Round 3:** Evidence – evaluations, contracts, claims, findings
-
 Scripts: `build_graph_round.py` implements this progressive loading. See [docs/ontology/README.md](../ontology/README.md) for details and policies.
-
 All nodes/facts are deduplicated by canonical ID/IRI/external id, with merge/split and history tracked.
 
 ---
 
-## 6. Agent, API, and Retrieval Requirements
+## 7. Agent, API, and Retrieval Requirements
 - All blocks, facts, claims, and entities must expose provenance inline or on modal/click.
 - Contradiction and pending badges are programmatic; a block/fact is only rendered as accepted when its trust state is eligible by blueprint rules.
 - Agent retrieval must return evidence-cited, truncation-marked, freshness-scored context packs (never just blobbed PDF text or raw embeddings).
@@ -84,7 +85,7 @@ All nodes/facts are deduplicated by canonical ID/IRI/external id, with merge/spl
 
 ---
 
-## 7. Success Criteria
+## 8. Success Criteria
 - All accepted knowledge is evidence-backed and traceable.
 - Contradictions/updates never overwrite without review.
 - Hybrid retrieval returns cited, context-rich, verification-marked answers (UI or agent).

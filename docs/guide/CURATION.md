@@ -2,7 +2,7 @@
 
 ## 1. Curation Overview
 
-Metamorph empowers curators, reviewers, and analysts to keep knowledge clean, current, and trustworthy. Micro-tasks, conflict queues, and in-wiki review make quality control seamless.
+Metamorph empowers curators, reviewers, and analysts to keep knowledge clean, current, and trustworthy. Micro-tasks, conflict queues, in-wiki review, and a robust audit/retroaction pipeline make quality control seamless and auditable.
 
 ---
 
@@ -18,7 +18,7 @@ Metamorph empowers curators, reviewers, and analysts to keep knowledge clean, cu
 ### 2.2 In-Wiki Curation
 - Every wiki block can be verified, flagged, edited, or resolved.
 - Conflict banners, freshness indicators, and provenance modals are always visible.
-- Reviewer actions trigger backend workflows and audit logging.
+- Reviewer actions trigger backend workflows, immediate wiki/card/graph update, and audit logging. All accepted or rejected actions flow into the canonical graph and claim store via the retroaction loop.
 
 ### 2.3 Trust Routing and Verification States
 - **Auto-Accept**: High confidence, eligible by policy—becomes accepted and visible
@@ -30,7 +30,12 @@ Metamorph empowers curators, reviewers, and analysts to keep knowledge clean, cu
 
 ---
 
-## 3. Conflict Handling
+## 3. Human Retroaction Feedback Loop
+When a curator or reviewer performs any in-wiki or dashboard action—approving, editing, merging, escalating, or rejecting—a new entry is instantly recorded in the audit log and curation table with actor, rationale, and timestamp. The canonical claim, fact, or entity record is updated in both the relational and graph database and previous states are preserved with full provenance. Changes trigger block/card refresh in the UI and update verification badges/banners. All retroaction is bidirectionally traceable via API for both human and agentic use. This ensures that every curation action permanently alters the trusted knowledge base in an auditable and reproducible way. For detailed API contracts, see API.md.
+
+---
+
+## 4. Conflict Handling
 - Conflicts queued by contradiction detection (quantitative, normative, contact, structural, temporal, classification)
 - Each conflict record (`review.conflicts`) contains:
   - Existing value, incoming value
@@ -41,7 +46,7 @@ Metamorph empowers curators, reviewers, and analysts to keep knowledge clean, cu
 
 ---
 
-## 4. Review Tiers & Escalation
+## 5. Review Tiers & Escalation
 
 - **Tier 1—Field/local:** domain/operational data
 - **Tier 2—Regional:** regional SOP/strategy/conflicts
@@ -50,11 +55,12 @@ Metamorph empowers curators, reviewers, and analysts to keep knowledge clean, cu
 
 ---
 
-## 5. Audit & QA
+## 6. Audit & QA
 - All reviewer actions are audit-trailed and appear in immutable logs
-- Curation actions update block/claim/fact status and provenance
-- All state transitions documented for trust, governance, reproducibility
+- Curation actions update block/claim/fact status and provenance, and are propagated via the human retroaction feedback loop
+- All state transitions are documented for trust, governance, and reproducibility
+- The API and QA dashboards must reflect all live and historic decisions
 
 ---
 
-See [PIPELINE.md](./PIPELINE.md) for knowledge flow, [ARCHITECTURE.md](./ARCHITECTURE.md) for system context, and [API.md](./API.md) for ValidationCard/curation APIs.
+See [PIPELINE.md](./PIPELINE.md) for knowledge flow and retroaction summary, [ARCHITECTURE.md](./ARCHITECTURE.md) for system context, and [API.md](./API.md) for ValidationCard/curation endpoints. 
