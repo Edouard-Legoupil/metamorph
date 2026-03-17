@@ -2,6 +2,8 @@
 
 A document-to-knowledge intelligence system for UN and international humanitarian organisations.
 
+
+![alt text](docs/blueprint.png)
 ---
 
 ## What This Is
