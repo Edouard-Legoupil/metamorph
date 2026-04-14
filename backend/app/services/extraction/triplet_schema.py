@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any, List, Tuple, Literal, Union
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field, validator, constr
 import re
 
@@ -179,7 +179,7 @@ EXAMPLES = {
             label="Settlement",
             id=None,
             name="Bidi Bidi",
-            properties={"settlementType": "Camp"},
+            properties={"settlementType": "Camp", "name": "Bidi Bidi"},
         ),
         metadata=TripletMetadata(
             source_document_id="doc-222",
@@ -216,7 +216,7 @@ EXAMPLES = {
     # KC-4 Partner
     "partner": Triplet(
         subject=TripletEntity(
-            label="ImplementingPartner", id=None, name="RedCross", properties={}
+            label="ImplementingPartner", id=None, name="RedCross", properties={"name": "RedCross"}
         ),
         predicate="IMPLEMENTED_BY",
         object=TripletEntity(
@@ -260,11 +260,11 @@ EXAMPLES = {
     # KC-6 Crisis
     "crisis": Triplet(
         subject=TripletEntity(
-            label="ConflictEvent", id=None, name="2022 Border Skirmish", properties={}
+            label="ConflictEvent", id=None, name="2022 Border Skirmish", properties={"name": "2022 Border Skirmish"}
         ),
         predicate="LED_TO",
         object=TripletEntity(
-            label="ProtectionIncident", id=None, name="Village attack", properties={}
+            label="ProtectionIncident", id=None, name="Village attack", properties={"name": "Village attack"}
         ),
         metadata=TripletMetadata(
             source_document_id="doc-conflict",

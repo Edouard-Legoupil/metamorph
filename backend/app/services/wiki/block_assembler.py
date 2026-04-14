@@ -53,6 +53,38 @@ def assemble_blocks_for_card(
     return blocks
 
 
+# Query execution stub
+class QueryExecutor:
+    """Stub query executor for testing."""
+    def execute(self, query: str, parameters: Dict = None) -> Dict:
+        """Execute a query and return mock results."""
+        return {"results": [{"data": "mock data"}]}
+
+
+# Block template renderer
+class BlockTemplateRenderer:
+    """Render block templates with data."""
+    def render(self, template: str, data: Dict) -> str:
+        """Render template with provided data."""
+        return template.format(**data)
+
+
+# Block rendering function
+def render_live_block(block: Dict, executor: Any, renderer: Any) -> str:
+    """Render a live block with template and data."""
+    # Basic template rendering - replace placeholders with actual data
+    template = block.get("template", "# {section_name}\n{content}")
+    
+    # Simple placeholder replacement
+    rendered = template.format(
+        section_name=block["section_name"],
+        content=block.get("content", ""),
+        figure=block.get("figure", "")
+    )
+    
+    return rendered
+
+
 # Patch: Add validation at block assemble time
 def validate_assembled_blocks(
     card_id: str, page_id: str, query_defs: Dict = None

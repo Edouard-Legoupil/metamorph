@@ -1,4 +1,4 @@
-from backend.app.services.extraction.triplet_schema import (
+from app.services.extraction.triplet_schema import (
     Triplet,
     validate_triplet,
     EXAMPLES,

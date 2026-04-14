@@ -1,4 +1,4 @@
-from backend.app.services.ingestion.ingestion_pipeline import (
+from app.services.ingestion.ingestion_pipeline import (
     analyze_layout,
     route_parser,
     process_document,

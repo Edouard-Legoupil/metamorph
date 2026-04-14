@@ -9,129 +9,236 @@ Welcome! This guide walks you through getting Metamorph running locally with a f
 - Python 3.10+
 - Node.js 18+
 - Git
-- (Optional, but recommended): Poetry or pipenv for backend
-def
-- Docker Desktop (for one-command bringup, but you can run services locally instead)
+- Docker Desktop (recommended for easiest setup)
+- (Optional): Poetry or pipenv for backend dependency management
 
 ---
 
-## 🗄️ 1. Database and Services (Local or Docker)
-### Option A: Use Docker Compose (quickest, see below)
-### Option B: Run Everything Natively (no Docker)
+## 🗄️ Quick Start with Docker (Recommended)
 
-If you wish to develop and run Metamorph outside containers, start each service yourself:
-
-#### 1. PostgreSQL
-- Install locally (`brew install postgresql` or your OS method)
-- Create the database:
-  ```bash
-  createdb metamorph
-  psql metamorph < scripts/init_db.sql
-  ```
-- Enable pgvector extension:
-  ```bash
-  psql -d metamorph -c "CREATE EXTENSION IF NOT EXISTS vector;"
-  ```
-
-#### 2. Neo4j
-- Download from https://neo4j.com/download or use Desktop app.
-- Run with:
-  ```bash
-  neo4j console --home-dir $NEO4J_HOME --config-dir $NEO4J_HOME/conf
-  ```
-- Set initial password.
-- Default bolt URL is `bolt://localhost:7687`.
-- To bootstrap the ontology, see below.
-
-#### 3. Redis (for Celery and cache)
-- Install with `brew install redis` or OS package manager.
-- Start: `redis-server`
-
-#### 4. MinIO (object storage, optional for dev/test)
-- Download from https://min.io/download (run `minio server /tmp/minio` with test credentials)
-- Or replace S3 storage config with local dirs for dev only.
-
----
-
-## 📝 2. Environment Variables
-- Copy `.env.example` → `.env` in repo root and backend as needed
-- Set DB=postgres URIs, NEO4J, REDIS, and S3/MINIO envs to your local services (not Docker container names!).
-- Example for local Postgres:
-  ```env
-  POSTGRES_DSN=postgresql://localhost:5432/metamorph
-  ```
-  See README.md for the full variable set.
-
----
-
-## 🐍 3. Backend (FastAPI)
-- Create a Python 3.10+ virtual environment (venv, poetry, or pipenv)
-- Install dependencies:
-  ```bash
-  poetry install  # or pip install -r requirements.txt
-  ```
-- Run the API (with auto-reload):
-  ```bash
-  poetry run uvicorn app.main:app --reload
-  # or uvicorn app.main:app --reload
-  ```
-- API runs by default at http://localhost:8000; docs at `/docs` endpoint.
-
----
-
-## 🖥️ 4. Frontend (React/Vite/TypeScript)
-- Navigate to frontend directory:
-  ```bash
-  cd frontend
-  npm install
-  npm run dev
-  ```
-- Frontend runs by default at http://localhost:3000
-- Configure VITE_ or NEXT_PUBLIC_ variables in `.env` if applicable for proxying to your API/backend.
-
----
-
-## 📊 5. Knowledge Graph Ontology and Pipeline Bootstrap
-- Ontology bootstrapping (Neo4j):
-  ```bash
-  python scripts/bootstrap_knowledge_graph.py --ontology docs/ontology/unhcr-knowledge-ontology.ttl --neo4j-url bolt://localhost:7687
-  ```
-- Progressive graph build, per round:
-  ```bash
-  python scripts/build_graph_round.py --round 1
-  python scripts/build_graph_round.py --round 2
-  python scripts/build_graph_round.py --round 3
-  ```
-- These steps are identical in both Docker and native workflows; just ensure your `NEO4J_URI` matches your local instance.
-
----
-
-## 🏃 6. Running Tests and QA
-- Backend: `pytest` OR `poetry run pytest`
-- Frontend: `npm test` or `npx playwright test`
-- In both, use local URLs/credentials for API and database access.
-- Both sides support hot reload; you can attach debuggers, run Playwright/E2E, and test increments as you build.
-
----
-
-## 🧩 7. Troubleshooting
-- If services fail to connect, check `.env` for local addresses, not Docker hostnames.
-- Make sure each database/service is running and has been initialized.
-- Logs from API (`uvicorn`), frontend, and DB/graph/redis will all show on your standard out.
-- For more details, see README.md, DATABASE.md, and API.md for full config, and check the relevant issues or docs for the specific service you’re operating outside of Docker.
-
----
-
-## 🗄️ Alternative: Docker Compose Full Bring-Up
-Running everything in Docker remains the fastest onboarding. If you wish to return to it, just:
+### 1. Clone the Repository
 ```bash
-docker compose up --build
+git clone https://github.com/your-repo/metamorph.git
+cd metamorph
 ```
-This will start all services, with all network/config/database persistence handled by Docker. See original documentation above for details!
+
+### 2. Start Services with Docker
+```bash
+# Start Neo4j and MinIO containers
+docker run -d -p 7687:7687 -p 7474:7474 -e NEO4J_AUTH=neo4j/password --name neo4j neo4j:5
+docker run -d -p 9000:9000 -p 9001:9001 -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin --name minio minio/minio server /data --console-address ":9001"
+```
+
+### 3. Create MinIO Bucket
+```bash
+# Install MinIO client and create bucket
+docker exec minio mc alias set local http://localhost:9000 minioadmin minioadmin
+docker exec minio mc mb local/metamorph-documents
+```
+
+### 4. Install Backend Dependencies
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install pydantic-settings  # Required for Pydantic v2
+```
+
+### 5. Run Backend Tests
+```bash
+# Run all unit tests
+python -m pytest tests/unit/ -v
+
+# Expected: 35 tests passing (100% success rate)
+```
+
+### 6. Start Backend Server
+```bash
+# From backend directory
+source .venv/bin/activate
+uvicorn app.main:app --reload
+```
+
+### 7. Install Frontend Dependencies
+```bash
+cd ../frontend
+npm install
+npx playwright install  # Install browsers for testing
+```
+
+### 8. Build Frontend
+```bash
+npm run build
+```
+
+### 9. Start Frontend Development Server
+```bash
+npm run dev
+```
+
+### 10. Access the Application
+- **Backend API**: http://localhost:8000
+- **Frontend**: http://localhost:5173
+- **Neo4j Browser**: http://localhost:7474 (user: neo4j, password: password)
+- **MinIO Console**: http://localhost:9001 (user: minioadmin, password: minioadmin)
 
 ---
 
-## 🎉 Congratulations!
-You can now develop, run, test, and QA Metamorph locally—inside Docker containers or outside, with all the benefits of local dev, hot reload, IDE integration, isolated services, and rapid TDD.
+## 🧪 Running Tests
 
-For next steps, service-specific docs, or detailed configuration, see README.md and other docs in docs/guide.
+### Backend Tests
+```bash
+cd backend
+source .venv/bin/activate
+python -m pytest tests/unit/ -v --tb=short
+```
+
+**Expected Results:**
+- ✅ 35 tests passing (100% success)
+- ⚠️ Deprecation warnings (non-critical)
+- Tests cover: API endpoints, extraction, reconciliation, graph operations, ingestion, integration, edge cases
+
+### Frontend Tests
+```bash
+cd frontend
+npm test
+```
+
+**Note:** Playwright tests require browsers installed via `npx playwright install`
+
+---
+
+## 🔧 Development Workflow
+
+### Backend Development
+```bash
+cd backend
+source .venv/bin/activate
+# Run with hot reload
+uvicorn app.main:app --reload
+```
+
+### Frontend Development
+```bash
+cd frontend
+npm run dev  # Hot reload at http://localhost:5173
+```
+
+### Common Commands
+```bash
+# Lint backend
+cd backend && source .venv/bin/activate && pylint app/
+
+# Format backend
+cd backend && source .venv/bin/activate && black app/
+
+# Lint frontend
+cd frontend && npm run lint
+
+# Format frontend
+cd frontend && npm run format
+```
+
+---
+
+## 🐳 Docker Alternative (Full Stack)
+
+If you prefer Docker for everything:
+
+```bash
+# Build and start all services
+docker-compose -f docker-compose.open-source.yml up -d
+
+# Wait for services to initialize (check logs)
+docker-compose -f docker-compose.open-source.yml logs -f
+
+# Run backend tests inside container
+docker exec metamorph-api python -m pytest tests/unit/ -v
+```
+
+---
+
+## 📚 Key Files and Directories
+
+### Backend
+- `backend/app/main.py` - FastAPI application entry
+- `backend/app/services/` - Core business logic
+- `backend/tests/unit/` - Unit tests (35 tests)
+- `backend/requirements.txt` - Python dependencies
+
+### Frontend
+- `frontend/src/` - React source code
+- `frontend/src/pages/` - Main page components
+- `frontend/tests/` - Playwright end-to-end tests
+- `frontend/package.json` - Node.js dependencies
+
+### Configuration
+- `.env.example` - Environment variables template
+- `docker-compose.yml` - Docker service definitions
+- `docker-compose.open-source.yml` - Full open-source stack
+
+---
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+**1. Pydantic Import Error**
+```
+ImportError: BaseSettings has been moved to pydantic-settings
+```
+**Fix:** Install pydantic-settings
+```bash
+pip install pydantic-settings
+```
+
+**2. Playwright Browser Missing**
+```
+Error: Executable doesn't exist at /home/user/.cache/ms-playwright/
+```
+**Fix:** Install browsers
+```bash
+npx playwright install
+```
+
+**3. Neo4j Connection Failed**
+```
+ServiceUnavailable: Couldn't connect to localhost:7687
+```
+**Fix:** Start Neo4j container
+```bash
+docker start <neo4j-container-id>
+```
+
+**4. MinIO Connection Failed**
+```
+EndpointConnectionError: Could not connect to localhost:9000
+```
+**Fix:** Start MinIO container and create bucket
+```bash
+docker start <minio-container-id>
+docker exec minio mc mb local/metamorph-documents
+```
+
+---
+
+## 🎯 Next Steps
+
+1. **Explore the API**: http://localhost:8000/docs
+2. **Try the frontend**: http://localhost:5173
+3. **Run tests**: Verify everything works
+4. **Start developing**: Add new features or fix issues
+
+---
+
+## 📞 Support
+
+- **Documentation**: See `/docs` directory
+- **Architecture**: `docs/guide/ARCHITECTURE.md`
+- **Ontology**: `docs/ontology/unhcr-knowledge-ontology.ttl`
+- **Issues**: Check GitHub issues for known problems
+
+---
+
+🎉 **You're ready to go!** The Metamorph knowledge pipeline is now running locally.

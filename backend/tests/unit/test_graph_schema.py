@@ -30,10 +30,9 @@ async def test_temporal_versioning():
           CREATE (i:Indicator:Entity {
             identifier:'uuid-ind',
             indicatorCode:'POP01',
-            numericValue:[
-              {value:100.0, date:'2023-01-01', source:'doc-x'},
-              {value:140.0, date:'2023-07-01', source:'doc-y'}
-            ],
+            numericValue: [100.0, 140.0],
+            valueDates: ['2023-01-01', '2023-07-01'],
+            valueSources: ['doc-x', 'doc-y'],
             createdAt:datetime(), lastUpdated:datetime(),
             verificationStatus:'SHADOW', hasTag:['pop','trend']
           });
@@ -43,4 +42,4 @@ async def test_temporal_versioning():
         )
         rec = await result.single()
         vals = rec["vals"]
-        assert vals[-1]["value"] == 140.0
+        assert vals[-1] == 140.0

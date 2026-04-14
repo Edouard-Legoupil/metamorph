@@ -80,8 +80,6 @@ All prompts, workflows, and implementations MUST conform to the canonical docume
 
 - `docs/guide/CURATION.md`: Reviewer, conflict, curation, and trust/verification surface/policy.
 
-- `docs/guide/API.md`: API, CLI, MCP/agent endpoints, including contract, conventions, and examples.
-
 - `docs/ontology/unhcr-knowledge-ontology.ttl`: Core ontology for all node types, edge semantics, and schema enforcement.
 
 - `docs/guide/get-started.md`: For hands-on setup/bootstrapping.
@@ -470,10 +468,6 @@ Use fully open-source components wherever possible and avoid hard dependencies o
 - must remain compatible with any S3-compatible object store
 
 ### Wiki / Curation UI
-Preferred default:
-- **Wiki.js** for lightweight wiki publishing
-
-Alternative if tighter custom control is required:
 - custom React wiki workspace backed by the Metamorph API
 
 ### Frontend

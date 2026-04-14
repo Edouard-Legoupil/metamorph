@@ -1,4 +1,4 @@
-from backend.app.services.ingestion.storage import upload_to_s3
+from app.services.ingestion.storage import upload_to_s3
 import os
 
 

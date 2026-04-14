@@ -1,7 +1,7 @@
 import boto3
 import os
 
-S3_ENDPOINT = os.getenv("S3_ENDPOINT", "http://minio:9000")
+S3_ENDPOINT = os.getenv("S3_ENDPOINT", "http://localhost:9000")
 S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "minioadmin")
 S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "minioadmin")
 S3_BUCKET = os.getenv("S3_BUCKET", "metamorph-documents")

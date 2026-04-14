@@ -12,7 +12,6 @@ from app.core.security import get_api_key
 @router.post("/ingest")
 async def ingest_document(
     file: UploadFile = File(...), background_tasks: BackgroundTasks = None, api_key: str = Depends(get_api_key)
-    file: UploadFile = File(...), background_tasks: BackgroundTasks = None
 ):
     temp_path = f"/tmp/{file.filename}"
     with open(temp_path, "wb") as out_file:
@@ -29,7 +28,6 @@ async def ingest_document(
 @router.post("/batch-ingest")
 async def batch_ingest(
     files: List[UploadFile] = File(...), background_tasks: BackgroundTasks = None, api_key: str = Depends(get_api_key)
-    files: List[UploadFile] = File(...), background_tasks: BackgroundTasks = None
 ):
     for file in files:
         tmp = f"/tmp/{file.filename}"
