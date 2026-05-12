@@ -1,50 +1,8 @@
-Implement the community trust system from Pipeline Blueprint Section 4.3.2.
+Implement a community trust and implicit verification system for wiki/card blocks. For each block, maintain a community trust score influenced by user interactions: reading without flagging, explicit verification, proposal citation, or flagging for inaccuracy. Apply configurable thresholds for automatically changing verification status (from auto-accepted to community-verified, etc.), and implement workflows for flag escalation and forced review. Track unique reads and verifications, visualize verification status clearly, and enable trust score decay/expiry logic as configured. Wire community trust changes and implicit validation into both the REST API and wiki/card UI, and make sure review/escalation routes connect to the curation queue.
 
-Create services/trust/community_trust.py:
-
-1. Trust score model:
-   - Each wiki block has community_trust_score (integer)
-   - Incremented by:
-     * User reads block and does not flag: +1 (max 1 per user per block)
-     * User clicks [Verify] button: +3
-     * User cites block in proposal (via tracking): +5
-   - Decremented by:
-     * User flags as incorrect: -2 (triggers review)
-     * Conflict discovered after read: -1 per affected reader
-
-2. Implicit verification logic:
-   threshold = config.get("COMMUNITY_TRUST_THRESHOLD", 3)
-   
-   IF block.verification_status == "AUTO_ACCEPTED":
-       if block.community_trust_score >= threshold:
-           block.verification_status = "COMMUNITY_VERIFIED"
-           block.verified_at = now()
-           # Remove 🤖 icon, add 👥 icon
-
-3. Read tracking:
-   - Track unique user reads per block
-   - Use browser fingerprinting or auth for logged-in users
-   - Store read events: {block_id, user_id, timestamp, session_id}
-   - Deduplicate reads within 24h per user
-
-4. Flag workflow:
-   - When user flags content, create FlagRecord
-   - Flag triggers:
-     * Immediate review queue entry
-     * Notification to Tier 1 focal point
-     * Block temporarily shows "Under Review" banner
-   - If 3+ flags from unique users, auto-escalate to Tier 2
-
-5. Trust decay:
-   - Trust scores decay over time (configurable: 10% per year)
-   - Newer verifications weighted more heavily
-   - If block has no reads in 6 months, flag for review
-
-6. Verification visualization:
-   - 🤖 Auto-accepted (no human eyes yet)
-   - ⚠️ Pending verification (shadow update)
-   - 👥 Community-verified (implicit consensus)
-   - ✅ Human-verified (explicit curator approval)
-   - 🔴 Contested (active flags/conflicts)
-
-Plug these hooks into block preview endpoints, and invoke trust score/read/verify/flag in REST as needed for wiki page rendering or agentic moderation.   
+Verification & Test Guidance
+- [ ] Inspect backend/services/trust/community_trust, database, and frontend UI for presence of trust score logic per block/card and correct visualization.
+- [ ] Confirm user interactions (read, verify, flag, cite) are tracked and increment/decrement trust scores as described.
+- [ ] Check automated status transitions (e.g., auto-accepted to community-verified) happen at threshold and are visualized with correct icons/badges in the UI.
+- [ ] Flag workflow and decay behavior are present and connected to curation/escalation routes; flags are tracked and batch/escalation tested.
+- [ ] Manual test by reading, verifying, or flagging a block updates the score and UI status, and triggers correct workflow per docs.

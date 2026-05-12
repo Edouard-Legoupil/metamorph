@@ -1,43 +1,8 @@
-Implement the ingestion pipeline  with routing logic between Docling and MinerU.
+Implement a file ingestion pipeline that accepts uploads of documents (PDF, DOCX, Markdown, HTML, and other supportable rich formats), collects key metadata (title, author, publication date, source URL, checksum, document type), and stores the original file with version tracking and status in object storage. Route each document to the appropriate normalization parser according to a layout and content analysis—choose the optimal parser for tables, multi-column layouts, or OCR needs. Save normalized Markdown output and update the document record with all processing attributes, parser metadata, execution timing, provenance, and storage key. Document the full ingestion flow in get-started.md and PIPELINE.md. Ensure the ingestion code is robust to novel input and all writes are auditable. 
 
-Create services/ingestion/ingestion_pipeline.py:
-
-1. Document intake:
-   - Accept PDF, DOCX, Markdown, HTML
-   - Extract document metadata (title, author, publication_date, source_url)
-   - Store original file with version tracking
-   - Create Document record in graph
-
-2. Layout analysis for parser routing:
-   - Extract first 10 pages for sampling
-   - Calculate table density (tables per page)
-   - Detect multi-column layout
-   - Count embedded images/charts
-   - Decision logic:
-     IF table_density > 0.3 OR columns > 1 OR complex_layout_score > threshold:
-         route_to = "mineru"
-     ELSE:
-         route_to = "docling"
-
-3. Docling integration:
-   - Configure for humanitarian document types (policy docs, situation reports, assessments)
-   - Preserve: headings, lists, tables, footnotes, citations
-   - Output: Markdown with structural annotations
-
-4. MinerU integration:
-   - Configure for complex tables, multi-column, embedded charts
-   - Enable table structure recognition
-   - Extract embedded images with captions
-   - Output: Markdown with layout annotations
-
-5. Document record update:
-   - Store markdown_path
-   - Set status = "EXTRACTED"
-   - Record parser_used and processing_time
-   - Queue for triplet extraction
-
-Invariant: All output must be Markdown-first for consistent downstream processing.
-
-Add REST API endpoints, asynchronous task wiring, Neo4j upsert, and test coverage for this pipeline
-
-Add  full Neo4j transactional wiring, batch ingest, Playwright E2E tests, and S3/Minio upload testing
+Verification & Test Guidance
+- [ ] Confirm an ingestion pipeline exists with explicit parser routing logic (by file type/layout/complexity).
+- [ ] Verify all document uploads record metadata and status in the database.
+- [ ] Check that original and normalized files are saved in object storage with persistent, traceable keys.
+- [ ] See get-started.md outlines the operational and pipeline ingestion steps for new files.
+- [ ] Manually upload example files via the UI/API and verify all DB entries (including version lineage, parser selection, and provenance).
