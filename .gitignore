@@ -212,3 +212,7 @@ arc/
 /frontend/node_modules/
 logs/*
 docs/guide/archive_old
+backend/originals/*
+originals/*
+metamoprh.zip
+.specify/sp
