@@ -1,11 +1,13 @@
 """
-Website Crawler Module (FR-001c)
+Website Crawler Module (FR-001c, FR-001e)
 
 Provides BFS/DFS crawling functionality for website exploration and file discovery.
+Supports Cloudflare authentication to bypass robots.txt prevention.
 """
 import re
 import time
 import requests
+import json
 from typing import Dict, Any, List, Optional, Set, Tuple
 from urllib.parse import urljoin, urlparse, urlunparse
 from collections import deque
@@ -30,6 +32,18 @@ DEFAULT_HEADERS = {
 
 
 @dataclass
+class CloudflareConfig:
+    """Configuration for Cloudflare authentication"""
+    enabled: bool = False
+    cf_access_client_id: str = ""
+    cf_access_client_secret: str = ""
+    token_url: str = "https://www.cloudflare.com/cdn-cgi/access/cfaccess"  # Default Cloudflare auth URL
+    token: Optional[str] = None
+    token_expiry: float = 0.0  # Unix timestamp when token expires
+    auto_refresh: bool = True
+
+
+@dataclass
 class CrawlConfig:
     """Configuration for website crawling"""
     base_url: str
@@ -50,6 +64,12 @@ class CrawlConfig:
     discover_files: bool = True
     file_types: List[str] = field(default_factory=lambda: list(SCRAPABLE_FILE_TYPES))
     skip_non_file_urls: bool = False
+    
+    # Authentication settings (FR-001e)
+    cloudflare: CloudflareConfig = field(default_factory=CloudflareConfig)
+    basic_auth: Optional[Tuple[str, str]] = None  # (username, password)
+    cookies: Optional[Dict[str, str]] = None  # Session cookies
+    headers: Optional[Dict[str, str]] = None  # Custom headers
 
 
 @dataclass
@@ -80,13 +100,19 @@ class WebsiteCrawler:
     - Rate limiting (NFR-010)
     - File type detection (FR-001a)
     - Domain boundary enforcement
+    - Cloudflare authentication support (FR-001e)
+    - Basic authentication support
+    - Cookie-based session support
     - Error handling and retries
     
-    Acceptance Criteria (FR-001c):
+    Acceptance Criteria (FR-001c, FR-001e):
     - Crawl website using BFS strategy
     - Discover and follow internal links
     - Identify files that can be scraped
     - Handle errors gracefully
+    - Support Cloudflare site token authentication
+    - Support basic HTTP authentication
+    - Support session cookies
     """
     
     def __init__(self, base_url: str, **kwargs):
@@ -95,29 +121,231 @@ class WebsiteCrawler:
         
         Args:
             base_url: The base URL to start crawling from
-            **kwargs: Additional configuration options
+            **kwargs: Additional configuration options including:
+                - cloudflare: CloudflareConfig with cf_access_client_id and cf_access_client_secret
+                - basic_auth: Tuple of (username, password)
+                - cookies: Dict of session cookies
+                - headers: Dict of custom headers
         """
         self.config = CrawlConfig(base_url=base_url, **kwargs)
         self.base_url = base_url
         self.domain = extract_domain(base_url)
         self.robots_result: Optional[Dict[str, Any]] = None
         self.crawl_delay = self.config.crawl_delay
+        self.session: Optional[requests.Session] = None
         
         # Validate base URL
         try:
             self.base_url = validate_url(base_url)
         except URLValidationError as e:
             raise ValueError(f"Invalid base URL: {str(e)}")
+        
+        # Initialize Cloudflare token if enabled
+        if self.config.cloudflare.enabled:
+            self._init_cloudflare_session()
+        
+        # Initialize request session
+        self._init_session()
+    
+    def _init_session(self) -> requests.Session:
+        """
+        Initialize a requests session with configured authentication.
+        
+        Returns:
+            Configured requests.Session
+        """
+        self.session = requests.Session()
+        
+        # Set default headers
+        self.session.headers.update(DEFAULT_HEADERS)
+        
+        # Add custom headers if provided
+        if self.config.headers:
+            self.session.headers.update(self.config.headers)
+        
+        # Add basic auth if provided
+        if self.config.basic_auth:
+            username, password = self.config.basic_auth
+            self.session.auth = (username, password)
+        
+        # Add cookies if provided
+        if self.config.cookies:
+            self.session.cookies.update(self.config.cookies)
+        
+        # Add Cloudflare token if available
+        if self.config.cloudflare.enabled and self.config.cloudflare.token:
+            self.session.headers["Authorization"] = f"Bearer {self.config.cloudflare.token}"
+        
+        return self.session
+    
+    def _init_cloudflare_session(self) -> None:
+        """
+        Initialize Cloudflare authentication.
+        Gets token from Cloudflare using client ID and secret.
+        
+        Cloudflare Access uses OAuth2 client credentials flow.
+        Token URL: https://<team-name>.cloudflareaccess.com/cdn-cgi/access/cfaccess
+        """
+        if not self.config.cloudflare.cf_access_client_id or not self.config.cloudflare.cf_access_client_secret:
+            raise ValueError("Cloudflare client ID and secret are required when enabled")
+        
+        # Get token from Cloudflare
+        token_data = self._get_cloudflare_token()
+        if token_data:
+            self.config.cloudflare.token = token_data.get("access_token")
+            expiry = token_data.get("expires_in", 3600)  # Default 1 hour
+            self.config.cloudflare.token_expiry = time.time() + expiry - 60  # 1 minute buffer
+    
+    def _get_cloudflare_token(self) -> Optional[Dict[str, Any]]:
+        """
+        Get access token from Cloudflare using client credentials.
+        
+        Returns:
+            Dictionary with token data or None if failed
+        """
+        try:
+            # Prepare request data
+            data = {
+                "grant_type": "client_credentials",
+                "client_id": self.config.cloudflare.cf_access_client_id,
+                "client_secret": self.config.cloudflare.cf_access_client_secret,
+                "audience": self.base_url,
+            }
+            
+            headers = {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent": USER_AGENT,
+            }
+            
+            # Send token request
+            response = requests.post(
+                self.config.cloudflare.token_url,
+                data=data,
+                headers=headers,
+                timeout=self.config.timeout,
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                # Log error but continue without Cloudflare auth
+                return None
+                
+        except Exception as e:
+            # Log error but continue without Cloudflare auth
+            return None
+    
+    def _refresh_cloudflare_token_if_needed(self) -> bool:
+        """
+        Refresh Cloudflare token if it's expired or about to expire.
+        
+        Returns:
+            True if token was refreshed, False otherwise
+        """
+        if not self.config.cloudflare.enabled or not self.config.cloudflare.auto_refresh:
+            return False
+        
+        if not self.config.cloudflare.token:
+            # No token yet, try to get one
+            token_data = self._get_cloudflare_token()
+            if token_data:
+                self.config.cloudflare.token = token_data.get("access_token")
+                expiry = token_data.get("expires_in", 3600)
+                self.config.cloudflare.token_expiry = time.time() + expiry - 60
+                if self.session:
+                    self.session.headers["Authorization"] = f"Bearer {self.config.cloudflare.token}"
+                return True
+            return False
+        
+        # Check if token is expired or about to expire
+        if time.time() >= self.config.cloudflare.token_expiry:
+            token_data = self._get_cloudflare_token()
+            if token_data:
+                self.config.cloudflare.token = token_data.get("access_token")
+                expiry = token_data.get("expires_in", 3600)
+                self.config.cloudflare.token_expiry = time.time() + expiry - 60
+                if self.session:
+                    self.session.headers["Authorization"] = f"Bearer {self.config.cloudflare.token}"
+                return True
+        
+        return False
+    
+    def is_cloudflare_challenge(self, response: requests.Response) -> bool:
+        """
+        Check if a response indicates a Cloudflare challenge.
+        
+        Args:
+            response: HTTP response to check
+            
+        Returns:
+            True if response indicates Cloudflare challenge
+        """
+        if response.status_code in [403, 429, 503]:
+            # Check for Cloudflare-specific indicators
+            content = response.text.lower()
+            headers = response.headers
+            
+            # Cloudflare challenge indicators
+            if "cloudflare" in content or "cloudflare" in str(headers).lower():
+                return True
+            if "cf-ray" in str(headers).lower():
+                return True
+            if "access denied" in content:
+                return True
+        
+        return False
+    
+    def _get_auth_headers(self) -> Dict[str, str]:
+        """
+        Get authentication headers for requests.
+        
+        Returns:
+            Dictionary of headers including Cloudflare token if available
+        """
+        headers = {}
+        if self.config.cloudflare.enabled and self.config.cloudflare.token:
+            headers["Authorization"] = f"Bearer {self.config.cloudflare.token}"
+        return headers
     
     def fetch_robots(self) -> Dict[str, Any]:
         """
         Fetch and parse robots.txt for the website.
+        Uses Cloudflare authentication if configured.
         
         Returns:
             Dictionary with robots.txt parsing results
         """
         if self.robots_result is None:
-            self.robots_result = fetch_robots_txt(self.base_url, timeout=self.config.timeout)
+            # Prepare auth headers
+            auth_headers = self._get_auth_headers()
+            
+            # Try with session first (includes auth)
+            if self.session:
+                try:
+                    robots_url = urljoin(self.base_url, "/robots.txt")
+                    response = self.session.get(robots_url, timeout=self.config.timeout)
+                    if response.status_code == 200:
+                        from .robots_parser import parse_robots_txt
+                        self.robots_result = parse_robots_txt(response.text, robots_url)
+                        self.robots_result["found"] = True
+                        self.robots_result["url"] = robots_url
+                        self.robots_result["content"] = response.text
+                        
+                        # Extract crawl delay
+                        if self.robots_result.get("crawl_delay") and self.config.respect_robots:
+                            self.crawl_delay = max(self.crawl_delay, self.robots_result["crawl_delay"])
+                        return self.robots_result
+                except Exception:
+                    pass
+            
+            # Fallback to fetch_robots_txt with auth
+            self.robots_result = fetch_robots_txt(
+                self.base_url,
+                timeout=self.config.timeout,
+                headers=auth_headers,
+                cookies=self.config.cookies,
+                auth=self.config.basic_auth,
+            )
             
             # Extract crawl delay from robots.txt
             if self.robots_result.get("crawl_delay") and self.config.respect_robots:
@@ -395,13 +623,14 @@ class WebsiteCrawler:
         
         return True, None
     
-    def crawl_page(self, url: str, depth: int = 0) -> Dict[str, Any]:
+    def crawl_page(self, url: str, depth: int = 0, retry_on_cloudflare: bool = True) -> Dict[str, Any]:
         """
         Crawl a single page and extract links.
         
         Args:
             url: URL to crawl
             depth: Current crawl depth
+            retry_on_cloudflare: Whether to retry with Cloudflare auth if blocked
             
         Returns:
             Dictionary with page data and extracted links
@@ -413,6 +642,7 @@ class WebsiteCrawler:
             "links": set(),
             "files": [],
             "error": None,
+            "is_cloudflare_blocked": False,
         }
         
         try:
@@ -420,16 +650,49 @@ class WebsiteCrawler:
             if self.crawl_delay > 0 and depth > 0:
                 time.sleep(self.crawl_delay)
             
-            # Make the request
-            response = requests.get(
-                url,
-                headers=DEFAULT_HEADERS,
-                timeout=self.config.timeout,
-                allow_redirects=self.config.follow_redirects,
-            )
+            # Refresh Cloudflare token if needed
+            if self.config.cloudflare.enabled:
+                self._refresh_cloudflare_token_if_needed()
+            
+            # Use session if available
+            if self.session:
+                response = self.session.get(
+                    url,
+                    timeout=self.config.timeout,
+                    allow_redirects=self.config.follow_redirects,
+                )
+            else:
+                # Fallback to direct request
+                headers = DEFAULT_HEADERS.copy()
+                if self.config.cloudflare.enabled and self.config.cloudflare.token:
+                    headers["Authorization"] = f"Bearer {self.config.cloudflare.token}"
+                if self.config.headers:
+                    headers.update(self.config.headers)
+                
+                response = requests.get(
+                    url,
+                    headers=headers,
+                    timeout=self.config.timeout,
+                    allow_redirects=self.config.follow_redirects,
+                    auth=self.config.basic_auth,
+                    cookies=self.config.cookies,
+                )
             
             result["status_code"] = response.status_code
             result["content_type"] = response.headers.get('Content-Type', '')
+            
+            # Check for Cloudflare challenge
+            if self.is_cloudflare_challenge(response):
+                result["is_cloudflare_blocked"] = True
+                result["error"] = f"Cloudflare challenge detected (status: {response.status_code})"
+                
+                # Try with Cloudflare auth if enabled and not already tried
+                if retry_on_cloudflare and self.config.cloudflare.enabled:
+                    # Force token refresh
+                    self._init_cloudflare_session()
+                    # Retry with fresh token
+                    return self.crawl_page(url, depth, retry_on_cloudflare=False)
+                return result
             
             # Check if successful
             if response.status_code >= 400:

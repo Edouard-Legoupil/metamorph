@@ -6,7 +6,7 @@ Implements respectful scraping as per NFR-009.
 """
 import re
 import requests
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from urllib.parse import urljoin
 
 from .url_validator import URLValidationError, extract_domain
@@ -232,13 +232,22 @@ def check_robots_permission_with_delay(robots_content: str, base_url: str, user_
     }
 
 
-def fetch_robots_txt(base_url: str, timeout: int = 5) -> Dict[str, Any]:
+def fetch_robots_txt(
+    base_url: str,
+    timeout: int = 5,
+    headers: Optional[Dict[str, str]] = None,
+    cookies: Optional[Dict[str, str]] = None,
+    auth: Optional[Tuple[str, str]] = None,
+) -> Dict[str, Any]:
     """
     Fetch and parse robots.txt from a website.
     
     Args:
         base_url: The base URL of the website
         timeout: Timeout in seconds
+        headers: Optional custom headers (e.g., Authorization for Cloudflare)
+        cookies: Optional session cookies
+        auth: Optional basic auth tuple (username, password)
         
     Returns:
         Dictionary containing:
@@ -255,6 +264,8 @@ def fetch_robots_txt(base_url: str, timeout: int = 5) -> Dict[str, Any]:
     - Parse and respect its directives
     - Fail-open: if robots.txt cannot be fetched, assume crawling is allowed
     """
+    import requests
+    
     robots_url = urljoin(base_url, "/robots.txt")
     
     result = {
@@ -268,7 +279,15 @@ def fetch_robots_txt(base_url: str, timeout: int = 5) -> Dict[str, Any]:
     }
     
     try:
-        response = requests.get(robots_url, timeout=timeout)
+        kwargs = {"timeout": timeout}
+        if headers:
+            kwargs["headers"] = headers
+        if cookies:
+            kwargs["cookies"] = cookies
+        if auth:
+            kwargs["auth"] = auth
+        
+        response = requests.get(robots_url, **kwargs)
         
         if response.status_code == 200:
             result["found"] = True
