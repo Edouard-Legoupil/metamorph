@@ -1,594 +1,881 @@
-# Metamorph Research Notes
+# Metamorph Research Notes (v3.0 - Website-First)
 
 **Spec ID:** 001-metamorph  
-**Version:** 1.0  
+**Version:** 3.0  
 **Status:** Draft  
-**Date:** 2026-04-12
+**Date:** 2026-05-12
 
 ---
 
 ## Overview
 
-This document captures research findings, technical decisions, and reference materials for the Metamorph project. It serves as a knowledge base for implementation decisions and a reference for future development.
+This document captures research findings, technical decisions, and reference materials for Metamorph v3.0. **Key Change:** The system now starts with website URL input, automatically explores the site to discover files, allows user selection, and triggers automatic ingestion.
 
 ---
 
-## 📚 Technology Research
+## 🌐 Website Crawling & Discovery Research (NEW)
 
-### Document Parsing Libraries
+### Website Crawling Approaches
 
-#### Docling
+#### Approach 1: Custom Crawler (Recommended)
+**Implementation:** Python with `requests` + `BeautifulSoup` or `lxml`
+
+**Pros:**
+- Full control over crawling logic
+- Easy to customize for humanitarian websites
+- Can implement respectful scraping (NFR-009)
+- Can parse sitemap.xml directly (FR-001b)
+- Lightweight and fast
+
+**Cons:**
+- More development effort
+- Need to handle edge cases manually
+- No built-in JavaScript rendering
+
+**Libraries:**
+- `requests` - HTTP requests
+- `beautifulsoup4` - HTML parsing
+- `lxml` - Fast HTML/XML parsing
+- `urllib.robotparser` - robots.txt parsing
+- `aiohttp` - Async HTTP (for performance)
+
+**Decision:** ✅ **Primary choice** - Custom crawler for full control
+
+#### Approach 2: Scrapy Framework
+**Implementation:** Python Scrapy framework
+
+**Pros:**
+- Mature, production-ready crawler framework
+- Built-in support for robots.txt (NFR-009)
+- Built-in support for sitemaps (FR-001b)
+- Built-in rate limiting (NFR-010)
+- Built-in item pipelines
+- Extensible with middlewares
+
+**Cons:**
+- Steeper learning curve
+- More complex to customize
+- Overkill for simple crawling needs
+
+**Libraries:**
+- `scrapy` - Main framework
+- `scrapy-splash` - JavaScript rendering
+- `scrapy-proxy-pool` - Proxy rotation
+
+**Decision:** ⚠️ **Backup option** - Use if custom crawler becomes too complex
+
+#### Approach 3: Headless Browser (Playwright/Puppeteer)
+**Implementation:** Node.js with Playwright or Puppeteer
+
+**Pros:**
+- Can handle JavaScript-heavy websites
+- Can interact with pages (click buttons, fill forms)
+- Can extract data from SPAs (Single Page Applications)
+- Can render pages for preview generation
+
+**Cons:**
+- Resource intensive (CPU, memory)
+- Slower than direct HTTP requests
+- More complex setup
+- Different language (Node.js vs Python backend)
+
+**Libraries:**
+- `playwright` - Cross-browser automation
+- `puppeteer` - Chrome/Chromium automation
+
+**Decision:** ⚠️ **Fallback for JS sites** - Use for websites that require JavaScript
+
+#### Approach 4: Hybrid (Recommended)
+**Implementation:** Custom Python crawler + Playwright for JS sites
+
+**Strategy:**
+1. Try custom crawler first (fast, lightweight)
+2. Detect if site requires JavaScript (check for SPA indicators)
+3. Fall back to Playwright for JavaScript-heavy sites
+4. Cache results to avoid re-crawling
+
+**Decision:** ✅ **Selected approach** - Best of both worlds
+
+---
+
+### File Discovery Strategies
+
+#### Strategy 1: Sitemap.xml Parsing (High Priority - FR-001b)
+**Implementation:** Parse `/sitemap.xml` and `/robots.txt` for sitemap locations
+
+**Pros:**
+- Structured, reliable source of URLs
+- Includes metadata (lastmod, changefreq, priority)
+- Fast to parse
+- Standard across most websites
+
+**Cons:**
+- Not all websites have sitemaps
+- May not include all files (especially dynamically generated)
+- Format varies slightly between sites
+
+**Implementation Notes:**
+- Check common sitemap locations: `/sitemap.xml`, `/sitemap_index.xml`
+- Parse XML and extract `<loc>` tags
+- Handle sitemap index files (files that point to other sitemaps)
+- Respect `<lastmod>` for incremental updates (FR-028)
+- Extract file types from URLs
+
+**Decision:** ✅ **Primary strategy** - Fast and reliable
+
+#### Strategy 2: Crawl from Root URL (FR-001c)
+**Implementation:** BFS/DFS crawl starting from user-provided URL
+
+**Algorithm:**
+```python
+# Breadth-First Search (recommended for most sites)
+def bfs_crawl(start_url, max_depth=3, max_pages=1000):
+    visited = set()
+    queue = Queue([(start_url, 0)])
+    discovered_files = []
+    
+    while queue and len(visited) < max_pages:
+        url, depth = queue.dequeue()
+        if url in visited or depth > max_depth:
+            continue
+        
+        visited.add(url)
+        page = fetch(url)
+        
+        # Extract links
+        links = extract_links(page, base_url=url)
+        
+        # Filter by same domain
+        same_domain_links = filter_same_domain(links, start_url)
+        
+        # Identify scrapable files
+        files = identify_scrapable_files(links)
+        discovered_files.extend(files)
+        
+        # Queue new links
+        for link in same_domain_links:
+            if link not in visited:
+                queue.enqueue((link, depth + 1))
+    
+    return discovered_files
+```
+
+**Pros:**
+- Discovers files not in sitemap
+- Can find deeply nested files
+- Works on all websites
+
+**Cons:**
+- Slower than sitemap parsing
+- May miss files behind forms/login
+- Resource intensive for large sites
+
+**Optimizations:**
+- Use BFS for most sites (finds files closer to root faster)
+- Use DFS for deep hierarchical sites
+- Limit depth (configurable, default=3)
+- Limit total pages (configurable, default=1000)
+- Respect robots.txt crawl-delay
+
+**Decision:** ✅ **Secondary strategy** - Use after sitemap parsing
+
+#### Strategy 3: Direct File Pattern Matching
+**Implementation:** Check common file paths directly
+
+**Patterns:**
+```
+Documents:
+- /documents/*.pdf
+- /downloads/*.pdf
+- /reports/*.pdf
+- /publications/*.pdf
+- /files/*.docx
+- /files/*.xlsx
+
+Media:
+- /media/*.jpg
+- /media/*.png
+- /images/*.jpg
+
+Data:
+- /data/*.csv
+- /data/*.json
+- /exports/*.xlsx
+```
+
+**Pros:**
+- Fast for known patterns
+- Works even if files not linked
+- Can find files behind broken links
+
+**Cons:**
+- Only finds files matching known patterns
+- May produce false positives
+- Website-specific patterns needed
+
+**Decision:** ⚠️ **Optional enhancement** - Can be added for known humanitarian sites
+
+---
+
+### File Type Detection (FR-001a)
+
+#### Method 1: URL Extension Matching
+**Implementation:** Match file extensions in URLs
+
+**Extensions to Detect:**
+```python
+SCRAPABLE_EXTENSIONS = {
+    # Documents
+    '.pdf': 'pdf',
+    '.doc': 'word',
+    '.docx': 'word',
+    '.rtf': 'word',
+    
+    # Spreadsheets
+    '.xls': 'excel',
+    '.xlsx': 'excel',
+    '.csv': 'csv',
+    '.ods': 'spreadsheet',
+    
+    # Presentations
+    '.ppt': 'powerpoint',
+    '.pptx': 'powerpoint',
+    '.odp': 'presentation',
+    
+    # Text
+    '.txt': 'text',
+    '.md': 'text',
+    '.text': 'text',
+    
+    # Web
+    '.html': 'html',
+    '.htm': 'html',
+    
+    # Data
+    '.json': 'json',
+    '.xml': 'xml',
+    
+    # Archives (optional)
+    '.zip': 'archive',
+    '.rar': 'archive',
+}
+```
+
+**Pros:**
+- Fast and simple
+- Works without downloading file
+- Low resource usage
+
+**Cons:**
+- URL may not reflect actual content type
+- Some sites use URL rewriting
+- May miss files with non-standard extensions
+
+**Decision:** ✅ **Primary method** - Fast and effective
+
+#### Method 2: Content-Type Header
+**Implementation:** Send HEAD request and check Content-Type header
+
+**Example:**
+```python
+import requests
+
+def get_content_type(url):
+    try:
+        response = requests.head(url, timeout=5, allow_redirects=True)
+        return response.headers.get('Content-Type', '')
+    except:
+        return None
+
+# Map Content-Type to file type
+CONTENT_TYPE_MAP = {
+    'application/pdf': 'pdf',
+    'application/msword': 'word',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'word',
+    'application/vnd.ms-excel': 'excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'excel',
+    'application/vnd.ms-powerpoint': 'powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'powerpoint',
+    'text/html': 'html',
+    'text/plain': 'text',
+    'text/csv': 'csv',
+    'application/json': 'json',
+}
+```
+
+**Pros:**
+- More accurate than URL extension
+- Works with URL rewriting
+- Standard HTTP method
+
+**Cons:**
+- Requires additional HTTP request
+- Slower for large numbers of files
+- Some servers don't return correct Content-Type
+
+**Decision:** ⚠️ **Secondary validation** - Use to confirm URL-based detection
+
+#### Method 3: File Content Sniffing
+**Implementation:** Download first few bytes and detect file type
+
+**Libraries:**
+- `python-magic` - File type detection from content
+- `filetype` - Pure Python file type detection
+
+**Pros:**
+- Most accurate detection
+- Works regardless of URL or headers
+
+**Cons:**
+- Requires downloading file content
+- Slow for large numbers of files
+- Resource intensive
+
+**Decision:** ❌ **Not recommended** - Too slow for discovery phase
+
+---
+
+### File Preview Generation (FR-002c)
+
+#### Text Files (.txt, .csv, .json)
+**Implementation:** Read first N bytes/lines
+
+```python
+def preview_text_file(url, max_chars=500):
+    response = requests.get(url, timeout=10)
+    content = response.text
+    return content[:max_chars] + ('...' if len(content) > max_chars else '')
+```
+
+**Pros:** Fast, simple
+**Cons:** Need to download file
+
+#### PDF Files
+**Implementation:** Use `PyPDF2` or `pdfminer.six`
+
+```python
+from PyPDF2 import PdfReader
+import io
+import requests
+
+def preview_pdf(url, max_chars=500):
+    response = requests.get(url, timeout=10)
+    pdf_reader = PdfReader(io.BytesIO(response.content))
+    first_page = pdf_reader.pages[0]
+    text = first_page.extract_text()
+    return text[:max_chars] + ('...' if len(text) > max_chars else '')
+```
+
+**Libraries:**
+- `PyPDF2` - Simple PDF reading
+- `pdfminer.six` - More robust PDF text extraction
+- `pypdf` - Modern PDF library
+
+**Decision:** ✅ **Use PyPDF2** - Fast and sufficient for preview
+
+#### Word Documents
+**Implementation:** Use `python-docx` or `textract`
+
+```python
+from docx import Document
+import io
+import requests
+
+def preview_word(url, max_chars=500):
+    response = requests.get(url, timeout=10)
+    doc = Document(io.BytesIO(response.content))
+    text = '\n'.join([para.text for para in doc.paragraphs])
+    return text[:max_chars] + ('...' if len(text) > max_chars else '')
+```
+
+**Libraries:**
+- `python-docx` - Word document reading
+- `textract` - Multi-format text extraction
+- `docx2txt` - Simple Word to text
+
+**Decision:** ✅ **Use python-docx** - Good balance of features and simplicity
+
+#### HTML Pages
+**Implementation:** Extract text from HTML
+
+```python
+from bs4 import BeautifulSoup
+import requests
+
+def preview_html(url, max_chars=500):
+    response = requests.get(url, timeout=10)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    # Remove script and style elements
+    for script in soup(['script', 'style']):
+        script.decompose()
+    text = soup.get_text()
+    # Clean up whitespace
+    text = ' '.join(text.split())
+    return text[:max_chars] + ('...' if len(text) > max_chars else '')
+```
+
+**Pros:** Fast, built into crawler
+**Cons:** May include boilerplate text
+
+---
+
+### Rate Limiting & Respectful Scraping (NFR-009, NFR-010)
+
+#### Rate Limiting Strategies
+
+**1. Fixed Delay**
+```python
+import time
+
+def fetch_with_delay(url, delay=1.0):
+    time.sleep(delay)
+    return requests.get(url)
+```
+
+**Pros:** Simple, predictable
+**Cons:** Same delay for all sites, may be too slow or too fast
+
+**2. Adaptive Delay (Recommended)**
+```python
+import time
+
+def fetch_with_adaptive_delay(url, base_delay=1.0, last_request_time=None):
+    if last_request_time:
+        elapsed = time.time() - last_request_time
+        delay = max(0, base_delay - elapsed)
+        time.sleep(delay)
+    return requests.get(url), time.time()
+```
+
+**Pros:** Maintains consistent rate, efficient
+**Cons:** Slightly more complex
+
+**3. Token Bucket**
+```python
+from ratelimit import limits, sleep_and_retry
+
+@sleep_and_retry
+@limits(calls=10, period=1)  # 10 requests per second
+climited_request = requests.get
+```
+
+**Pros:** Flexible, allows bursts
+**Cons:** More complex to implement
+
+**Decision:** ✅ **Adaptive delay** - Simple and effective
+
+#### robots.txt Compliance (NFR-009)
+
+**Implementation:**
+```python
+from urllib.robotparser import RobotFileParser
+
+def check_robots_txt(base_url, user_agent='MetamorphBot/1.0'):
+    robots_url = f"{base_url.rstrip('/')}/robots.txt"
+    rp = RobotFileParser()
+    try:
+        rp.set_url(robots_url)
+        rp.read()
+        crawl_delay = rp.crawl_delay(user_agent)
+        can_fetch = rp.can_fetch(user_agent, base_url)
+        return can_fetch, crawl_delay
+    except:
+        # If robots.txt not found or error, assume crawling is allowed
+        return True, 0
+```
+
+**Rules:**
+- Always check robots.txt before crawling
+- Respect `Disallow` directives
+- Respect `Crawl-delay` if specified
+- Use custom user-agent: `MetamorphBot/1.0`
+- Cache robots.txt for 24 hours
+
+**User-Agent String:**
+```
+MetamorphBot/1.0 (+https://metamorph.example.com/bot-info)
+```
+
+**Decision:** ✅ **Mandatory** - Must comply with robots.txt
+
+#### Error Handling & Retries
+
+**Retry Strategy:**
+```python
+import time
+import requests
+from requests.exceptions import RequestException
+
+def fetch_with_retry(url, max_retries=3, backoff_factor=2):
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                return response
+            elif response.status_code == 429:  # Too Many Requests
+                delay = backoff_factor ** attempt
+                time.sleep(delay)
+            elif response.status_code >= 500:  # Server Error
+                delay = backoff_factor ** attempt
+                time.sleep(delay)
+            else:
+                return response  # Return non-200 response
+        except RequestException as e:
+            delay = backoff_factor ** attempt
+            time.sleep(delay)
+    
+    raise Exception(f"Failed after {max_retries} retries: {url}")
+```
+
+**HTTP Status Codes:**
+- `200 OK` - Success
+- `403 Forbidden` - Respect, do not retry
+- `404 Not Found` - Skip, do not retry
+- `429 Too Many Requests` - Retry with backoff
+- `5xx Server Error` - Retry with backoff
+- `Timeout` - Retry with backoff
+
+**Decision:** ✅ **Exponential backoff** - Standard best practice
+
+---
+
+## 📚 Technology Research (Updated)
+
+### Document Parsing Libraries (Updated for v3.0)
+
+#### Docling (FR-004)
 - **Website:** https://github.com/DS4SD/Docling
-- **License:** Apache 2.0
-- **Capabilities:**
-  - Supports PDF, Word, HTML, plain text
-  - Advanced layout analysis
-  - Table extraction
-  - Figure extraction
-  - Mathematical formula extraction
-- **Pros:**
-  - Open source
-  - Actively maintained
-  - High accuracy for standard documents
-  - Good support for scientific papers
-- **Cons:**
-  - May require tuning for complex humanitarian documents
-  - Limited support for some proprietary formats
-- **Decision:** ✅ Selected for standard document parsing
+- **Use Case:** Standard document formats (PDF, Word, HTML)
+- **Decision:** ✅ **Primary parser** - High accuracy, actively maintained
 
-#### MinerU
+#### MinerU (FR-004)
 - **Website:** https://github.com/wirelesscosmos/mineru
-- **License:** MIT
-- **Capabilities:**
-  - Specialized for complex document layouts
-  - Handles tables, forms, multi-column layouts
-  - Rule-based extraction
-  - Custom template support
-- **Pros:**
-  - Excellent for structured forms and reports
-  - Highly configurable
-  - Good for UN/NGO documents with specific formats
-- **Cons:**
-  - Less mature than Docling
-  - Requires more configuration
-- **Decision:** ✅ Selected for complex document layouts
+- **Use Case:** Complex document layouts, forms, tables
+- **Decision:** ✅ **Secondary parser** - Specialized for complex layouts
 
-#### Combined Approach
-- Use Docling as primary parser for standard documents
-- Use MinerU for complex layouts and forms
-- Implement fallback mechanism: Docling → MinerU → Manual
-- Create unified interface to abstract parser differences
+#### Combined Approach (Updated)
+- Use Docling as primary parser
+- Use MinerU for complex layouts
+- Fallback: Docling → MinerU → Manual
+- **NEW:** Add fallback to raw text extraction for unparseable files
+- **NEW:** Store which parser was used for each document
+
+### Web Crawling Libraries (NEW)
+
+#### Requests + BeautifulSoup
+- **Use Case:** Custom crawler implementation
+- **Decision:** ✅ **Primary choice** - Full control, lightweight
+
+#### Scrapy
+- **Use Case:** Full-featured crawling framework
+- **Decision:** ⚠️ **Backup option** - If custom crawler becomes too complex
+
+#### Playwright
+- **Use Case:** JavaScript-heavy websites
+- **Decision:** ⚠️ **Fallback** - For sites requiring JS rendering
+
+#### aiohttp
+- **Use Case:** Async HTTP requests for performance
+- **Decision:** ⚠️ **Optional** - Can be added for high-performance crawling
 
 ---
 
 ### Graph Databases
 
-#### Neo4j
-- **Website:** https://neo4j.com
-- **License:** GPL (Community), Commercial (Enterprise)
-- **Type:** Native Graph Database
-- **Query Language:** Cypher
-- **Pros:**
-  - Mature and production-ready
-  - Excellent Cypher query language
-  - Good performance for complex traversals
-  - Strong community and ecosystem
-  - Full-text search integration
-  - ACID compliant
-- **Cons:**
-  - Resource intensive
-  - Learning curve for Cypher
-  - Enterprise features require license
-- **Decision:** ✅ Primary choice for graph storage
-
-#### Amazon Neptune
-- **Website:** https://aws.amazon.com/neptune
-- **License:** AWS Service
-- **Type:** Managed Graph Database
-- **Pros:**
-  - Fully managed
-  - Scalable
-  - Supports multiple graph models (Property Graph, RDF)
-  - Integrates with AWS ecosystem
-- **Cons:**
-  - Vendor lock-in
-  - Cost at scale
-  - Less flexible for customization
-- **Decision:** ⚠️ Backup option if cloud deployment needed
-
-#### JanusGraph
-- **Website:** https://janusgraph.org
-- **License:** Apache 2.0
-- **Type:** Scalable Graph Database
-- **Pros:**
-  - Open source
-  - Scalable
-  - Supports multiple storage backends
-  - TinkerPop3 stack
-- **Cons:**
-  - Less mature than Neo4j
-  - Smaller community
-  - More complex setup
-- **Decision:** ❌ Not selected - Neo4j preferred for simplicity
-
-#### ArangoDB
-- **Website:** https://www.arangodb.com
-- **License:** Apache 2.0
-- **Type:** Multi-model Database
-- **Pros:**
-  - Supports documents, graphs, and key-value
-  - Single query language (AQL)
-  - Good performance
-- **Cons:**
-  - Multi-model adds complexity
-  - Less graph-specific optimization
-- **Decision:** ❌ Not selected - Pure graph database preferred
+#### Neo4j (Updated for v3.0)
+- **Status:** ✅ **Primary choice**
+- **Schema Updates for v3.0:**
+  - Add Website nodes
+  - Add DiscoveredFile nodes
+  - Add ScrapeSession nodes
+  - Add IngestionJob nodes
+  - Add Document nodes
+  - Add new relationship types (DISCOVERED, INGESTED, SCRAPED, PROCESSED)
+  - Add provenance properties (website_url, file_url, discovered_at, ingested_at)
 
 ---
 
-### API Frameworks
+## 🏗️ Architecture Decisions (Updated)
 
-#### FastAPI
-- **Website:** https://fastapi.tiangolo.com
-- **License:** MIT
-- **Pros:**
-  - Modern, fast (high-performance)
-  - Easy to use
-  - Type hints and automatic validation
-  - Automatic OpenAPI/Swagger documentation
-  - Async support
-- **Cons:**
-  - Relatively new (but stable)
-  - Smaller ecosystem than Django/Flask
-- **Decision:** ✅ Selected for API layer
-
-#### GraphQL (Strawberry/Ariadne)
-- **Website:** https://graphql.org
-- **License:** Various
-- **Pros:**
-  - Flexible querying
-  - Single endpoint for all requests
-  - Strong typing
-  - Good for complex data relationships
-- **Cons:**
-  - More complex to implement
-  - Performance considerations for complex queries
-  - Caching challenges
-- **Decision:** ⚠️ Optional - Can be added later if needed
-
-#### Django REST Framework
-- **Website:** https://www.django-rest-framework.org
-- **License:** BSD
-- **Pros:**
-  - Mature and stable
-  - Batteries included
-  - Strong ecosystem
-  - Good admin interface
-- **Cons:**
-  - Heavier than FastAPI
-  - Less async support
-  - More boilerplate
-- **Decision:** ❌ Not selected - FastAPI preferred for performance
-
----
-
-### Agentic Systems
-
-#### Mistral Vibe CLI
-- **Website:** https://mistral.ai
-- **Capabilities:**
-  - Multi-model support
-  - Local execution
-  - Tool integration
-  - Custom workflows
-- **Decision:** ✅ Primary agentic system
-
-#### Claude Code
-- **Website:** https://claude.ai
-- **Capabilities:**
-  - Code generation
-  - Code review
-  - Natural language understanding
-- **Decision:** ✅ Supported for multi-model approach
-
-#### LlamaIndex / LangChain
-- **Website:** https://llamaindex.ai, https://python.langchain.com
-- **Capabilities:**
-  - Document indexing
-  - Query engines
-  - Agent orchestration
-- **Decision:** ⚠️ Consider for complex workflows
-
----
-
-## 🏗️ Architecture Decisions
-
-### Decision 1: Microservices vs Monolith
-**Decision:** Start with Modular Monolith, evolve to Microservices
+### Decision 1: Crawler Architecture
+**Decision:** Python-based custom crawler with fallback to Playwright
 
 **Rationale:**
-- Faster development in early phases
-- Easier to understand and debug
-- Can extract services as they mature
-- Team size (4-5 developers) suits monolith
+- Python aligns with backend stack
+- Custom crawler gives full control
+- Playwright fallback handles JS sites
+- Respectful scraping is mandatory (NFR-009)
 
-**Migration Path:**
-1. Phase 1-2: Monolithic FastAPI application
-2. Phase 3: Extract Ingestion service
-3. Phase 4: Extract Graph service
-4. Phase 5: Extract API Gateway
+**Implementation:**
+```
+┌─────────────────┐
+│   Crawler        │
+│  Controller      │
+└─────────┬───────┘
+          │
+    ┌─────┴─────┐
+    │           │
+┌───▼───┐   ┌───▼───┐
+│Custom  │   │Playwright│
+│Crawler │   │  (JS)   │
+└────────┘   └────────┘
+     │             │
+     └──────┬──────┘
+            │
+     ┌──────▼──────┐
+     │   Queue      │
+     │   Manager    │
+     └──────┬──────┘
+            │
+     ┌──────▼──────┐
+     │   Database   │
+     │   (Neo4j)    │
+     └─────────────┘
+```
 
-### Decision 2: Database Strategy
-**Decision:** Single Neo4j database with logical separation
+### Decision 2: Crawling Strategy
+**Decision:** Sitemap-first, then crawl, then pattern matching
 
 **Rationale:**
-- Simpler to manage
-- Good performance for our scale
-- Logical separation via labels/properties
-- Can shard later if needed
+- Sitemap is fastest and most reliable
+- Crawling finds files not in sitemap
+- Pattern matching catches files behind broken links
 
-**Schema Strategy:**
-- Use Neo4j labels for entity types
-- Use properties for attributes
-- Use relationships for connections
-- Index all frequently queried properties
+**Priority Order:**
+1. Parse sitemap.xml (FR-001b)
+2. Crawl from root URL (FR-001c)
+3. Check common file patterns (optional)
 
-### Decision 3: Frontend Framework
-**Decision:** React with TypeScript
+### Decision 3: Preview Generation Strategy
+**Decision:** Generate previews on-demand with caching
 
 **Rationale:**
-- Strong ecosystem
-- Good TypeScript support
-- Component-based architecture
-- Large talent pool
-- Mature routing and state management
+- On-demand avoids unnecessary processing
+- Caching improves performance for repeated previews
+- Balance between speed and resource usage
 
-**Alternative Considered:**
-- Vue.js: Similar benefits, slightly simpler
-- Svelte: Emerging, less ecosystem
-- Angular: Too heavy for our needs
-
----
-
-## 📊 Knowledge Domain Research
-
-### Geographic Domain
-- **Sources:** UN OCHA, UNHCR, World Bank, CIA World Factbook
-- **Key Entities:** Countries, Regions, Cities, Coordinates
-- **Key Relationships:** contains, borders, adjacent_to, part_of
-- **Challenges:**
-  - Changing geopolitical boundaries
-  - Multiple naming conventions
-  - Historical vs current data
-
-### Crisis Domain
-- **Sources:** UN OCHA, ACAPS, ReliefWeb
-- **Key Entities:** Crises, Conflicts, Disasters, Emergencies
-- **Key Relationships:** affects, caused_by, related_to, escalated_from
-- **Challenges:**
-  - Rapidly changing information
-  - Multiple conflicting reports
-  - Sensitivity of information
-
-### Demographics Domain
-- **Sources:** UNICEF, World Bank, National Statistics
-- **Key Entities:** Population, Age Groups, Gender, Ethnic Groups
-- **Key Relationships:** belongs_to, affected_by, located_in
-- **Challenges:**
-  - Data privacy concerns
-  - Sampling methodologies vary
-  - Outdated information common
-
-### Programming Domain
-- **Sources:** UNHCR, WFP, UNICEF program documents
-- **Key Entities:** Programs, Projects, Activities, Budgets
-- **Key Relationships:** implements, funded_by, targets, operates_in
-- **Challenges:**
-  - Complex hierarchies
-  - Budget tracking across time
-  - Impact measurement
-
-### Policy Domain
-- **Sources:** UN Resolutions, National Laws, NGO Policies
-- **Key Entities:** Policies, Regulations, Guidelines, Standards
-- **Key Relationships:** governs, complies_with, conflicts_with, supersedes
-- **Challenges:**
-  - Legal language complexity
-  - Jurisdictional variations
-  - Version tracking
-
-### Finance Domain
-- **Sources:** UN Financial Reports, Donor Reports
-- **Key Entities:** Funding, Budgets, Expenditures, Donors
-- **Key Relationships:** funds, allocated_to, spent_on, reported_by
-- **Challenges:**
-  - Multiple currencies
-  - Fiscal year variations
-  - Audit requirements
-
-### Human Resources Domain
-- **Sources:** UN Staff Directories, NGO Reports
-- **Key Entities:** Staff, Roles, Skills, Organizations
-- **Key Relationships:** employed_by, manages, reports_to, assigned_to
-- **Challenges:**
-  - Staff turnover
-  - Confidentiality requirements
-  - Organizational restructuring
-
-### Knowledge Assets Domain
-- **Sources:** UN Libraries, Research Institutions
-- **Key Entities:** Reports, Studies, Databases, Methodologies
-- **Key Relationships:** cites, based_on, supports, contradicts
-- **Challenges:**
-  - Access restrictions
-  - Quality variation
-  - Citation tracking
+**Implementation:**
+- Cache previews in Redis
+- TTL: 24 hours
+- Max cache size: 1000 previews
+- Fallback to "Preview unavailable" if error
 
 ---
 
-## 🔬 Extraction Patterns Research
+## 📊 Knowledge Domain Research (Unchanged)
 
-### Named Entity Recognition (NER)
-- **Approach:** Use spaCy with custom models
-- **Models:**
-  - `en_core_web_lg` (base)
-  - `en_core_web_trf` (transformer-based, higher accuracy)
-- **Customization:**
-  - Train on humanitarian domain text
-  - Add custom entity types (8 domains)
-  - Fine-tune for UN terminology
-
-### Relationship Extraction
-- **Approach:** Rule-based + ML-based hybrid
-- **Rule-based:**
-  - Pattern matching for common relationships
-  - Dependency parsing
-  - POS tag patterns
-- **ML-based:**
-  - Transformer models for complex relationships
-  - Fine-tuned on humanitarian text
-
-### Semantic Triplet Extraction
-- **Approach:** OpenIE (Open Information Extraction)
-- **Tools:**
-  - Stanford OpenIE
-  - AllenNLP OpenIE
-  - Custom implementation
-- **Challenges:**
-  - Triple completeness
-  - Confidence scoring
-  - Redundancy elimination
-
-### Confidence Scoring
-- **Factors:**
-  - Parser confidence: 0-1
-  - Source reliability: 0-1 (trusted=1, unverified=0.5, untrusted=0.1)
-  - Extraction method: rule-based=0.9, ML=0.7, manual=1.0
-  - Corroboration: number of sources (1=1, 2=0.95, 3+=0.98)
-  - Freshness: days since publication (0-30=1, 31-90=0.9, 91-180=0.7, 181+=0.5)
-- **Formula:**
-  ```
-  confidence = (parser_confidence * 0.3 + 
-                source_reliability * 0.25 + 
-                extraction_method * 0.2 + 
-                corroboration * 0.15 + 
-                freshness * 0.1)
-  ```
+[Previous domain research remains valid - see sections below]
 
 ---
 
-## 🎯 Trust Routing Research
+## 🔬 Extraction Patterns Research (Updated)
 
-### Confidence Thresholds
-- **Auto-Accept:** confidence >= 0.9
-- **Pending/Review:** 0.7 <= confidence < 0.9
-- **Escalation:** confidence < 0.7
+### Confidence Scoring (Updated for v3.0)
 
-### Sensitivity Classification
-- **Low:** Non-controversial, public information
-  - Examples: Geographic coordinates, population statistics
-  - Routing: Auto-accept if confidence high
-- **Medium:** Potentially controversial, operational information
-  - Examples: Program effectiveness, local politics
-  - Routing: Require review by Tier 1
-- **High:** Highly sensitive, protection concerns
-  - Examples: Individual identities, security incidents, legal issues
-  - Routing: Escalate to Tier 3, require HQ approval
+**Factors:**
+- Parser confidence: 0-1
+- Source reliability: 0-1 (website domain reputation + file metadata)
+- Extraction method: rule-based=0.9, ML=0.7, manual=1.0
+- Corroboration: number of sources (1=1, 2=0.95, 3+=0.98)
+- Freshness: days since publication (0-30=1, 31-90=0.9, 91-180=0.7, 181+=0.5)
+- **NEW:** Website reliability: known domains=0.95, new domains=0.7
 
-### Source Reliability Indicators
-- **Trusted:**
-  - UN official documents
-  - Government reports
-  - Academic publications (peer-reviewed)
-  - Established NGOs with track record
-- **Unverified:**
-  - News articles (mainstream)
-  - NGO reports (lesser known)
-  - Social media (verified accounts)
-- **Untrusted:**
-  - Social media (unverified)
-  - Rumors
-  - Anonymous sources
+**Formula:**
+```
+confidence = (parser_confidence * 0.25 + 
+              source_reliability * 0.25 + 
+              extraction_method * 0.20 + 
+              corroboration * 0.10 + 
+              freshness * 0.10 + 
+              website_reliability * 0.10)
+```
 
-### Contradiction Detection
-- **Types:**
-  1. **Factual Accuracy:** Different values for same fact
-  2. **Source Reliability:** Trusted vs untrusted sources disagree
-  3. **Temporal Mismatch:** Information valid for different time periods
-  4. **Quantitative Mismatch:** Different numbers for same metric
-  5. **Classification Mismatch:** Different categories assigned
-  6. **Scope Mismatch:** Different geographic/operational scope
-  7. **Geographic Mismatch:** Different locations referenced
-  8. **Structural Mismatch:** Different relationships/structure
-  9. **Normative Disagreement:** Different interpretations/perspectives
-  10. **Policy Conflict:** Contradicts established policy
-  11. **Sensitive Domain:** Involves protected/sensitive information
-  12. **Duplicate Entity:** Same entity appears with different IDs
-  13. **Graph Relationship Conflict:** Conflicting relationships in graph
+### Website Domain Reliability
+
+**Classification:**
+- **Trusted (0.95):**
+  - UN domains (un.org, unhcr.org, unicef.org, etc.)
+  - Government domains (.gov, .gob, etc.)
+  - Academic domains (.edu)
+  - Known NGO domains
+
+- **Known (0.85):**
+  - Major news organizations
+  - Established think tanks
+  - International organizations
+
+- **Unknown (0.70):**
+  - New domains not in database
+  - Requires manual review
+
+- **Untrusted (0.30):**
+  - Known problematic domains
+  - Social media platforms
+  - User-generated content sites
+
+**Implementation:**
+- Maintain domain reliability database
+- Allow manual override
+- Update based on curator feedback
 
 ---
 
-## 📈 Performance Benchmarks
+## 🎯 Trust Routing Research (Updated)
 
-### Parsing Performance
-| Document Type | Pages | Average Size | Target Parse Time | Current Parse Time |
-|---------------|-------|--------------|-------------------|--------------------|
-| PDF Standard | 10 | 500KB | <5 seconds | TBD |
-| PDF Complex | 50 | 5MB | <30 seconds | TBD |
-| Word Document | 20 | 1MB | <10 seconds | TBD |
-| HTML Page | 1 | 200KB | <3 seconds | TBD |
+### Source Reliability (Updated for v3.0)
 
-### Graph Query Performance
-| Query Type | Complexity | Target Response Time | Current Response Time |
-|------------|------------|----------------------|-----------------------|
-| Simple node lookup | Low | <10ms | TBD |
-| Node with relationships | Medium | <100ms | TBD |
-| Path traversal (3 hops) | Medium | <500ms | TBD |
-| Complex aggregation | High | <1 second | TBD |
-| Full-text search | Medium | <200ms | TBD |
+**Trusted Sources:**
+- UN official websites (un.org, unhcr.org, unicef.org, undp.org, etc.)
+- Government websites (.gov, .gob, .mil, etc.)
+- Academic institutions (.edu)
+- Established NGOs (redcross.org, oxfam.org, etc.)
+- **NEW:** Known humanitarian organizations
 
-### System Scalability
+**Unverified Sources:**
+- News articles (mainstream media)
+- NGO reports (lesser known organizations)
+- Social media (verified accounts)
+
+**Untrusted Sources:**
+- Social media (unverified)
+- Rumors
+- Anonymous sources
+- **NEW:** Domains flagged as problematic
+
+---
+
+## 📈 Performance Benchmarks (Updated)
+
+### Crawling Performance (NEW)
 | Metric | Target | Current |
 |--------|--------|---------|
-| Concurrent users | 100 | TBD |
-| Documents stored | 100,000 | TBD |
-| Nodes in graph | 1,000,000 | TBD |
-| Relationships in graph | 10,000,000 | TBD |
+| Pages crawled per minute | 100-200 | TBD |
+| Files discovered per minute | 50-100 | TBD |
+| Crawl completion time (500 pages) | <5 minutes | TBD |
+| Memory usage per crawl | <100MB | TBD |
+| CPU usage per crawl | <50% | TBD |
+
+### File Discovery Performance (NEW)
+| File Type | Discovery Time | Preview Time |
+|-----------|----------------|--------------|
+| PDF | <1s | <2s |
+| Word | <1s | <2s |
+| Excel | <1s | <2s |
+| HTML | <1s | <1s |
+| Text | <1s | <1s |
+
+### Ingestion Performance (Updated)
+| Metric | Target | Current |
+|--------|--------|---------|
+| Files queued per second | 50 | TBD |
+| Files downloaded per second | 10 | TBD |
+| Files parsed per second | 5 | TBD |
+| Concurrent ingestion jobs | 10 | TBD |
+
+### System Scalability (Updated)
+| Metric | Target | Current |
+|--------|--------|---------|
+| Concurrent crawls | 50 | TBD |
+| Websites stored | 10,000 | TBD |
+| Discovered files stored | 1,000,000 | TBD |
+| Documents ingested | 500,000 | TBD |
 | API requests/second | 100 | TBD |
-| Data growth/month | 10GB | TBD |
 
 ---
 
-## 🔒 Security Research
+## 🔒 Security Research (Updated)
 
-### Data Classification
-- **Public:** Non-sensitive, can be shared openly
-- **Internal:** For UN staff and partners only
-- **Confidential:** Limited distribution, requires clearance
-- **Secret:** Highly sensitive, strict access control
+### Data Provenance (NFR-002 - Updated)
+**Requirements:**
+- Every claim must be traceable to source website
+- Every claim must be traceable to source file
+- Every claim must include discovery metadata
+- Every claim must include ingestion metadata
 
-### Access Control Model
-- **Role-Based Access Control (RBAC):**
-  - Viewer: Read-only access to approved content
-  - Curator: Read/write access to curated content, can approve/reject
-  - Reviewer: Can participate in discussions, limited approval
-  - Tier 1 Curator: Field/local level approval
-  - Tier 2 Curator: Regional level approval
-  - Tier 3 Curator: HQ/thematic level approval
-  - Admin: Full system access
-  - Super Admin: System configuration, user management
-
-### Audit Requirements
-- **What to log:**
-  - All data access (who, what, when)
-  - All data modifications (who, what, when, previous value)
-  - All approval/rejection decisions (who, what, when, rationale)
-  - All system configuration changes
-  - All authentication events
-- **Retention:** 7 years minimum
-- **Immutability:** Audit logs cannot be modified or deleted
-- **Access:** Audit logs accessible only to admins and auditors
-
-### Encryption
-- **At Rest:** AES-256 encryption for all sensitive data
-- **In Transit:** TLS 1.3 for all communications
-- **Field-Level:** Encryption for PII and sensitive fields
+**Implementation:**
+```python
+@dataclass
+class KnowledgeProvenance:
+    website_id: str
+    website_url: str
+    discovered_file_id: str
+    file_url: str
+    file_type: str
+    discovered_at: datetime
+    scrape_session_id: str
+    ingestion_job_id: str
+    ingested_at: datetime
+    parsing_tool: str  # docling, mineru, manual
+    parsed_at: datetime
+    confidence_score: float
+    source_reliability: float
+```
 
 ---
 
-## 🌍 Humanitarian Context Research
+## 🌍 Humanitarian Context Research (Unchanged)
 
-### Key UN Organizations
-- UNHCR: United Nations High Commissioner for Refugees
-- OCHA: Office for the Coordination of Humanitarian Affairs
-- WFP: World Food Programme
-- UNICEF: United Nations Children's Fund
-- UNDP: United Nations Development Programme
+[Previous humanitarian context research remains valid]
 
-### Data Standards
-- **IATI:** International Aid Transparency Initiative
-- **HDX:** Humanitarian Data Exchange
-- **UNHCR Data Portal:** Refugee data and statistics
-- **OCHA Humanitarian Response Plans:** Coordination documents
-
-### Common Document Types
-1. **Situation Reports** (SitReps) - Regular updates on crises
-2. **Needs Assessments** - Identification of needs and gaps
-3. **Project Proposals** - Funding requests and plans
-4. **Financial Reports** - Budget and expenditure tracking
-5. **Evaluation Reports** - Program effectiveness analysis
-6. **Protection Reports** - Sensitive information on protection concerns
-7. **Market Assessments** - Economic and market analysis
-8. **Coordination Meeting Minutes** - Meeting notes and action items
-
-### Language Considerations
-- **Primary:** English
-- **Secondary:** French, Spanish, Arabic
-- **Local:** Various local languages based on region
-- **Approach:**
-  - Primary extraction in English
-  - Support for multilingual documents
-  - Translation services integration (future)
 
 ---
 
-## 📝 Open Questions
+## 📝 Open Questions (Updated)
 
-1. **Document Storage:**
-   - Where to store original documents? (S3, local storage, document management system)
-   - How to handle large documents (>100MB)?
-   - What retention policy for original documents?
+### Website Crawling
+1. **Crawling Depth:** What should be the default max depth? (Recommended: 3)
+2. **Page Limit:** What should be the default max pages per crawl? (Recommended: 1000)
+3. **Rate Limiting:** What delay between requests? (Recommended: 1-2 seconds)
+4. **Concurrent Crawls:** How many websites can we crawl simultaneously? (Recommended: 10-20)
+5. **JavaScript Sites:** How to handle single-page applications? (Fallback to Playwright)
+6. **Authentication:** How to store credentials securely for protected sites?
+7. **Large Sites:** How to handle websites with 10,000+ pages? (Incremental crawling)
 
-2. **Graph Database:**
-   - Should we use Neo4j Aura (managed) or self-hosted?
-   - What backup strategy for Neo4j?
-   - How to handle graph schema migrations?
+### File Discovery
+1. **File Size Limit:** What's the maximum file size to attempt preview? (Recommended: 10MB)
+2. **Preview Cache:** How long to cache previews? (Recommended: 24 hours)
+3. **Preview Length:** How many characters to extract for preview? (Recommended: 500)
+4. **Binary Files:** Should we attempt to preview binary files? (Recommended: No, metadata only)
 
-3. **API Design:**
-   - Should we support both REST and GraphQL?
-   - What authentication method? (OAuth2, JWT, API keys)
-   - Should we rate limit by user or by organization?
+### Ingestion
+1. **Queue Priority:** How to prioritize files in the queue? (Recommended: User-selected order)
+2. **Download Retries:** How many retries for failed downloads? (Recommended: 3)
+3. **Download Timeout:** What timeout for file downloads? (Recommended: 30 seconds)
+4. **Parallel Processing:** How many files to process simultaneously? (Recommended: 5-10)
 
-4. **Agentic System:**
-   - Which LLM providers to support initially?
-   - How to handle API costs for LLM usage?
-   - Should we cache LLM responses?
-
-5. **Deployment:**
-   - Cloud provider preference? (AWS, Azure, GCP, on-premise)
-   - What regions to deploy in?
-   - Disaster recovery strategy?
-
-6. **Data Privacy:**
-   - How to handle PII (Personally Identifiable Information)?
-   - What data can be shared publicly?
-   - GDPR compliance requirements?
+### Legal/Compliance
+1. **Robots.txt Compliance:** How to handle sites that block all crawlers? (Recommended: Skip)
+2. **Rate Limit Detection:** How to detect and respond to rate limiting? (Exponential backoff)
+3. **DMCA Takedowns:** Process for handling copyright complaints?
+4. **Data Retention:** How long to store downloaded files? (Recommended: Until ingestion complete, then delete)
 
 ---
 
-## 📚 References
+## 📚 References (Updated)
 
-### Documentation
-- [Docling Documentation](https://github.com/DS4SD/Docling)
-- [MinerU Documentation](https://github.com/wirelesscosmos/mineru)
-- [Neo4j Documentation](https://neo4j.com/docs/)
-- [FastAPI Documentation](https://fastapi.tiangolo.com)
-- [spaCy Documentation](https://spacy.io)
+### Crawling & Scraping
+- [Robots.txt Specification](https://developers.google.com/search/docs/crawling-indexing/robots/intro)
+- [Sitemap Protocol](https://www.sitemaps.org/protocol.html)
+- [BeautifulSoup Documentation](https://www.crummy.com/software/BeautifulSoup/bs4/doc/)
+- [Scrapy Documentation](https://docs.scrapy.org/)
+- [Playwright Documentation](https://playwright.dev/)
+- [Respectful Web Scraping Guide](https://www.scrapingbee.com/blog/web-scraping-101/)
 
-### Standards
-- [IATI Standard](https://iatistandard.org/)
-- [HDX API](https://data.humdata.org/api)
-- [UNHCR Data Standards](https://www.unhcr.org/data.html)
+### Legal & Ethical
+- [Google's Webmaster Guidelines](https://support.google.com/webmasters/answer/35769?hl=en)
+- [GDPR Compliance for Web Scraping](https://gdpr-info.eu/)
+- [Copyright Law for Web Scraping](https://www.copyright.gov/)
 
 ### Research Papers
-- [Knowledge Graph Embeddings](https://arxiv.org/abs/2002.00388)
-- [Information Extraction from Documents](https://arxiv.org/abs/1903.07602)
-- [Contradiction Detection in Knowledge Bases](https://arxiv.org/abs/2106.00574)
+- [Polite Web Crawling](https://dl.acm.org/doi/10.1145/335189.335436)
+- [Focused Crawling](https://dl.acm.org/doi/10.1145/345342.345456)
+- [Incremental Web Crawling](https://dl.acm.org/doi/10.1145/502585.502603)
 
 ---
 
 ## 🔄 Revision History
 
-| Date | Author | Changes |
-|------|--------|---------|
-| 2026-04-12 | Edouard Legoupil | Initial research document created |
+| Date | Version | Author | Changes |
+|------|---------|--------|---------|
+| 2026-05-12 | 3.0 | Edouard Legoupil | Major update for website-first workflow. Added comprehensive website crawling research: crawler approaches (custom, Scrapy, Playwright), file discovery strategies (sitemap, crawling, pattern matching), file type detection methods, preview generation techniques, rate limiting and respectful scraping strategies, error handling and retry logic. Updated technology research, architecture decisions, performance benchmarks, and open questions. Added new references for web scraping. |
+| 2026-04-12 | 1.0 | Edouard Legoupil | Initial research document created |

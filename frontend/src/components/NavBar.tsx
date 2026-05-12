@@ -5,7 +5,7 @@ const NAV_ITEMS = [
   { to: "/wiki", label: "Wiki" },
   { to: "/scraping", label: "Scraping" },
   { to: "/ingestion", label: "Ingestion" },
-  { to: "/curation", label: "Curation" },
+  { to: "/settings", label: "Settings" },
   { to: "/about", label: "About" },
 ];
 

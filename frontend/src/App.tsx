@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "r
 import Scraping from "./pages/Scraping";
 import Ingestion from "./pages/Ingestion";
 import Wiki from "./pages/Wiki";
-import CurationWorkspace from "./pages/CuratorWorkspace";
+import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import About from "./pages/About";
 
@@ -25,9 +25,10 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Navigate to="/wiki" />} />
         <Route path="/wiki" element={<RequireAuth><Wiki /></RequireAuth>} />
+        <Route path="/wiki/:topicId" element={<RequireAuth><Wiki /></RequireAuth>} />
         <Route path="/scraping" element={<RequireAuth><Scraping /></RequireAuth>} />
         <Route path="/ingestion" element={<RequireAuth><Ingestion /></RequireAuth>} />
-        <Route path="/curation" element={<RequireAuth><CurationWorkspace /></RequireAuth>} />
+        <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
         <Route path="/about" element={<RequireAuth><About /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/wiki" />} />
       </Routes>

@@ -1,15 +1,21 @@
-# Metamorph Quick Start Guide
+# Metamorph Quick Start Guide (v3.0 - Website-First)
 
 **Spec ID:** 001-metamorph  
-**Version:** 1.0  
+**Version:** 3.0  
 **Status:** Draft  
-**Date:** 2026-04-12
+**Date:** 2026-05-12
 
 ---
 
-## 🚀 Getting Started with Metamorph
+## 🚀 Getting Started with Metamorph v3.0
 
-This guide will help you set up and start using the Metamorph knowledge pipeline system. Whether you're a developer, curator, or end-user, this guide provides the essential steps to begin.
+Metamorph v3.0 introduces a **website-first workflow**. Instead of manually uploading documents, you now:
+1. **Define a website URL** to scrape
+2. **Let the system automatically explore** and identify all scrapable files
+3. **Select which files** you want to ingest (all or specific subset)
+4. **Ingestion starts automatically** upon confirmation
+
+This guide will help you set up and start using the new website-to-knowledge pipeline.
 
 ---
 
@@ -17,21 +23,16 @@ This guide will help you set up and start using the Metamorph knowledge pipeline
 
 ### For Developers
 - **Python** 3.10+ (recommended: 3.11 or 3.12)
-- **Node.js** 18+ (for frontend development)
+- **Node.js** 18+ (optional, for Playwright/JS sites)
 - **Git**
 - **Docker** (optional, for containerized deployment)
 - **Neo4j** 5.x (or Neo4j Aura for managed service)
-- **Redis** (optional, for caching)
+- **Redis** (optional, for caching previews)
 
-### For Curators
+### For Users (Website Scrapers)
 - Modern web browser (Chrome, Firefox, Edge, Safari)
 - Internet connection
-- UN/NGO email account (for authentication)
-
-### For Proposal Writers
-- Modern web browser
-- Access to approved knowledge cards
-- Basic understanding of humanitarian operations
+- Websites to scrape (URLs)
 
 ---
 
@@ -58,6 +59,9 @@ source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Additional packages for crawling
+pip install requests beautifulsoup4 lxml urllib3
 ```
 
 #### 3. Set Up Neo4j
@@ -79,7 +83,16 @@ docker run \
 curl http://localhost:7474
 ```
 
-#### 4. Configure Environment
+#### 4. Set Up Redis (Optional for Preview Caching)
+```bash
+# Using Docker
+docker run \
+  --name metamorph-redis \
+  -p 6379:6379 \
+  -d redis:alpine
+```
+
+#### 5. Configure Environment
 ```bash
 # Copy example environment file
 cp .env.example .env
@@ -93,20 +106,27 @@ NEO4J_USER=neo4j
 NEO4J_PASSWORD=password
 SECRET_KEY=your-secret-key-here
 DEBUG=true
+REDIS_URL=redis://localhost:6379/0  # Optional
+
+# Crawling settings (configurable):
+CRAWLER_MAX_DEPTH=3
+CRAWLER_MAX_PAGES=1000
+CRAWLER_DELAY=1.0  # seconds between requests
+CRAWLER_USER_AGENT=MetamorphBot/1.0
 ```
 
-#### 5. Initialize Database
+#### 6. Initialize Database
 ```bash
 # Run database initialization script
 python scripts/init_db.py
 
 # This will:
-# - Create required indexes
-# - Set up constraints
+# - Create Website, DiscoveredFile, ScrapeSession, IngestionJob, Document nodes
+# - Set up indexes for crawling entities
 # - Load initial schema
 ```
 
-#### 6. Start Backend Server
+#### 7. Start Backend Server
 ```bash
 # From backend directory
 cd backend
@@ -115,7 +135,7 @@ uvicorn app.main:app --reload --port 8000
 # The API will be available at: http://localhost:8000
 ```
 
-#### 7. Start Frontend (Optional)
+#### 8. Start Frontend (Optional)
 ```bash
 # From frontend directory
 cd frontend
@@ -127,158 +147,128 @@ npm run dev
 
 ---
 
-### Option 2: Docker Compose Setup
-
-#### 1. Clone the Repository
-```bash
-git clone <repository-url>
-cd metamorph
-```
-
-#### 2. Configure Environment
-```bash
-cp .env.example .env
-# Edit .env as needed
-```
-
-#### 3. Start All Services
-```bash
-docker-compose up -d
-
-# This starts:
-# - Neo4j database
-# - Redis cache
-# - Backend API
-# - Frontend UI (optional)
-```
-
-#### 4. Verify Services
-```bash
-# Check all containers are running
-docker-compose ps
-
-# View logs
-docker-compose logs -f
-```
-
----
-
-### Option 3: Production Deployment
-
-#### 1. Prepare Infrastructure
-- Set up server (Linux recommended)
-- Install Docker and Docker Compose
-- Configure domain and SSL certificates
-- Set up database backups
-
-#### 2. Configure for Production
-```bash
-# Edit docker-compose.prod.yml
-nano docker-compose.prod.yml
-
-# Update environment variables for production
-cp .env.example .env.prod
-nano .env.prod
-```
-
-#### 3. Deploy
-```bash
-# Build and start production services
-docker-compose -f docker-compose.prod.yml up -d --build
-```
-
-#### 4. Set Up Monitoring
-```bash
-# Install monitoring tools
-# Set up logging
-# Configure alerts
-```
-
----
-
 ## 🎯 First Steps for Different User Types
 
-### For Developers
+### For Website Scrapers (NEW - Primary Role)
 
-#### 1. Run Tests
-```bash
-# Run all tests
-pytest
+#### Step 1: Access the System
+1. Open your web browser
+2. Navigate to the Metamorph URL (e.g., http://localhost:3000)
+3. Log in (or create an account if first time)
 
-# Run specific test modules
-pytest tests/unit/test_extraction_services.py
-pytest tests/integration/
+#### Step 2: Start a New Scraping Job
+1. Click **"New Scrape Job"** or **"Add Website"** button
+2. Enter the website URL you want to scrape (e.g., `https://www.unhcr.org`)
+3. Click **"Start Discovery"**
 
-# Run with coverage
-pytest --cov=backend --cov-report=html
-```
+#### Step 3: System Automatically Explores the Website
+- The system will:
+  - Check if the website is accessible
+  - Parse `robots.txt` to check scraping permissions
+  - Look for `sitemap.xml` and parse it
+  - Crawl the website starting from the provided URL
+  - Follow internal links within the same domain
+  - Identify all scrapable files (PDFs, Word docs, Excel, etc.)
 
-#### 2. Explore the API
-```bash
-# View API documentation (Swagger UI)
-open http://localhost:8000/docs
+- You'll see a progress indicator showing:
+  - Pages crawled
+  - Files discovered
+  - Estimated time remaining
 
-# Test API endpoints
-curl http://localhost:8000/api/v1/health
+#### Step 4: Review Discovered Files
+Once crawling is complete, you'll see a list of all discovered files with:
+- **File name** (e.g., `Global_Trends_2024.pdf`)
+- **File type** (e.g., PDF, Word, Excel)
+- **File size** (e.g., 2.5 MB)
+- **Last modified** date
+- **URL** (full path to the file)
 
-# Upload a test document
-curl -X POST \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@test_document.pdf" \
-  http://localhost:8000/api/v1/documents/upload
-```
+Files are grouped by type for easier browsing:
+- 📄 **PDF Documents**
+- 📝 **Word Documents**
+- 📊 **Spreadsheets**
+- 📑 **Presentations**
+- 🌐 **Web Pages**
+- 📋 **Other Files**
 
-#### 3. Work with the Graph
-```bash
-# Connect to Neo4j Browser
-open http://localhost:7474
+#### Step 5: Preview Files (Optional)
+- Click on any file to see a preview
+- For text files: First 500 characters
+- For PDFs: First page text
+- For Word/Excel: Extracted text preview
+- For HTML: Clean text extraction
 
-# Run sample queries
-# Find all documents
-MATCH (d:Document) RETURN d LIMIT 10
+#### Step 6: Select Files for Ingestion
+- Use the checkboxes to select files:
+  - **Select All** - Check the box at the top
+  - **Select by Type** - Use the type filter dropdown
+  - **Select by Date Range** - Use the date filter
+  - **Individual Selection** - Check specific files
+- Selected count is displayed (e.g., "12 of 45 files selected")
 
-# Find entities by type
-MATCH (e:Entity {type: "Organization"}) RETURN e LIMIT 10
+#### Step 7: Start Ingestion
+1. Click **"Start Ingestion"** button
+2. Confirm your selection in the dialog
+3. Ingestion starts **automatically**!
 
-# Find relationships
-MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 10
-```
+The system will:
+- Queue all selected files
+- Download files from URLs
+- Parse them using Docling (standard) or MinerU (complex layouts)
+- Extract knowledge and store in the graph database
+- Track progress for each file
+
+You'll see:
+- Overall progress percentage
+- Individual file status (queued, downloading, parsing, complete, error)
+- Estimated time remaining
+- Error messages for any failed files
+
+#### Step 8: View Results
+Once ingestion is complete:
+- Knowledge is extracted and stored in the graph
+- You can view the extracted knowledge in the Curated Wiki
+- The system flags any conflicts or changes for review
+- Validation cards are created for items needing your attention
 
 ---
 
 ### For Curators
 
+The curation workflow is similar to v2.0, but now knowledge comes from websites:
+
 #### 1. Access the System
 1. Open your web browser
-2. Navigate to the Metamorph URL (provided by your administrator)
-3. Log in using your UN/NGO credentials
+2. Navigate to the Metamorph URL
+3. Log in using your credentials
 
 #### 2. Understand the Dashboard
-- **Validation Queue:** Shows pending validation cards needing your review
-- **Recent Activity:** Shows recent changes and updates
+- **Validation Queue:** Shows pending validation cards from ingested website content
+- **Recent Activity:** Shows recent scraping jobs and changes
+- **Discovered Websites:** List of websites that have been scraped
 - **My Tasks:** Shows tasks assigned to you
 - **Search:** Search for specific topics, entities, or cards
 
 #### 3. Process a Validation Card
 1. Click on a validation card in the queue
-2. Review the **Current Value** vs **Proposed Value**
+2. Review the **Current Value** vs **Proposed Value** (from website)
 3. Check the **Diff** to see exactly what changed
-4. Review **Evidence** and **Provenance**
+4. Review **Evidence** and **Provenance** (now includes source website and file URL)
 5. Check the **Confidence Score** and **Sensitivity Classification**
 6. Take action:
-   - **Approve:** If the change is accurate and well-sourced
-   - **Reject:** If the change is incorrect or poorly sourced
-   - **Merge/Edit:** If the change needs modification
-   - **Escalate:** If you're unsure or it's sensitive
-   - **Open Discussion:** If it needs community input
+   - **Approve** - If the change is accurate and well-sourced
+   - **Reject** - If the change is incorrect or poorly sourced
+   - **Merge/Edit** - If the change needs modification
+   - **Escalate** - If you're unsure or it's sensitive
+   - **Open Discussion** - If it needs community input
 
-#### 4. Create a Knowledge Card
-1. Navigate to **Knowledge Cards**
-2. Click **Create New Card**
-3. Select the card type (KC-1 to KC-6)
-4. Fill in the template sections
-5. Add sources and citations
-6. Submit for review
+#### 4. Monitor Website Scraping
+- View the **Websites** section to see:
+  - List of all scraped websites
+  - Number of files discovered per website
+  - Number of files ingested
+  - Last scrape date
+  - Scrape status (success, error, pending)
 
 ---
 
@@ -290,10 +280,18 @@ MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 10
    - Domain (Geographic, Crisis, etc.)
    - Card Type (KC-1 to KC-6)
    - Validity (ensure cards are not expired)
+   - **Source Website** (NEW - filter by website)
    - Date Range
 3. Review search results
 
-#### 2. Use Cards in Proposals
+#### 2. Check Source Information
+- Each card now shows:
+  - **Source Website** - Where the knowledge came from
+  - **Source File** - The specific file that was ingested
+  - **Ingestion Date** - When the file was processed
+  - **Provenance Chain** - Full trace from website → file → knowledge
+
+#### 3. Use Cards in Proposals
 1. Select relevant cards for your proposal
 2. Click **Add to Proposal**
 3. Arrange cards in logical order
@@ -304,7 +302,7 @@ MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 10
 5. Review the generated draft
 6. Make manual adjustments as needed
 
-#### 3. Export Proposal
+#### 4. Export Proposal
 1. Review the final proposal
 2. Click **Export**
 3. Choose format (PDF, Word, HTML)
@@ -312,63 +310,142 @@ MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 10
 
 ---
 
-### For Reviewers
+## 🌐 Website Scraping Workflow (v3.0)
 
-#### 1. Participate in Discussions
-1. Navigate to **Discussion Forum**
-2. Browse threads or use search
-3. Click on a thread to view details
-4. Read the discussion and evidence
-5. Add your comment:
-   - Cite your sources
-   - Provide reasoning
-   - Propose patches if applicable
-6. Vote on consensus
+### The New Workflow Explained
 
-#### 2. Watch Topics
-1. Navigate to a topic of interest
-2. Click **Watch** button
-3. Configure notification preferences
-4. You'll receive notifications when:
-   - The topic is edited
-   - A claim is disputed
-   - A discussion is opened
-   - A consensus decision is applied
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    METAMORPH v3.0 USER WORKFLOW                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  STEP 1: DEFINE WEBSITE                                           │
+│  ┌─────────────────────────┐                                    │
+│  │  Enter URL:              │                                    │
+│  │  [https://_________]     │◄── User provides website URL      │
+│  │                         │                                    │
+│  │  [Start Discovery]      │                                    │
+│  └─────────────────────────┘                                    │
+│            │                                                      │
+│            ▼                                                      │
+│  STEP 2: AUTOMATIC EXPLORATION                                   │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  ✓ Checking robots.txt                                  │   │
+│  │  ✓ Parsing sitemap.xml                                   │   │
+│  │  ✓ Crawling website (0/45 pages)                         │   │
+│  │  ✓ Found 12 PDFs, 8 Word docs, 5 Excel files              │   │
+│  │  ┌─────────────────┐                                    │   │
+│  │  │ Progress: 85%   │                                    │   │
+│  │  └─────────────────┘                                    │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│            │                                                      │
+│            ▼                                                      │
+│  STEP 3: REVIEW & SELECT FILES                                    │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  📁 Discovered Files (25 total)                           │   │
+│  │                                                              │   │
+│  │  📄 PDF DOCUMENTS (12)                                    │   │
+│  │  ✓ [ ] Global_Trends_2024.pdf (2.5 MB, 2024-03-15)      │   │
+│  │  ✓ [ ] Annual_Report_2023.pdf (5.1 MB, 2024-01-20)      │   │
+│  │  ✗ [ ] Quarterly_Update.pdf (1.2 MB, 2024-04-01)        │   │
+│  │                                                              │   │
+│  │  📝 WORD DOCUMENTS (8)                                     │   │
+│  │  ✓ [ ] Strategy_Document.docx (1.8 MB, 2024-02-10)     │   │
+│  │  ✗ [ ] Meeting_Notes.docx (0.5 MB, 2024-04-15)         │   │
+│  │                                                              │   │
+│  │  Selected: 2 of 25 files                                    │   │
+│  │                                                              │   │
+│  │  [Select All] [Select by Type ▼] [Select by Date ▼]      │   │
+│  │                                                              │   │
+│  │  [Start Ingestion]                                         │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│            │                                                      │
+│            ▼                                                      │
+│  STEP 4: AUTOMATIC INGESTION                                       │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  Ingestion Progress                                        │   │
+│  │                                                              │   │
+│  │  Global_Trends_2024.pdf    ████████████░░░░  80%         │   │
+│  │  Strategy_Document.docx   ████████████████░░░░  95%         │   │
+│  │                                                              │   │
+│  │  Overall: 87% complete                                       │   │
+│  │  Estimated time remaining: 32 seconds                     │   │
+│  │                                                              │   │
+│  │  [View Details] [Cancel]                                    │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│            │                                                      │
+│            ▼                                                      │
+│  STEP 5: KNOWLEDGE READY!                                         │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  ✓ Ingestion Complete!                                    │   │
+│  │                                                              │   │
+│  │  2 files successfully ingested                            │   │
+│  │  45 knowledge items extracted                              │   │
+│  │  3 validation cards created for review                     │   │
+│  │                                                              │   │
+│  │  [View Knowledge Graph] [Review Validation Cards]         │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Key Features of v3.0
+
+✅ **Automatic Discovery:** No need to manually find documents
+✅ **File Selection:** Choose exactly what to ingest
+✅ **Automatic Ingestion:** Starts immediately upon confirmation
+✅ **Progress Tracking:** See exactly what's happening
+✅ **Provenance Tracking:** Every piece of knowledge linked to source website and file
 
 ---
 
-## 📖 Understanding Knowledge Cards
+## 📖 Understanding the New Data Model
 
-### Card Types Overview
+### Websites
+- A website is the starting point for knowledge extraction
+- Each website has:
+  - URL (the root URL you provide)
+  - Domain name
+  - Discovery date
+  - Last scrape date
+  - Total files discovered
+  - Total files ingested
 
-| Card Type | Purpose | Validity | Typical Use |
-|-----------|---------|----------|-------------|
-| **KC-1: Donor Intelligence** | Understand funder priorities | 12 months | Funding proposals |
-| **KC-2: Field Context** | Describe situation, needs, risks | 6 months | Situation analysis |
-| **KC-3: Outcome Evidence** | Summarize effective interventions | 12 months | Program design |
-| **KC-4: Partner Capacity** | Assess partner ability to deliver | 6 months | Partner selection |
-| **KC-5: Institutional Track Record** | Highlight UNHCR credibility | 24 months | Credibility statements |
-| **KC-6: Crisis Political Economy** | Explain crisis strategic importance | 6 months | Strategic planning |
+### Discovered Files
+- Files found during website crawling
+- Each file has:
+  - URL (full path to the file)
+  - File type (PDF, Word, Excel, etc.)
+  - File size
+  - Last modified date
+  - Status (discovered, selected, ingested, error)
 
-### Card Structure
-Each card contains:
-- **Header:** Card type, ID, validity period, approval status
-- **Sections:** Organized content blocks (varies by card type)
-- **Blocks:** Individual content units with:
-  - Unique block_id
-  - Section name
-  - Word limit
-  - Block type
-  - Template for extraction
-  - Verification status
-  - Provenance tracking
-- **Metadata:**
-  - Created by
-  - Created date
-  - Last updated
-  - Approved by
-  - Approval date
-  - Expiry date
+### Scrape Sessions
+- Each time you scrape a website, a session is created
+- Tracks:
+  - When the scrape started and completed
+  - How many files were discovered
+  - How many were selected
+  - How many were ingested
+  - Any errors that occurred
+
+### Documents
+- The actual parsed documents
+- Each document has:
+  - Original URL
+  - Source website
+  - Source file
+  - Download date
+  - Parse date
+  - Parsing tool used (Docling or MinerU)
+  - Extracted text and metadata
+
+### Knowledge Graph
+- Extracted knowledge is stored as:
+  - **Entities** (people, organizations, locations, etc.)
+  - **Relationships** (connections between entities)
+  - **Properties** (attributes and metadata)
+  - **Provenance** (traceability to source website and file)
 
 ---
 
@@ -380,9 +457,10 @@ Each card contains:
 3. Click on a topic to view its page
 4. Each page shows:
    - **Accepted knowledge** (currently verified)
+   - **Source Information** (NEW - shows which website and file the knowledge came from)
    - **Verification badges** (✓ for accepted, ⚠️ for pending)
    - **Freshness indicators** (how recent the information is)
-   - **Provenance** (click to see sources)
+   - **Provenance** (click to see full source chain)
    - **Maintenance tags** (if any issues)
    - **Discussion links** (if disputed)
 
@@ -390,57 +468,67 @@ Each card contains:
 Curators can perform actions directly on wiki blocks:
 1. Hover over a block to see action buttons
 2. Available actions:
-   - **Verify:** Mark as verified/accepted
-   - **Flag:** Flag for review
-   - **Edit:** Edit the content
-   - **Revert:** Revert to previous version
-   - **Discuss:** Open discussion
-   - **Resolve Conflict:** If the block was disputed
-   - **Escalate:** Send to higher review tier
-   - **Archive:** Remove from active view
+   - **Verify** - Mark as verified/accepted
+   - **Flag** - Flag for review
+   - **Edit** - Edit the content
+   - **Revert** - Revert to previous version
+   - **Discuss** - Open discussion
+   - **Resolve Conflict** - If the block was disputed
+   - **Escalate** - Send to higher review tier
+   - **Archive** - Remove from active view
 
 ---
 
-## 🛡️ Trust Routing Explained
+## 🛡️ Trust Routing & Provenance
 
 ### How Knowledge is Processed
 
-When new information is extracted or proposed:
+When new information is extracted from a website:
 
 ```
-Incoming Information
+Discovered File
     ↓
 ┌─────────────────────┐
-│  Trust Router        │
+│  Ingestion Pipeline  │
 │                     │
-│  if confidence >= 0.9│──── Auto-Accept ────▶ Curated Wiki
-│     and trusted     │
-│     and no conflict │
-│                     │
-│  if 0.7 <= confidence│── Pending/Review ──▶ Validation Queue
-│     < 0.9           │
-│     or needs check  │
-│                     │
-│  if confidence < 0.7│─── Escalation ────▶ Review Tier
-│     or sensitive    │
-└─────────────────────┘
+│  - Download file    │
+│  - Parse document    │
+│  - Extract triplets  │
+│  - Store in graph    │
+└────────────┬────────┘
+             │
+     ┌───────▼───────┐
+     │  Trust Router  │
+     │               │
+     │  if confidence ≥ 0.9 │──── Auto-Accept ────▶ Curated Wiki
+     │     and trusted     │
+     │     and no conflict │
+     │                 │
+     │  if 0.7 ≤ confidence│── Pending/Review ──▶ Validation Queue
+     │     < 0.9           │
+     │     or needs check  │
+     │                 │
+     │  if confidence < 0.7│─── Escalation ────▶ Review Tier
+     │     or sensitive    │
+     └─────────────────┘
 ```
 
-### Confidence Factors
+### Confidence Factors (Updated for v3.0)
+
 Your content's confidence score is based on:
 1. **Parser Confidence:** How sure the system is about the extraction
-2. **Source Reliability:** How trustworthy the source is
+2. **Source Reliability:** How trustworthy the source website is
 3. **Extraction Method:** Rule-based vs ML-based
 4. **Corroboration:** How many sources agree
 5. **Freshness:** How recent the information is
+6. **Website Domain:** Known/trusted domains score higher
 
-### Sensitivity Levels
-- **Low:** Non-controversial, public information
-  - Auto-accepted if confidence is high
-- **Medium:** Potentially controversial
-  - Requires review by Tier 1 (Field/Local)
-- **High:** Highly sensitive
-  - Escalated to Tier 3 (HQ/Thematic) for approval
+### Website Domain Reliability
+
+- **Trusted (0.95):** UN websites, government domains, academic institutions
+- **Known (0.85):** Major news organizations, established NGOs
+- **Unknown (0.70):** New domains, requires review
+- **Untrusted (0.30):** Known problematic domains
 
 ---
 
@@ -448,18 +536,18 @@ Your content's confidence score is based on:
 
 ### Basic Search
 - Use the search bar at the top of any page
-- Search across all topics, entities, and cards
+- Search across all topics, entities, cards, and **websites**
 - Results are ranked by relevance and recency
 
 ### Advanced Search
 1. Click **Advanced Search** next to the search bar
 2. Use filters:
-   - **Type:** Documents, Entities, Cards, Discussions
+   - **Type:** Documents, Entities, Cards, Discussions, **Websites**
    - **Domain:** Geographic, Crisis, Demographics, etc.
+   - **Source Website:** Filter by specific website
    - **Status:** Accepted, Pending, Disputed, Expired
    - **Date Range:** Filter by creation/modification date
-   - **Source:** Filter by source organization
-   - **Confidence:** Minimum confidence score
+   - **File Type:** PDF, Word, Excel, etc.
 
 ### Search Operators
 | Operator | Example | Description |
@@ -469,6 +557,7 @@ Your content's confidence score is based on:
 | `NOT` | `UNHCR NOT Syria` | Exclude documents with Syria |
 | `" "` | `"World Food Programme"` | Exact phrase match |
 | `*` | `refugee*` | Wildcard (refugee, refugees, etc.) |
+| `website:` | `website:unhcr.org` | Filter by source website |
 
 ---
 
@@ -504,7 +593,7 @@ Each piece of knowledge goes through verification states:
 
 | State | Description | Can be Used? |
 |-------|-------------|--------------|
-| **incoming** | Newly extracted, not yet processed | ❌ No |
+| **incoming** | Newly extracted from website, not yet processed | ❌ No |
 | **auto_accepted** | Automatically accepted (high confidence) | ✅ Yes |
 | **pending** | Awaiting review | ⚠️ Limited (visible to reviewers) |
 | **escalated** | Escalated to higher review tier | ❌ No |
@@ -516,69 +605,89 @@ Each piece of knowledge goes through verification states:
 
 ---
 
-## 🎯 Best Practices
+## 🎯 Best Practices (v3.0)
+
+### For Website Scrapers
+1. **Start with trusted websites** - UN, government, academic sites have high-quality content
+2. **Use sitemap.xml when available** - Faster and more reliable than crawling
+3. **Select files carefully** - Focus on relevant documents for your needs
+4. **Monitor progress** - Check ingestion status and address any errors
+5. **Respect website policies** - Don't scrape sites that block crawlers
+6. **Schedule regular updates** - Set up re-scraping for websites that change frequently
 
 ### For Curators
-1. **Always verify sources** - Don't accept claims without checking provenance
-2. **Check for contradictions** - Use the conflict detection tools
-3. **Add context** - When approving, add notes about why it's trustworthy
-4. **Escalate when unsure** - Better to escalate than make a wrong decision
-5. **Watch your domains** - Set up watches for areas you specialize in
+1. **Check source website** - Verify the website is reliable before approving
+2. **Review file context** - Understand where the knowledge came from
+3. **Check for duplicates** - The same file might be on multiple websites
+4. **Add context** - When approving, add notes about the source website
+5. **Escalate when unsure** - Better to escalate than make a wrong decision
 
 ### For Proposal Writers
-1. **Always check validity** - Never use expired knowledge cards
-2. **Review provenance** - Understand where the knowledge comes from
-3. **Check for maintenance tags** - Be aware of potential issues
-4. **Cite everything** - Ensure every claim can be traced back
-5. **Acknowledge gaps** - If knowledge is incomplete, state this explicitly
+1. **Verify source websites** - Check the provenance of knowledge cards
+2. **Check for freshness** - Ensure knowledge from websites is up to date
+3. **Look for multiple sources** - Knowledge corroborated by multiple websites is more reliable
+4. **Cite everything** - Include source website and file in citations
+5. **Acknowledge limitations** - Note if knowledge comes from a single source
 
 ### For Developers
-1. **Follow TDD** - Write tests before implementation (NFR-006)
-2. **Track provenance** - Every piece of data must be traceable (NFR-002)
-3. **Handle edge cases** - Humanitarian data is often messy
-4. **Optimize for curators** - Their workflow is the most important
-5. **Prioritize reliability** - False positives are better than false negatives
+1. **Respect robots.txt** - Always check and honor website scraping policies
+2. **Implement rate limiting** - Don't overwhelm websites with requests
+3. **Handle errors gracefully** - Websites can be unreliable, expect failures
+4. **Cache previews** - Preview generation can be resource-intensive
+5. **Track provenance** - Every piece of data must be traceable to source
+6. **Follow TDD** - Write tests before implementation (NFR-006)
 
 ---
 
-## 🆘 Troubleshooting
+## 🆘 Troubleshooting (v3.0)
 
 ### Common Issues
 
-#### Documents Not Parsing
-- **Symptom:** Document upload succeeds but no knowledge extracted
+#### Website Not Accessible
+- **Symptom:** Crawling fails immediately with "Website not accessible"
 - **Solutions:**
-  - Check document format is supported
-  - Verify document is not password-protected
-  - Try with a different document of same type
-  - Check server logs for parsing errors
+  - Check the URL is correct
+  - Verify the website is online
+  - Check if the website blocks crawlers (robots.txt)
+  - Try a different website
 
-#### Low Confidence Scores
-- **Symptom:** Extracted knowledge has low confidence scores
+#### No Files Discovered
+- **Symptom:** Crawling completes but no files found
 - **Solutions:**
-  - Use higher quality source documents
-  - Ensure documents are in good condition (not scanned PDFs)
-  - Check if source is in source reliability list
-  - Manually review and adjust confidence if appropriate
+  - Check if the website has any scrapable files
+  - Try increasing the crawl depth in settings
+  - Try increasing the max pages limit
+  - Check if the website uses JavaScript (may need Playwright)
+  - Verify the website allows crawling
 
-#### Graph Queries Slow
-- **Symptom:** Database queries take a long time
+#### Crawling is Slow
+- **Symptom:** Crawling takes a long time
 - **Solutions:**
-  - Add appropriate indexes
-  - Check query complexity
-  - Use EXPLAIN to analyze query plan
-  - Consider query rewriting for better performance
+  - Check if the website has rate limiting
+  - Increase the delay between requests
+  - Reduce the crawl depth
+  - Reduce the max pages limit
+  - Check server resources (CPU, memory)
 
-#### Knowledge Cards Not Generating
-- **Symptom:** Cards not appearing in library
+#### Ingestion Failures
+- **Symptom:** Files fail to ingest
 - **Solutions:**
-  - Check if required data exists in graph
-  - Verify card generation job is running
-  - Check for errors in card generation logs
-  - Ensure templates are properly configured
+  - Check the error message for specific issues
+  - Try re-ingesting the failed files
+  - Check if files are accessible (not 404)
+  - Check if files are password-protected
+  - Check if files are too large
+
+#### Preview Not Available
+- **Symptom:** Preview shows "Preview unavailable"
+- **Solutions:**
+  - File may be binary or unsupported format
+  - File may be too large for preview
+  - Preview generation may have timed out
+  - Try opening the file directly in browser
 
 ### Getting Help
-1. **Check Documentation:** This guide and the full spec.md
+1. **Check Documentation:** This guide and the full spec.md v3.0
 2. **Search Issues:** Look for similar issues in the issue tracker
 3. **Ask in Chat:** Use the team chat channel
 4. **Create Issue:** If it's a bug or feature request, create an issue
@@ -592,7 +701,7 @@ Each piece of knowledge goes through verification states:
 |------------|---------|---------------|
 | Bug Report | Issue Tracker | 24 hours |
 | Feature Request | Issue Tracker | 48 hours |
-| Urgent Production Issue | Admin Team | 4 hours |
+| Crawling Problem | Support Team | 4 hours |
 | General Question | Team Chat | 4 hours |
 | Training Request | Training Team | 48 hours |
 
@@ -602,19 +711,20 @@ Each piece of knowledge goes through verification states:
 
 | Date | Version | Changes |
 |------|---------|---------|
+| 2026-05-12 | 3.0 | Major update for website-first workflow. Rewrote entire guide to reflect new workflow: website URL input → automatic exploration → file selection → automatic ingestion. Added website scraper role, updated all sections for new data model (Website, DiscoveredFile, ScrapeSession, IngestionJob). Added troubleshooting for crawling issues. |
 | 2026-04-12 | 1.0 | Initial quick start guide |
 
 ---
 
 ## 📚 Additional Resources
 
-- [Full Specification (spec.md)](./spec.md) - Complete project specification
-- [Implementation Plan (plan.md)](./plan.md) - Detailed implementation roadmap
-- [Task List (tasks.md)](./tasks.md) - Development task tracking
-- [Research Notes (research.md)](./research.md) - Technical research and decisions
-- [API Documentation](../api/) - REST API reference
+- [Full Specification (spec.md)](./spec.md) - Complete project specification with website-first workflow
+- [Implementation Plan (plan.md)](./plan.md) - Detailed implementation roadmap for v3.0
+- [Task List (tasks.md)](./tasks.md) - Development task tracking with new crawling tasks
+- [Research Notes (research.md)](./research.md) - Technical research on website crawling and discovery
+- [API Documentation](../api/) - REST API reference including website scraping endpoints
 - [Developer Guide](../dev-guide.md) - Detailed development instructions
 
 ---
 
-*Happy knowledge management! 🎉*
+*Happy website scraping! 🌐🎉*

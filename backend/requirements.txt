@@ -2,6 +2,7 @@
 fastapi==0.110.2
 uvicorn[standard]
 pydantic
+pydantic-settings
 python-dotenv
 jinja2
 
