@@ -13,6 +13,8 @@ import TeamManagement from "./pages/TeamManagement";
 import TopicManagement from "./pages/TopicManagement";
 import FileSelectionPage from "./pages/FileSelectionPage";
 import IngestionProgressPage from "./pages/IngestionProgressPage";
+import KnowledgeCards from "./pages/KnowledgeCards";
+import KnowledgeCardDetail from "./pages/KnowledgeCardDetail";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const apiKey = typeof window !== 'undefined' ? localStorage.getItem("API_KEY") : null;
@@ -30,6 +32,8 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Navigate to="/wiki" />} />
+        <Route path="/cards" element={<RequireAuth><KnowledgeCards /></RequireAuth>} />
+        <Route path="/cards/:cardId" element={<RequireAuth><KnowledgeCardDetail /></RequireAuth>} />
         <Route path="/wiki" element={<RequireAuth><Wiki /></RequireAuth>} />
         <Route path="/wiki/:topicId" element={<RequireAuth><Wiki /></RequireAuth>} />
         <Route path="/scraping" element={<RequireAuth><Scraping /></RequireAuth>} />

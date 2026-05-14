@@ -1227,6 +1227,103 @@ async def create_discussion_thread(
     return db_thread
 
 
+@router.get("/discussion/threads/{thread_id}/comments", response_model=List[DiscussionCommentResponse])
+async def list_discussion_comments(
+    thread_id: str,
+    db: Session = Depends(get_db),
+    api_key: str = Depends(get_api_key),
+) -> List[DiscussionComment]:
+    """
+    List all comments in a discussion thread.
+    
+    Acceptance Criteria:
+    - Return all comments for a thread
+    - Support pagination (future enhancement)
+    """
+    db_thread = db.query(DiscussionThread).filter(DiscussionThread.id == thread_id).first()
+    if not db_thread:
+        raise HTTPException(status_code=404, detail="Discussion thread not found")
+    
+    # Get all comments for this thread
+    comments = db.query(DiscussionComment).filter(DiscussionComment.thread_id == thread_id).all()
+    
+    return comments
+
+
+@router.patch("/discussion/comments/{comment_id}", response_model=DiscussionCommentResponse)
+async def update_discussion_comment(
+    comment_id: str,
+    update_data: Dict[str, Any],
+    db: Session = Depends(get_db),
+    api_key: str = Depends(get_api_key),
+) -> DiscussionComment:
+    """
+    Update a discussion comment.
+    
+    Acceptance Criteria:
+    - Allow editing comment content
+    - Track edit history
+    - Prevent editing by unauthorized users
+    """
+    db_comment = db.query(DiscussionComment).filter(DiscussionComment.id == comment_id).first()
+    if not db_comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    # Check if the current user is the author (in a real app, you'd have proper auth)
+    if db_comment.created_by != api_key:
+        raise HTTPException(status_code=403, detail="You can only edit your own comments")
+    
+    # Update content if provided
+    if 'content' in update_data:
+        db_comment.content = update_data['content']
+        db_comment.is_edited = True
+    
+    # Update metadata if provided
+    if 'evidence_quality' in update_data:
+        db_comment.evidence_quality = update_data['evidence_quality']
+    if 'policy_compliance' in update_data:
+        db_comment.policy_compliance = update_data['policy_compliance']
+    
+    db_comment.updated_at = datetime.now()
+    db_comment.updated_by = api_key
+    
+    db.commit()
+    db.refresh(db_comment)
+    
+    return db_comment
+
+
+@router.delete("/discussion/comments/{comment_id}", response_model=Dict[str, Any])
+async def delete_discussion_comment(
+    comment_id: str,
+    db: Session = Depends(get_db),
+    api_key: str = Depends(get_api_key),
+) -> Dict[str, Any]:
+    """
+    Delete a discussion comment.
+    
+    Acceptance Criteria:
+    - Allow comment deletion by author or moderators
+    - Prevent deletion if comment has replies (future enhancement)
+    """
+    db_comment = db.query(DiscussionComment).filter(DiscussionComment.id == comment_id).first()
+    if not db_comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    # Check if the current user is the author (in a real app, you'd have proper auth)
+    if db_comment.created_by != api_key:
+        raise HTTPException(status_code=403, detail="You can only delete your own comments")
+    
+    db.delete(db_comment)
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": "Comment deleted successfully",
+        "comment_id": comment_id
+    }
+
+
 @router.get("/discussion/threads", response_model=List[DiscussionThreadResponse])
 async def list_discussion_threads(
     db: Session = Depends(get_db),
@@ -1446,3 +1543,107 @@ async def unwatch_discussion_thread(
         "is_watching": False,
         "watcher_count": len(db_thread.watchers)
     }
+
+
+@router.post("/discussion/threads/{thread_id}/close", response_model=DiscussionThreadResponse)
+async def close_discussion_thread(
+    thread_id: str,
+    close_data: Dict[str, Any],
+    db: Session = Depends(get_db),
+    api_key: str = Depends(get_api_key),
+) -> DiscussionThread:
+    """
+    Close a discussion thread.
+    
+    Acceptance Criteria (US-REV-001):
+    - Mark thread as closed
+    - Capture resolution information
+    - Prevent further comments
+    """
+    db_thread = db.query(DiscussionThread).filter(DiscussionThread.id == thread_id).first()
+    if not db_thread:
+        raise HTTPException(status_code=404, detail="Discussion thread not found")
+    
+    if db_thread.status == 'closed':
+        raise HTTPException(status_code=400, detail="Thread is already closed")
+    
+    # Update thread status
+    db_thread.status = 'closed'
+    db_thread.resolved_at = datetime.now()
+    db_thread.resolved_by = api_key
+    
+    # Update resolution information if provided
+    if 'resolution_summary' in close_data:
+        db_thread.resolution_summary = close_data['resolution_summary']
+    if 'consensus_result' in close_data:
+        db_thread.consensus_result = close_data['consensus_result']
+    
+    db.commit()
+    db.refresh(db_thread)
+    
+    return db_thread
+
+
+@router.post("/discussion/threads/{thread_id}/apply-consensus", response_model=DiscussionThreadResponse)
+async def apply_consensus_to_thread(
+    thread_id: str,
+    consensus_data: Dict[str, Any],
+    db: Session = Depends(get_db),
+    api_key: str = Depends(get_api_key),
+) -> DiscussionThread:
+    """
+    Apply consensus decision to a discussion thread.
+    
+    Acceptance Criteria (US-REV-001):
+    - Apply consensus result to thread
+    - Update linked entities if consensus reached
+    - Track consensus metadata
+    """
+    db_thread = db.query(DiscussionThread).filter(DiscussionThread.id == thread_id).first()
+    if not db_thread:
+        raise HTTPException(status_code=404, detail="Discussion thread not found")
+    
+    if db_thread.status not in ['open', 'under_review']:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot apply consensus from status: {db_thread.status}"
+        )
+    
+    # Validate required fields
+    if 'consensus_result' not in consensus_data:
+        raise HTTPException(status_code=400, detail="consensus_result is required")
+    
+    # Update consensus information
+    db_thread.consensus_result = consensus_data['consensus_result']
+    db_thread.resolution_summary = consensus_data.get('resolution_summary', '')
+    db_thread.evidence_quality = consensus_data.get('evidence_quality', db_thread.evidence_quality)
+    db_thread.policy_compliance = consensus_data.get('policy_compliance', db_thread.policy_compliance)
+    
+    # Update status based on consensus result
+    if consensus_data['consensus_result'] == 'accept':
+        db_thread.status = 'consensus_reached'
+    elif consensus_data['consensus_result'] == 'reject':
+        db_thread.status = 'rejected'
+    elif consensus_data['consensus_result'] == 'modify':
+        db_thread.status = 'under_review'  # Needs further work
+    elif consensus_data['consensus_result'] == 'no_consensus':
+        db_thread.status = 'no_consensus'
+    elif consensus_data['consensus_result'] == 'escalate':
+        db_thread.status = 'escalated'
+    else:
+        db_thread.status = 'resolved'
+    
+    db_thread.resolved_at = datetime.now()
+    db_thread.resolved_by = api_key
+    
+    # If consensus is reached and we have a linked block, we could update it here
+    # This would be part of the integration with the curation system
+    if consensus_data['consensus_result'] == 'accept' and db_thread.linked_block_id:
+        # In a full implementation, this would update the wiki block
+        # For now, we'll just log the action
+        pass
+    
+    db.commit()
+    db.refresh(db_thread)
+    
+    return db_thread

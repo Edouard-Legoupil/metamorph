@@ -483,7 +483,7 @@ export default function Wiki() {
                 </div>
               )}
 
-              {/* DISCUSSION TAB - Wikipedia-style talk page */}
+              {/* DISCUSSION TAB - Integrated discussion system */}
               {activeTab === 'discussion' && (
                 <div style={{ maxWidth: '800px', margin: '0 auto' }}>
                   <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#202122', marginBottom: '24px' }}>
@@ -512,12 +512,30 @@ export default function Wiki() {
                     <strong>Please sign your posts</strong> with <code>~~~~</code>.
                   </div>
 
-                  {/* Discussion threads would go here */}
-                  <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
-                    Discussion feature coming soon. This will show threads linked to blocks in the {currentCardTemplate?.title || 'current template'}.
+                  {/* Integrated Discussion List */}
+                  <div style={{ marginBottom: '24px' }}>
+                    <button
+                      style={{ 
+                        padding: '12px 24px', 
+                        background: UNHCR_BLUE, 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '8px', 
+                        cursor: 'pointer', 
+                        fontSize: '16px', 
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onClick={() => window.open(`/discussion?topic=${encodeURIComponent(currentTopic?.title || '')}&card=${currentTopic?.cardTemplateId || ''}`, '_blank')}
+                    >
+                      <span>💬</span>
+                      View Full Discussion System
+                    </button>
                   </div>
 
-                  {/* Wikipedia-style add topic section */}
+                  {/* Quick discussion interface for common topics */}
                   <div style={{ 
                     marginTop: '32px', 
                     padding: '16px', 
@@ -525,26 +543,39 @@ export default function Wiki() {
                     border: '1px solid #a2a9b1', 
                     borderRadius: '4px'
                   }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '12px' }}>Add topic</h3>
+                    <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '12px' }}>Quick Discussion</h3>
+                    <p style={{ fontSize: '14px', color: '#54595d', marginBottom: '12px' }}>
+                      Start a quick discussion about this topic:
+                    </p>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <input 
                         type="text"
+                        id="quickDiscussionTitle"
                         placeholder="Enter a title for your discussion"
                         style={{ 
                           flex: 1, 
                           padding: '8px', 
                           border: '1px solid #a2a9b1', 
-                          borderRadius: '2px'
+                          borderRadius: '4px'
                         }}
                       />
-                      <button style={{ 
-                        padding: '8px 16px', 
-                        background: '#36c', 
-                        color: 'white', 
-                        border: 'none', 
-                        borderRadius: '2px', 
-                        cursor: 'pointer'
-                      }}>
+                      <button
+                        style={{ 
+                          padding: '8px 16px', 
+                          background: '#36c', 
+                          color: 'white', 
+                          border: 'none', 
+                          borderRadius: '4px', 
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => {
+                          const title = (document.getElementById('quickDiscussionTitle') as HTMLInputElement)?.value;
+                          if (title) {
+                            const url = `/discussion?topic=${encodeURIComponent(currentTopic?.title || '')}&card=${currentTopic?.cardTemplateId || ''}&newThread=${encodeURIComponent(title)}`;
+                            window.open(url, '_blank');
+                          }
+                        }}
+                      >
                         Start discussion
                       </button>
                     </div>

@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 
 const NAV_ITEMS = [
+  { to: "/cards", label: "Knowledge Cards" },
   { to: "/wiki", label: "Wiki" },
   { to: "/websites", label: "Websites" },
   { to: "/users", label: "Users" },
