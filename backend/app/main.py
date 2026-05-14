@@ -71,6 +71,10 @@ app.include_router(agentic_content_router, prefix="/api/v1")
 from app.api.v1.endpoints.advanced_search import router as advanced_search_router
 app.include_router(advanced_search_router, prefix="/api/v1")
 
+# Analytics endpoints
+from app.api.v1.endpoints.analytics import router as analytics_router
+app.include_router(analytics_router, prefix="/api/v1")
+
 # Must be LAST: Serve React build at /
 FRONTEND_BUILD_DIR = os.getenv(
     "FRONTEND_BUILD_DIR",
