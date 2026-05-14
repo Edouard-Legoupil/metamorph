@@ -37,6 +37,9 @@ python-pptx  # for PowerPoint presentation processing
 # AI/Langchain/Embeddings
 litellm
 tiktoken
+crewai
+chromadb
+sentence-transformers
 
 # LLM extraction routing (Docling + MinerU) - install if available or as local module
 docling  # If PyPI not available: comment out and use local module/install

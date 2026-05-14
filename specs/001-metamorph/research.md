@@ -48,6 +48,64 @@ This document resolves all "NEEDS CLARIFICATION" items from the Technical Contex
 
 **Alternatives Considered**:
 - GitLab CI/CD (if using GitLab)
+
+## 3. Agent Orchestration Framework
+
+**Decision**: CrewAI for multi-agent collaboration and task delegation
+
+**Rationale**:
+- **Multi-Agent Architecture**: CrewAI provides built-in support for teams of specialized agents
+- **Hierarchical Delegation**: Agents can delegate tasks to sub-agents with specific expertise
+- **Memory and Context**: Built-in memory system for agents to retain context across interactions
+- **Tool Integration**: Easy integration with external tools and APIs
+- **Flexibility**: Supports both sequential and parallel task execution
+- **Python Native**: Seamless integration with existing Python backend
+- **Community Support**: Active development and growing ecosystem
+
+**Key Capabilities**:
+- **Agent Roles**: Define specialized roles (Researcher, Analyst, Writer, etc.)
+- **Task Delegation**: Agents can assign subtasks to other agents
+- **Collaborative Workflows**: Multiple agents work together on complex tasks
+- **Context Sharing**: Agents share context and knowledge efficiently
+- **Error Handling**: Built-in retry and fallback mechanisms
+- **Monitoring**: Track agent performance and task completion
+
+**Implementation Plan**:
+- **Agent Definitions**: Create specialized agents for different domains
+- **Crew Formation**: Organize agents into crews for specific workflows
+- **Task Orchestration**: Implement task delegation and coordination
+- **Memory Management**: Configure agent memory and context retention
+- **Integration**: Connect CrewAI with knowledge graph and vector store
+- **Monitoring**: Add agent performance tracking and logging
+
+**Alternatives Considered**:
+- LangChain (more LLM-focused, less agent collaboration)
+- AutoGen (Microsoft, good but more complex setup)
+- Custom implementation (too time-consuming, reinventing the wheel)
+
+## 4. Vector Store Integration
+
+**Decision**: ChromaDB for embeddings and semantic search
+
+**Rationale**:
+- **Simplicity**: Easy to set up and integrate
+- **Performance**: Fast similarity search capabilities
+- **Scalability**: Handles large document collections efficiently
+- **Open Source**: No vendor lock-in, community-driven development
+- **Python Native**: Excellent Python API and documentation
+
+**Key Use Cases**:
+- **Semantic Search**: Find relevant documents based on meaning
+- **Content Enrichment**: Augment knowledge graph data with semantic context
+- **Hybrid Queries**: Combine graph queries with vector similarity
+- **Document Retrieval**: Retrieve similar documents for context
+
+**Implementation Plan**:
+- **Embedding Generation**: Use sentence-transformers for document embeddings
+- **Vector Indexing**: Create and maintain vector indexes
+- **Similarity Search**: Implement semantic search endpoints
+- **Hybrid Queries**: Combine graph and vector results
+- **Caching**: Cache frequent queries for performance
 - CircleCI, Jenkins (more complex setup)
 - Azure Pipelines (if in Microsoft ecosystem)
 

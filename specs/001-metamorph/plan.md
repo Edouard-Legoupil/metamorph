@@ -15,6 +15,8 @@
 - **User Interface**: React/TypeScript frontend with file selection, preview, and bulk operations
 - **Document Parsing**: Docling for standard documents, MinerU for complex layouts
 - **Knowledge Storage**: Neo4j Labeled Property Graph with provenance tracking
+- **Agent Orchestration**: CrewAI framework for multi-agent collaboration and task delegation
+- **Vector Store**: ChromaDB for semantic search and content enrichment
 - **Processing**: Asynchronous background ingestion with progress tracking and error handling
 - **API**: FastAPI REST endpoints with URL path versioning (/api/v1/)
 - **Accessibility**: WCAG 2.1 AA compliant interfaces
@@ -25,7 +27,7 @@
 ## Technical Context
 
 **Language/Version**: Python 3.11+ (backend), TypeScript 5.0+ (frontend)
-**Primary Dependencies**: FastAPI, React, Neo4j, Docling, MinerU, Playwright, BeautifulSoup, requests
+**Primary Dependencies**: FastAPI, React, Neo4j, CrewAI, ChromaDB, Docling, MinerU, Playwright, BeautifulSoup, requests
 **Storage**: Neo4j (Labeled Property Graph) for knowledge graph, with potential file storage for documents
 **Testing**: pytest (backend), Jest/React Testing Library (frontend)
 **Target Platform**: Linux server (backend), Modern web browsers (Chrome, Firefox, Safari, Edge)
@@ -88,6 +90,8 @@
 - Monitoring: Prometheus + Grafana + OpenTelemetry
 - Deployment: Docker + Kubernetes with horizontal scaling
 - Security: Defense-in-depth approach with encryption and audit logging
+- Agent Orchestration: CrewAI for multi-agent collaboration
+- Vector Store: ChromaDB for semantic search and content enrichment
 
 ### Workflow Enhancements
 
