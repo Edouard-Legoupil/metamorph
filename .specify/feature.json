@@ -1,0 +1,5 @@
+{
+  "feature_directory": "specs/001-metamorph",
+  "spec_id": "001-metamorph",
+  "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}

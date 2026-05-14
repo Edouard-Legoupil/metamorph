@@ -18,7 +18,7 @@ Welcome! This guide walks you through getting Metamorph running locally with a f
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-repo/metamorph.git
+git clone https://github.com/edouard-legoupil/metamorph.git
 cd metamorph
 ```
 
@@ -39,45 +39,35 @@ docker exec minio mc mb local/metamorph-documents
 ### 4. Install Backend Dependencies
 ```bash
 cd backend
-python -m venv .venv
+uv venv --python 3.13
 source .venv/bin/activate
-pip install -r requirements.txt
-pip install pydantic-settings  # Required for Pydantic v2
+uv pip install -r requirements.txt
 ```
 
-### 5. Run Backend Tests
-```bash
-# Run all unit tests
-python -m pytest tests/unit/ -v
-
-# Expected: 35 tests passing (100% success rate)
-```
-
-### 6. Start Backend Server
+### 5. Start Backend Server
 ```bash
 # From backend directory
-source .venv/bin/activate
 uvicorn app.main:app --reload
 ```
 
-### 7. Install Frontend Dependencies
+### 6. Install Frontend Dependencies
 ```bash
-cd ../frontend
+cd frontend
 npm install
 npx playwright install  # Install browsers for testing
 ```
 
-### 8. Build Frontend
+### 7. Build Frontend
 ```bash
 npm run build
 ```
 
-### 9. Start Frontend Development Server
+### 8. Start Frontend Development Server
 ```bash
 npm run dev
 ```
 
-### 10. Access the Application
+### 9. Access the Application
 - **Backend API**: http://localhost:8000
 - **Frontend**: http://localhost:5173
 - **Neo4j Browser**: http://localhost:7474 (user: neo4j, password: password)

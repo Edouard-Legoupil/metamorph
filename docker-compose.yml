@@ -94,7 +94,7 @@ services:
       retries: 3
 
   postgres:
-    image: ankane/pgvector:0.5.1
+    image: ankane/pgvector:latest
     restart: always
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -103,7 +103,7 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
     ports:
-      - '5432:5432'
+      - '5433:5432'
     healthcheck:
       test: ['CMD', 'pg_isready', '-U', '${POSTGRES_USER}']
       interval: 10s

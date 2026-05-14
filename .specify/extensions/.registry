@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "extensions": {
+    "git": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:9731aa8143a72fbebfdb440f155038ab42642517c2b2bdbbf67c8fdbe076ed79",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "vibe": [
+          "speckit.git.feature",
+          "speckit.git.validate",
+          "speckit.git.remote",
+          "speckit.git.initialize",
+          "speckit.git.commit"
+        ]
+      },
+      "registered_skills": [],
+      "installed_at": "2026-04-12T20:18:45.311941+00:00"
+    },
+    "red-team": {
+      "version": "1.0.2",
+      "source": "local",
+      "manifest_hash": "sha256:5bdd672fbde76cd960fb794b4544d49bd0b8bcdca053e04d85c405538e0b7c75",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {},
+      "registered_skills": [],
+      "installed_at": "2026-05-14T06:33:53.719623+00:00"
+    },
+    "bugfix": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:52d11bc3b1912949516c4cfdd730acc138c362699aa6eb1357c7343e85d37f6c",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {},
+      "registered_skills": [],
+      "installed_at": "2026-05-14T06:34:35.890208+00:00"
+    },
+    "security-review": {
+      "version": "1.5.0",
+      "source": "local",
+      "manifest_hash": "sha256:6845e1d761f2eeb49d395425f7bc1bb18dddc4bbc287a5de81c573ae6c215025",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {},
+      "registered_skills": [],
+      "installed_at": "2026-05-14T06:34:50.290137+00:00"
+    }
+  }
+}

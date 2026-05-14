@@ -13,6 +13,7 @@ neo4j==5.17.0
 celery==5.3.6
 redis==5.0.1
 diskcache
+APScheduler==3.10.4
 
 # Markdown/HTML/Parsing
 markdown
@@ -28,10 +29,18 @@ aiohttp
 # File and doc processing
 boto3
 Pillow  # for image/thumbnail handling if you support attachments
+PyPDF2  # for PDF text extraction
+python-docx  # for Word document processing
+openpyxl  # for Excel spreadsheet processing
+python-pptx  # for PowerPoint presentation processing
 
 # AI/Langchain/Embeddings
 litellm
 tiktoken
+crewai
+psycopg2-binary
+pgvector
+sentence-transformers
 
 # LLM extraction routing (Docling + MinerU) - install if available or as local module
 docling  # If PyPI not available: comment out and use local module/install
@@ -46,6 +55,11 @@ types-PyYAML
 pytest
 pytest-asyncio
 pytest-mock
+pytest-cov
+pytest-xdist
+playwright
+requests-mock
+responses
 
 # Static serving (optional, useful for FastAPI + React)
 python-multipart
