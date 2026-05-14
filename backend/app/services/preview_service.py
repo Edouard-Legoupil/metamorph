@@ -39,10 +39,10 @@ class PreviewService:
     """Service for generating file previews"""
     
     def __init__(self):
-        self.cache_dir = Path(settings.PREVIEW_CACHE_DIR or "/tmp/preview_cache")
+        self.cache_dir = Path(settings.preview_cache_dir or "/tmp/preview_cache")
         self.cache_dir.mkdir(exist_ok=True)
-        self.max_preview_length = settings.MAX_PREVIEW_LENGTH or 1000
-        self.max_file_size = settings.MAX_PREVIEW_FILE_SIZE or 10 * 1024 * 1024  # 10MB
+        self.max_preview_length = settings.max_preview_length or 10000
+        self.max_file_size = settings.max_preview_file_size or 10 * 1024 * 1024  # 10MB
     
     def _get_cache_key(self, file_url: str, content_hash: Optional[str] = None) -> str:
         """Generate cache key for file preview"""

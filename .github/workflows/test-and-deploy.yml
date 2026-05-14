@@ -1,0 +1,301 @@
+name: Test and Deploy
+
+on:
+  push:
+    branches: [ main, 001-metamorph ]
+  pull_request:
+    branches: [ main, 001-metamorph ]
+
+env:
+  PYTHON_VERSION: "3.10"
+  NODE_VERSION: "18"
+
+jobs:
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      neo4j:
+        image: neo4j:4.4
+        env:
+          NEO4J_AUTH: neo4j/testpassword
+        ports:
+          - 7687:7687
+          - 7474:7474
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p testpassword 'RETURN 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-xdist
+
+      - name: Run backend unit tests
+        run: |
+          cd backend
+          python -m pytest tests/unit/ -v --tb=short --junitxml=test-results/unit-results.xml
+
+      - name: Run backend integration tests
+        run: |
+          cd backend
+          python -m pytest tests/integration/ -v --tb=short --junitxml=test-results/integration-results.xml
+
+      - name: Run backend contract tests
+        run: |
+          cd backend
+          python -m pytest tests/contract/ -v --tb=short --junitxml=test-results/contract-results.xml
+
+      - name: Upload backend test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-test-results
+          path: backend/test-results/
+
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: Run frontend tests
+        run: |
+          cd frontend
+          npm test -- --reporters=default --reporters=jest-junit --outputFile=test-results/frontend-results.xml
+
+      - name: Upload frontend test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-test-results
+          path: frontend/test-results/
+
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+      
+      neo4j:
+        image: neo4j:4.4
+        env:
+          NEO4J_AUTH: neo4j/testpassword
+        ports:
+          - 7687:7687
+          - 7474:7474
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          cd ../frontend
+          npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Start backend server
+        run: |
+          cd backend
+          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
+          sleep 10  # Wait for server to start
+
+      - name: Run Playwright tests
+        run: |
+          cd frontend
+          npx playwright test --reporter=line --reporter=junit --output=test-results/e2e-results.xml
+
+      - name: Upload E2E test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-test-results
+          path: frontend/test-results/
+
+  coverage-report:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    needs: backend-tests
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest-cov
+
+      - name: Run coverage analysis
+        run: |
+          cd backend
+          python -m pytest tests/ --cov=app --cov-report=xml:test-results/coverage.xml --cov-report=html:test-results/coverage-html
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: backend/test-results/
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests, e2e-tests, coverage-report]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/001-metamorph'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          cd ../frontend
+          npm install
+          npm run build
+
+      - name: Build Docker images
+        run: |
+          docker build -t metamorph-backend -f backend/Dockerfile .
+          docker build -t metamorph-frontend -f frontend/Dockerfile .
+
+      - name: Log in to Docker Hub
+        if: success()
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Push Docker images
+        if: success()
+        run: |
+          docker tag metamorph-backend ${{ secrets.DOCKER_HUB_USERNAME }}/metamorph-backend:${{ github.sha }}
+          docker tag metamorph-frontend ${{ secrets.DOCKER_HUB_USERNAME }}/metamorph-frontend:${{ github.sha }}
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/metamorph-backend:${{ github.sha }}
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/metamorph-frontend:${{ github.sha }}
+
+      - name: Deploy to production
+        if: success()
+        run: |
+          echo "Deploying to production server..."
+          # Add your deployment commands here
+          # Example: ssh user@server "docker-compose pull && docker-compose up -d"
+          echo "Deployment completed!"
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests, e2e-tests, coverage-report]
+    if: always()
+    
+    steps:
+      - name: Download all test results
+        uses: actions/download-artifact@v3
+        with:
+          path: all-test-results
+
+      - name: Generate test summary
+        run: |
+          echo "# Test Summary Report" > test-summary.md
+          echo "" >> test-summary.md
+          echo "## Backend Tests" >> test-summary.md
+          ls -la all-test-results/backend-test-results/ || echo "No backend results"
+          echo "" >> test-summary.md
+          echo "## Frontend Tests" >> test-summary.md  
+          ls -la all-test-results/frontend-test-results/ || echo "No frontend results"
+          echo "" >> test-summary.md
+          echo "## E2E Tests" >> test-summary.md
+          ls -la all-test-results/e2e-test-results/ || echo "No E2E results"
+          echo "" >> test-summary.md
+          echo "## Coverage Report" >> test-summary.md
+          ls -la all-test-results/coverage-report/ || echo "No coverage results"
+
+      - name: Upload test summary
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-summary
+          path: test-summary.md
+
+      - name: Print summary to console
+        run: cat test-summary.md

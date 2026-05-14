@@ -51,6 +51,11 @@ types-PyYAML
 pytest
 pytest-asyncio
 pytest-mock
+pytest-cov
+pytest-xdist
+playwright
+requests-mock
+responses
 
 # Static serving (optional, useful for FastAPI + React)
 python-multipart

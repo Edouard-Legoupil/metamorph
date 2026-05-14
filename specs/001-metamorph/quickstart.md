@@ -1,730 +1,884 @@
-# Metamorph Quick Start Guide (v3.0 - Website-First)
+# Quickstart Guide: Metamorph Website-to-Knowledge System
 
-**Spec ID:** 001-metamorph  
-**Version:** 3.0  
-**Status:** Draft  
-**Date:** 2026-05-12
+**Version**: 3.0 | **Date**: 2026-05-12
 
----
-
-## 🚀 Getting Started with Metamorph v3.0
-
-Metamorph v3.0 introduces a **website-first workflow**. Instead of manually uploading documents, you now:
-1. **Define a website URL** to scrape
-2. **Let the system automatically explore** and identify all scrapable files
-3. **Select which files** you want to ingest (all or specific subset)
-4. **Ingestion starts automatically** upon confirmation
-
-This guide will help you set up and start using the new website-to-knowledge pipeline.
+This guide provides step-by-step instructions for setting up, running, and using the Metamorph system for website-to-knowledge extraction.
 
 ---
 
-## 📋 Prerequisites
+## 🚀 Getting Started
 
-### For Developers
-- **Python** 3.10+ (recommended: 3.11 or 3.12)
-- **Node.js** 18+ (optional, for Playwright/JS sites)
-- **Git**
-- **Docker** (optional, for containerized deployment)
-- **Neo4j** 5.x (or Neo4j Aura for managed service)
-- **Redis** (optional, for caching previews)
+### Prerequisites
 
-### For Users (Website Scrapers)
-- Modern web browser (Chrome, Firefox, Edge, Safari)
-- Internet connection
-- Websites to scrape (URLs)
+**System Requirements**:
+- **Operating System**: Linux (Ubuntu 22.04 LTS recommended)
+- **CPU**: 4+ cores
+- **RAM**: 16GB+ (32GB recommended for large websites)
+- **Disk**: 100GB+ SSD (depends on document volume)
+- **Docker**: 20.10+ with Docker Compose
+- **Python**: 3.11+
+- **Node.js**: 18.x+ (for frontend development)
 
----
-
-## 🛠️ Installation & Setup
-
-### Option 1: Local Development Setup
-
-#### 1. Clone the Repository
+**Required Tools**:
 ```bash
-git clone <repository-url>
+# Install dependencies on Ubuntu
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y git curl wget build-essential libssl-dev zlib1g-dev \
+    libbz2-dev libreadline-dev libsqlite3-dev llvm libncurses5-dev \
+    libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl
+
+# Install Docker
+sudo apt install -y docker.io docker-compose
+sudo systemctl enable docker
+sudo systemctl start docker
+sudo usermod -aG docker $USER
+
+# Install Node.js (using nvm)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+source ~/.bashrc
+nvm install 18
+nvm use 18
+
+# Install Python dependencies
+pip install poetry
+```
+
+---
+
+## 📦 Installation
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-org/metamorph.git
 cd metamorph
+git checkout 001-metamorph
 ```
 
-#### 2. Set Up Python Environment
+### 2. Set Up Backend
+
 ```bash
-# Create virtual environment
-python -m venv .venv
+cd backend
 
-# Activate environment
-# On Linux/Mac:
-source .venv/bin/activate
-# On Windows:
-.\.venv\Scripts\activate
+# Install Python dependencies
+poetry install
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Additional packages for crawling
-pip install requests beautifulsoup4 lxml urllib3
-```
-
-#### 3. Set Up Neo4j
-```bash
-# Option A: Using Docker (recommended for development)
-docker run \
-  --name metamorph-neo4j \
-  -p 7474:7474 -p 7687:7687 \
-  -e NEO4J_AUTH=neo4j/password \
-  -e NEO4J_dbms_memory_heap_max__size=2G \
-  -v metamorph_neo4j_data:/data \
-  -d neo4j:5-community
-
-# Option B: Local installation
-# Download from https://neo4j.com/download/
-# Install and start Neo4j Desktop
-
-# Verify Neo4j is running
-curl http://localhost:7474
-```
-
-#### 4. Set Up Redis (Optional for Preview Caching)
-```bash
-# Using Docker
-docker run \
-  --name metamorph-redis \
-  -p 6379:6379 \
-  -d redis:alpine
-```
-
-#### 5. Configure Environment
-```bash
-# Copy example environment file
+# Create .env file
 cp .env.example .env
 
-# Edit .env with your settings
-nano .env  # or use your preferred editor
+# Edit .env with your configuration
+nano .env
+```
 
-# Required settings:
-NEO4J_URI=bolt://localhost:7687
+**Example `.env` file**:
+```env
+# Database configuration
+NEO4J_URI=bolt://neo4j:7687
 NEO4J_USER=neo4j
-NEO4J_PASSWORD=password
-SECRET_KEY=your-secret-key-here
-DEBUG=true
-REDIS_URL=redis://localhost:6379/0  # Optional
+NEO4J_PASSWORD=your_secure_password
+NEO4J_DB=metamorph
 
-# Crawling settings (configurable):
-CRAWLER_MAX_DEPTH=3
-CRAWLER_MAX_PAGES=1000
-CRAWLER_DELAY=1.0  # seconds between requests
-CRAWLER_USER_AGENT=MetamorphBot/1.0
+# API configuration
+API_HOST=0.0.0.0
+API_PORT=8000
+API_VERSION=v1
+API_TITLE=Metamorph API
+API_DESCRIPTION=Website-to-Knowledge Intelligence System
+
+# Crawling configuration
+MAX_CONCURRENT_CRAWLS=5
+REQUEST_TIMEOUT=30
+USER_AGENT=Metamorph/3.0 (+https://metamorph.example.com)
+RESPECT_ROBOTS_TXT=true
+CRAWL_DELAY=1000
+MAX_DEPTH=5
+
+# File processing
+MAX_FILE_SIZE_MB=50
+ALLOWED_FILE_TYPES=pdf,docx,xlsx,pptx,html,txt
+TEMP_DIR=/tmp/metamorph
+
+# Security
+JWT_SECRET=your_very_secure_secret_key_here
+JWT_ALGORITHM=HS256
+JWT_EXPIRE_MINUTES=60
+
+# Logging
+LOG_LEVEL=info
+LOG_FILE=/var/log/metamorph/api.log
 ```
 
-#### 6. Initialize Database
+### 3. Set Up Frontend
+
 ```bash
-# Run database initialization script
-python scripts/init_db.py
+cd ../frontend
 
-# This will:
-# - Create Website, DiscoveredFile, ScrapeSession, IngestionJob, Document nodes
-# - Set up indexes for crawling entities
-# - Load initial schema
-```
-
-#### 7. Start Backend Server
-```bash
-# From backend directory
-cd backend
-uvicorn app.main:app --reload --port 8000
-
-# The API will be available at: http://localhost:8000
-```
-
-#### 8. Start Frontend (Optional)
-```bash
-# From frontend directory
-cd frontend
+# Install Node.js dependencies
 npm install
-npm run dev
 
-# The UI will be available at: http://localhost:3000
+# Create .env file
+cp .env.example .env
+
+# Edit .env with your configuration
+nano .env
+```
+
+**Example frontend `.env` file**:
+```env
+# API endpoint
+REACT_APP_API_BASE_URL=http://localhost:8000/api/v1
+
+# Application configuration
+REACT_APP_APP_NAME=Metamorph
+REACT_APP_VERSION=3.0.0
+REACT_APP_ENV=development
+
+# Feature flags
+REACT_APP_FEATURE_WEBSITE_CRAWLING=true
+REACT_APP_FEATURE_FILE_SELECTION=true
+REACT_APP_FEATURE_INGESTION=true
+REACT_APP_FEATURE_CURATION=true
+REACT_APP_FEATURE_PROPOSAL_DRAFTING=true
+
+# Analytics (optional)
+REACT_APP_GA_TRACKING_ID=UA-XXXXXX-X
+```
+
+### 4. Set Up Docker Services
+
+```bash
+cd ../
+
+# Create docker-compose.yml
+cat > docker-compose.yml << 'EOF'
+version: '3.8'
+
+services:
+  neo4j:
+    image: neo4j:5.13.0-enterprise
+    container_name: metamorph_neo4j
+    ports:
+      - "7474:7474"  # Browser interface
+      - "7687:7687"  # Bolt protocol
+    environment:
+      - NEO4J_AUTH=neo4j/your_secure_password
+      - NEO4J_dbms_memory_heap_max__size=8G
+      - NEO4J_dbms_memory_pagecache_size=4G
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+    networks:
+      - metamorph_network
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "your_secure_password", "RETURN 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:7.0-alpine
+    container_name: metamorph_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - metamorph_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: metamorph_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=your_secure_password
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /tmp/metamorph:/tmp/metamorph
+    networks:
+      - metamorph_network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: metamorph_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_BASE_URL=http://localhost:8000/api/v1
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - metamorph_network
+    restart: unless-stopped
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_import:
+  neo4j_plugins:
+  redis_data:
+
+networks:
+  metamorph_network:
+    driver: bridge
+EOF
+```
+
+### 5. Build and Start Services
+
+```bash
+# Build and start all services
+docker-compose up --build -d
+
+# Check service status
+docker-compose ps
+
+# View logs
+docker-compose logs -f
 ```
 
 ---
 
-## 🎯 First Steps for Different User Types
+## 🌐 Using Metamorph
 
-### For Website Scrapers (NEW - Primary Role)
+### 1. Access the Application
 
-#### Step 1: Access the System
-1. Open your web browser
-2. Navigate to the Metamorph URL (e.g., http://localhost:3000)
-3. Log in (or create an account if first time)
+- **Frontend**: http://localhost:3000
+- **API**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
+- **Neo4j Browser**: http://localhost:7474 (username: neo4j, password: your_secure_password)
 
-#### Step 2: Start a New Scraping Job
-1. Click **"New Scrape Job"** or **"Add Website"** button
-2. Enter the website URL you want to scrape (e.g., `https://www.unhcr.org`)
-3. Click **"Start Discovery"**
+### 2. Website Scraping Workflow
 
-#### Step 3: System Automatically Explores the Website
-- The system will:
-  - Check if the website is accessible
-  - Parse `robots.txt` to check scraping permissions
-  - Look for `sitemap.xml` and parse it
-  - Crawl the website starting from the provided URL
-  - Follow internal links within the same domain
-  - Identify all scrapable files (PDFs, Word docs, Excel, etc.)
+#### Step 1: Define a Website to Scrape
 
-- You'll see a progress indicator showing:
-  - Pages crawled
-  - Files discovered
-  - Estimated time remaining
+1. **Navigate** to the Website Management page
+2. **Click** "Add New Website"
+3. **Enter** the website URL (e.g., `https://unhcr.org`)
+4. **Select** scrape frequency (manual, daily, weekly, monthly)
+5. **Click** "Start Scraping"
 
-#### Step 4: Review Discovered Files
-Once crawling is complete, you'll see a list of all discovered files with:
-- **File name** (e.g., `Global_Trends_2024.pdf`)
-- **File type** (e.g., PDF, Word, Excel)
-- **File size** (e.g., 2.5 MB)
-- **Last modified** date
-- **URL** (full path to the file)
-
-Files are grouped by type for easier browsing:
-- 📄 **PDF Documents**
-- 📝 **Word Documents**
-- 📊 **Spreadsheets**
-- 📑 **Presentations**
-- 🌐 **Web Pages**
-- 📋 **Other Files**
-
-#### Step 5: Preview Files (Optional)
-- Click on any file to see a preview
-- For text files: First 500 characters
-- For PDFs: First page text
-- For Word/Excel: Extracted text preview
-- For HTML: Clean text extraction
-
-#### Step 6: Select Files for Ingestion
-- Use the checkboxes to select files:
-  - **Select All** - Check the box at the top
-  - **Select by Type** - Use the type filter dropdown
-  - **Select by Date Range** - Use the date filter
-  - **Individual Selection** - Check specific files
-- Selected count is displayed (e.g., "12 of 45 files selected")
-
-#### Step 7: Start Ingestion
-1. Click **"Start Ingestion"** button
-2. Confirm your selection in the dialog
-3. Ingestion starts **automatically**!
-
-The system will:
-- Queue all selected files
-- Download files from URLs
-- Parse them using Docling (standard) or MinerU (complex layouts)
-- Extract knowledge and store in the graph database
-- Track progress for each file
-
-You'll see:
-- Overall progress percentage
-- Individual file status (queued, downloading, parsing, complete, error)
-- Estimated time remaining
-- Error messages for any failed files
-
-#### Step 8: View Results
-Once ingestion is complete:
-- Knowledge is extracted and stored in the graph
-- You can view the extracted knowledge in the Curated Wiki
-- The system flags any conflicts or changes for review
-- Validation cards are created for items needing your attention
-
----
-
-### For Curators
-
-The curation workflow is similar to v2.0, but now knowledge comes from websites:
-
-#### 1. Access the System
-1. Open your web browser
-2. Navigate to the Metamorph URL
-3. Log in using your credentials
-
-#### 2. Understand the Dashboard
-- **Validation Queue:** Shows pending validation cards from ingested website content
-- **Recent Activity:** Shows recent scraping jobs and changes
-- **Discovered Websites:** List of websites that have been scraped
-- **My Tasks:** Shows tasks assigned to you
-- **Search:** Search for specific topics, entities, or cards
-
-#### 3. Process a Validation Card
-1. Click on a validation card in the queue
-2. Review the **Current Value** vs **Proposed Value** (from website)
-3. Check the **Diff** to see exactly what changed
-4. Review **Evidence** and **Provenance** (now includes source website and file URL)
-5. Check the **Confidence Score** and **Sensitivity Classification**
-6. Take action:
-   - **Approve** - If the change is accurate and well-sourced
-   - **Reject** - If the change is incorrect or poorly sourced
-   - **Merge/Edit** - If the change needs modification
-   - **Escalate** - If you're unsure or it's sensitive
-   - **Open Discussion** - If it needs community input
-
-#### 4. Monitor Website Scraping
-- View the **Websites** section to see:
-  - List of all scraped websites
-  - Number of files discovered per website
-  - Number of files ingested
-  - Last scrape date
-  - Scrape status (success, error, pending)
-
----
-
-### For Proposal Writers
-
-#### 1. Search for Knowledge Cards
-1. Navigate to **Knowledge Library**
-2. Use filters to narrow down:
-   - Domain (Geographic, Crisis, etc.)
-   - Card Type (KC-1 to KC-6)
-   - Validity (ensure cards are not expired)
-   - **Source Website** (NEW - filter by website)
-   - Date Range
-3. Review search results
-
-#### 2. Check Source Information
-- Each card now shows:
-  - **Source Website** - Where the knowledge came from
-  - **Source File** - The specific file that was ingested
-  - **Ingestion Date** - When the file was processed
-  - **Provenance Chain** - Full trace from website → file → knowledge
-
-#### 3. Use Cards in Proposals
-1. Select relevant cards for your proposal
-2. Click **Add to Proposal**
-3. Arrange cards in logical order
-4. The system will:
-   - Check all cards are valid (not expired)
-   - Generate a draft proposal
-   - Score interventions based on context
-5. Review the generated draft
-6. Make manual adjustments as needed
-
-#### 4. Export Proposal
-1. Review the final proposal
-2. Click **Export**
-3. Choose format (PDF, Word, HTML)
-4. Download and use in your workflow
-
----
-
-## 🌐 Website Scraping Workflow (v3.0)
-
-### The New Workflow Explained
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    METAMORPH v3.0 USER WORKFLOW                    │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│  STEP 1: DEFINE WEBSITE                                           │
-│  ┌─────────────────────────┐                                    │
-│  │  Enter URL:              │                                    │
-│  │  [https://_________]     │◄── User provides website URL      │
-│  │                         │                                    │
-│  │  [Start Discovery]      │                                    │
-│  └─────────────────────────┘                                    │
-│            │                                                      │
-│            ▼                                                      │
-│  STEP 2: AUTOMATIC EXPLORATION                                   │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  ✓ Checking robots.txt                                  │   │
-│  │  ✓ Parsing sitemap.xml                                   │   │
-│  │  ✓ Crawling website (0/45 pages)                         │   │
-│  │  ✓ Found 12 PDFs, 8 Word docs, 5 Excel files              │   │
-│  │  ┌─────────────────┐                                    │   │
-│  │  │ Progress: 85%   │                                    │   │
-│  │  └─────────────────┘                                    │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│            │                                                      │
-│            ▼                                                      │
-│  STEP 3: REVIEW & SELECT FILES                                    │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  📁 Discovered Files (25 total)                           │   │
-│  │                                                              │   │
-│  │  📄 PDF DOCUMENTS (12)                                    │   │
-│  │  ✓ [ ] Global_Trends_2024.pdf (2.5 MB, 2024-03-15)      │   │
-│  │  ✓ [ ] Annual_Report_2023.pdf (5.1 MB, 2024-01-20)      │   │
-│  │  ✗ [ ] Quarterly_Update.pdf (1.2 MB, 2024-04-01)        │   │
-│  │                                                              │   │
-│  │  📝 WORD DOCUMENTS (8)                                     │   │
-│  │  ✓ [ ] Strategy_Document.docx (1.8 MB, 2024-02-10)     │   │
-│  │  ✗ [ ] Meeting_Notes.docx (0.5 MB, 2024-04-15)         │   │
-│  │                                                              │   │
-│  │  Selected: 2 of 25 files                                    │   │
-│  │                                                              │   │
-│  │  [Select All] [Select by Type ▼] [Select by Date ▼]      │   │
-│  │                                                              │   │
-│  │  [Start Ingestion]                                         │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│            │                                                      │
-│            ▼                                                      │
-│  STEP 4: AUTOMATIC INGESTION                                       │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Ingestion Progress                                        │   │
-│  │                                                              │   │
-│  │  Global_Trends_2024.pdf    ████████████░░░░  80%         │   │
-│  │  Strategy_Document.docx   ████████████████░░░░  95%         │   │
-│  │                                                              │   │
-│  │  Overall: 87% complete                                       │   │
-│  │  Estimated time remaining: 32 seconds                     │   │
-│  │                                                              │   │
-│  │  [View Details] [Cancel]                                    │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│            │                                                      │
-│            ▼                                                      │
-│  STEP 5: KNOWLEDGE READY!                                         │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  ✓ Ingestion Complete!                                    │   │
-│  │                                                              │   │
-│  │  2 files successfully ingested                            │   │
-│  │  45 knowledge items extracted                              │   │
-│  │  3 validation cards created for review                     │   │
-│  │                                                              │   │
-│  │  [View Knowledge Graph] [Review Validation Cards]         │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                   │
-└─────────────────────────────────────────────────────────────────┘
+**API Example**:
+```bash
+curl -X POST http://localhost:8000/api/v1/websites \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "url": "https://unhcr.org",
+    "scrape_frequency": "manual",
+    "title": "UNHCR - The UN Refugee Agency",
+    "description": "Official website of the UN Refugee Agency"
+  }'
 ```
 
-### Key Features of v3.0
+#### Step 2: Review Discovered Files
 
-✅ **Automatic Discovery:** No need to manually find documents
-✅ **File Selection:** Choose exactly what to ingest
-✅ **Automatic Ingestion:** Starts immediately upon confirmation
-✅ **Progress Tracking:** See exactly what's happening
-✅ **Provenance Tracking:** Every piece of knowledge linked to source website and file
+1. **Wait** for crawling to complete (check progress in UI)
+2. **Navigate** to the File Discovery page for your website
+3. **Browse** the list of discovered files with:
+   - Filename, URL, file type, size, last modified date
+   - Preview of file content
+   - Grouping by file type
 
----
-
-## 📖 Understanding the New Data Model
-
-### Websites
-- A website is the starting point for knowledge extraction
-- Each website has:
-  - URL (the root URL you provide)
-  - Domain name
-  - Discovery date
-  - Last scrape date
-  - Total files discovered
-  - Total files ingested
-
-### Discovered Files
-- Files found during website crawling
-- Each file has:
-  - URL (full path to the file)
-  - File type (PDF, Word, Excel, etc.)
-  - File size
-  - Last modified date
-  - Status (discovered, selected, ingested, error)
-
-### Scrape Sessions
-- Each time you scrape a website, a session is created
-- Tracks:
-  - When the scrape started and completed
-  - How many files were discovered
-  - How many were selected
-  - How many were ingested
-  - Any errors that occurred
-
-### Documents
-- The actual parsed documents
-- Each document has:
-  - Original URL
-  - Source website
-  - Source file
-  - Download date
-  - Parse date
-  - Parsing tool used (Docling or MinerU)
-  - Extracted text and metadata
-
-### Knowledge Graph
-- Extracted knowledge is stored as:
-  - **Entities** (people, organizations, locations, etc.)
-  - **Relationships** (connections between entities)
-  - **Properties** (attributes and metadata)
-  - **Provenance** (traceability to source website and file)
-
----
-
-## 🎨 Working with the Wiki Surface
-
-### Viewing Curated Knowledge
-1. Navigate to the **Curated Wiki**
-2. Browse topics or use search
-3. Click on a topic to view its page
-4. Each page shows:
-   - **Accepted knowledge** (currently verified)
-   - **Source Information** (NEW - shows which website and file the knowledge came from)
-   - **Verification badges** (✓ for accepted, ⚠️ for pending)
-   - **Freshness indicators** (how recent the information is)
-   - **Provenance** (click to see full source chain)
-   - **Maintenance tags** (if any issues)
-   - **Discussion links** (if disputed)
-
-### In-Wiki Curation
-Curators can perform actions directly on wiki blocks:
-1. Hover over a block to see action buttons
-2. Available actions:
-   - **Verify** - Mark as verified/accepted
-   - **Flag** - Flag for review
-   - **Edit** - Edit the content
-   - **Revert** - Revert to previous version
-   - **Discuss** - Open discussion
-   - **Resolve Conflict** - If the block was disputed
-   - **Escalate** - Send to higher review tier
-   - **Archive** - Remove from active view
-
----
-
-## 🛡️ Trust Routing & Provenance
-
-### How Knowledge is Processed
-
-When new information is extracted from a website:
-
-```
-Discovered File
-    ↓
-┌─────────────────────┐
-│  Ingestion Pipeline  │
-│                     │
-│  - Download file    │
-│  - Parse document    │
-│  - Extract triplets  │
-│  - Store in graph    │
-└────────────┬────────┘
-             │
-     ┌───────▼───────┐
-     │  Trust Router  │
-     │               │
-     │  if confidence ≥ 0.9 │──── Auto-Accept ────▶ Curated Wiki
-     │     and trusted     │
-     │     and no conflict │
-     │                 │
-     │  if 0.7 ≤ confidence│── Pending/Review ──▶ Validation Queue
-     │     < 0.9           │
-     │     or needs check  │
-     │                 │
-     │  if confidence < 0.7│─── Escalation ────▶ Review Tier
-     │     or sensitive    │
-     └─────────────────┘
+**API Example - List discovered files**:
+```bash
+curl -X GET http://localhost:8000/api/v1/websites/{website_id}/files \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-### Confidence Factors (Updated for v3.0)
+#### Step 3: Select Files for Ingestion
 
-Your content's confidence score is based on:
-1. **Parser Confidence:** How sure the system is about the extraction
-2. **Source Reliability:** How trustworthy the source website is
-3. **Extraction Method:** Rule-based vs ML-based
-4. **Corroboration:** How many sources agree
-5. **Freshness:** How recent the information is
-6. **Website Domain:** Known/trusted domains score higher
+1. **Use bulk selection** options:
+   - Select all files
+   - Select by file type (PDFs, Word docs, etc.)
+   - Select by date range
+   - Individual file selection
 
-### Website Domain Reliability
+2. **Review** your selection (count shown in UI)
+3. **Click** "Start Ingestion"
 
-- **Trusted (0.95):** UN websites, government domains, academic institutions
-- **Known (0.85):** Major news organizations, established NGOs
-- **Unknown (0.70):** New domains, requires review
-- **Untrusted (0.30):** Known problematic domains
-
----
-
-## 🔍 Search Tips
-
-### Basic Search
-- Use the search bar at the top of any page
-- Search across all topics, entities, cards, and **websites**
-- Results are ranked by relevance and recency
-
-### Advanced Search
-1. Click **Advanced Search** next to the search bar
-2. Use filters:
-   - **Type:** Documents, Entities, Cards, Discussions, **Websites**
-   - **Domain:** Geographic, Crisis, Demographics, etc.
-   - **Source Website:** Filter by specific website
-   - **Status:** Accepted, Pending, Disputed, Expired
-   - **Date Range:** Filter by creation/modification date
-   - **File Type:** PDF, Word, Excel, etc.
-
-### Search Operators
-| Operator | Example | Description |
-|----------|---------|-------------|
-| `AND` | `refugees AND food` | Both terms must be present |
-| `OR` | `Syria OR Lebanon` | Either term can be present |
-| `NOT` | `UNHCR NOT Syria` | Exclude documents with Syria |
-| `" "` | `"World Food Programme"` | Exact phrase match |
-| `*` | `refugee*` | Wildcard (refugee, refugees, etc.) |
-| `website:` | `website:unhcr.org` | Filter by source website |
-
----
-
-## 📊 Verification States Explained
-
-Each piece of knowledge goes through verification states:
-
-```
-                    ┌─────────────────┐
-                    │     incoming     │
-                    └────────┬────────┘
-                             │
-          ┌──────────────────┼──────────────────┐
-          ↓                  ↓                  ↓
-   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-   │  auto_accepted│   │    pending    │   │  escalated   │
-   └──────┬───────┘   └──────┬───────┘   └──────┬───────┘
-           │                  │                  │
-           └──────────┬───────┴───────┬─────────┘
-                      ↓               ↓
-               ┌──────────────┐   ┌──────────────┐
-               │   accepted    │   │   rejected    │
-               └──────┬───────┘   └──────┬───────┘
-                      │                  │
-           ┌──────────┴──────────┬───────┴──────────┐
-           ↓                     ↓                  ↓
-    ┌──────────────┐      ┌──────────────┐   ┌──────────────┐
-    │  superseded  │      │    merged     │   │no_consensus  │
-    └──────────────┘      └──────────────┘   └──────────────┘
+**API Example - Select files**:
+```bash
+curl -X POST http://localhost:8000/api/v1/websites/{website_id}/files/select \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "file_ids": ["file_id_1", "file_id_2", "file_id_3"]
+  }'
 ```
 
-### State Descriptions
+#### Step 4: Monitor Ingestion Progress
 
-| State | Description | Can be Used? |
-|-------|-------------|--------------|
-| **incoming** | Newly extracted from website, not yet processed | ❌ No |
-| **auto_accepted** | Automatically accepted (high confidence) | ✅ Yes |
-| **pending** | Awaiting review | ⚠️ Limited (visible to reviewers) |
-| **escalated** | Escalated to higher review tier | ❌ No |
-| **accepted** | Reviewed and accepted | ✅ Yes |
-| **rejected** | Reviewed and rejected | ❌ No |
-| **merged** | Merged with existing knowledge | ✅ Yes (as merged) |
-| **superseded** | Replaced by newer version | ❌ No (old version) |
-| **no_consensus** | Unable to reach agreement | ❌ No |
+1. **View** the ingestion dashboard:
+   - Overall progress percentage
+   - Individual file status (queued, processing, completed, error)
+   - Real-time updates
+   - Error panel for failed files
+
+2. **Handle errors** if any:
+   - Review error details in the error panel
+   - Retry failed files individually or in bulk
+   - Download error logs for support
+
+**API Example - Start ingestion**:
+```bash
+curl -X POST http://localhost:8000/api/v1/websites/{website_id}/ingest \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "notify_email": "user@example.com",
+    "priority": "normal"
+  }'
+```
+
+### 3. Knowledge Curation
+
+#### Review Knowledge Cards
+
+1. **Navigate** to the Knowledge Cards dashboard
+2. **Filter** by:
+   - Card type (KC-1 to KC-6)
+   - Domain (geographic, crisis, demographics, etc.)
+   - Status (draft, approved, expired, etc.)
+   - Validity period
+
+3. **View** card details:
+   - Source website and file information
+   - Provenance tracking
+   - Verification state
+   - Related entities and events
+
+**API Example - List knowledge cards**:
+```bash
+curl -X GET http://localhost:8000/api/v1/cards \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### Curate Wiki Blocks
+
+1. **Select** a knowledge card
+2. **Review** individual wiki blocks:
+   - Content and formatting
+   - Verification state
+   - Provenance information
+   - Maintenance tags
+
+3. **Take curation actions**:
+   - **Verify**: Mark as accepted
+   - **Flag**: Mark as disputed or needing review
+   - **Edit**: Modify content directly
+   - **Discuss**: Open discussion thread
+   - **View History**: See revision history
+   - **Revert**: Roll back to previous version
+
+**API Example - Update wiki block**:
+```bash
+curl -X PATCH http://localhost:8000/api/v1/cards/{card_id}/blocks/{block_id} \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "verification_state": "accepted",
+    "content": "Updated content with proper citations"
+  }'
+```
+
+### 4. Validation Cards
+
+#### Review Validation Queue
+
+1. **Navigate** to the Validation Dashboard
+2. **Filter** by:
+   - Review tier (Tier 1, Tier 2, Tier 3)
+   - Sensitivity level
+   - Status (open, under_review, etc.)
+   - Contradiction type
+
+3. **Select** a validation card to review
+
+#### Validation Card Interface
+
+Each card shows:
+- **Current Value**: Currently accepted value
+- **Proposed Value**: New/proposed value
+- **Diff**: Visual difference between values
+- **Evidence**: Supporting documentation
+- **Provenance**: Source website, file, extraction details
+- **Confidence Score**: Automatic confidence assessment
+- **Sensitivity**: Classification level
+
+#### Available Actions
+
+- **Approve**: Accept the proposed change
+- **Reject**: Discard the proposed change
+- **Merge/Edit**: Modify and accept
+- **Escalate**: Send to higher review tier
+- **Open Discussion**: Create discussion thread
+- **Mark as Duplicate**: Identify as redundant
+- **Mark as No Consensus**: Unable to reach agreement
+
+**API Example - Resolve validation card**:
+```bash
+curl -X POST http://localhost:8000/api/v1/validation/cards/{card_id}/approve \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "resolution": "Approved after reviewing evidence from source website",
+    "assigned_tier": "tier_1"
+  }'
+```
+
+### 5. Discussion Threads
+
+#### Create Discussion Thread
+
+1. **Navigate** to the Discussion Forum
+2. **Click** "New Discussion"
+3. **Select** context:
+   - Linked to specific entity
+   - Linked to wiki block
+   - Linked to knowledge card
+   - General discussion
+
+4. **Provide** details:
+   - Title and topic
+   - Initial comment with evidence
+   - Mention relevant users
+
+**API Example - Create discussion**:
+```bash
+curl -X POST http://localhost:8000/api/v1/discussion/threads \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "title": "Discrepancy in refugee numbers",
+    "topic": "Data accuracy",
+    "linked_entity_id": "entity_123",
+    "content": "The reported refugee numbers conflict with UNHCR official statistics...",
+    "evidence_quality": "high",
+    "policy_compliance": true
+  }'
+```
+
+#### Participate in Discussion
+
+1. **View** thread details and history
+2. **Add comments** with:
+   - Supporting evidence
+   - Source citations (including website URLs)
+   - Policy references
+   - Data analysis
+
+3. **Take actions**:
+   - Propose patches/solutions
+   - Mention other reviewers
+   - Vote on proposals
+   - Mark thread status
 
 ---
 
-## 🎯 Best Practices (v3.0)
+## 🔧 Administration
 
-### For Website Scrapers
-1. **Start with trusted websites** - UN, government, academic sites have high-quality content
-2. **Use sitemap.xml when available** - Faster and more reliable than crawling
-3. **Select files carefully** - Focus on relevant documents for your needs
-4. **Monitor progress** - Check ingestion status and address any errors
-5. **Respect website policies** - Don't scrape sites that block crawlers
-6. **Schedule regular updates** - Set up re-scraping for websites that change frequently
+### User Management
 
-### For Curators
-1. **Check source website** - Verify the website is reliable before approving
-2. **Review file context** - Understand where the knowledge came from
-3. **Check for duplicates** - The same file might be on multiple websites
-4. **Add context** - When approving, add notes about the source website
-5. **Escalate when unsure** - Better to escalate than make a wrong decision
+```bash
+# Create admin user
+curl -X POST http://localhost:8000/api/v1/users \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ADMIN_JWT_TOKEN" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "secure_password_123",
+    "full_name": "System Administrator",
+    "role": "admin",
+    "is_active": true
+  }'
 
-### For Proposal Writers
-1. **Verify source websites** - Check the provenance of knowledge cards
-2. **Check for freshness** - Ensure knowledge from websites is up to date
-3. **Look for multiple sources** - Knowledge corroborated by multiple websites is more reliable
-4. **Cite everything** - Include source website and file in citations
-5. **Acknowledge limitations** - Note if knowledge comes from a single source
+# List users
+curl -X GET http://localhost:8000/api/v1/users \
+  -H "Authorization: Bearer ADMIN_JWT_TOKEN"
 
-### For Developers
-1. **Respect robots.txt** - Always check and honor website scraping policies
-2. **Implement rate limiting** - Don't overwhelm websites with requests
-3. **Handle errors gracefully** - Websites can be unreliable, expect failures
-4. **Cache previews** - Preview generation can be resource-intensive
-5. **Track provenance** - Every piece of data must be traceable to source
-6. **Follow TDD** - Write tests before implementation (NFR-006)
+# Update user role
+curl -X PATCH http://localhost:8000/api/v1/users/{user_id} \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ADMIN_JWT_TOKEN" \
+  -d '{
+    "role": "curator",
+    "review_tier": "tier_2"
+  }'
+```
+
+### System Monitoring
+
+```bash
+# Check service health
+docker-compose ps
+
+# View backend logs
+docker-compose logs backend -f
+
+# View frontend logs  
+docker-compose logs frontend -f
+
+# Check Neo4j status
+docker-compose exec neo4j cypher-shell -u neo4j -p your_secure_password "CALL dbms.listConnections()"
+
+# Monitor API performance
+curl http://localhost:8000/metrics
+```
+
+### Backup and Restore
+
+```bash
+# Backup Neo4j database
+docker-compose exec neo4j neo4j-admin dump --database=metamorph --to=/backups/metamorph-backup.dump
+
+# Restore Neo4j database (stop service first)
+docker-compose stop neo4j
+docker-compose exec neo4j neo4j-admin load --from=/backups/metamorph-backup.dump --database=metamorph --force
+docker-compose start neo4j
+
+# Backup application data
+mkdir -p backups/$(date +%Y-%m-%d)
+cp -r specs backups/$(date +%Y-%m-%d)/
+docker-compose exec backend pg_dump -U postgres metamorph > backups/$(date +%Y-%m-%d)/postgres.sql
+```
 
 ---
 
-## 🆘 Troubleshooting (v3.0)
+## 🛠️ Development
+
+### Running Tests
+
+```bash
+# Backend tests
+cd backend
+poetry run pytest tests/unit/ -v
+poetry run pytest tests/integration/ -v
+poetry run pytest tests/ --cov=app --cov-report=html
+
+# Frontend tests
+cd ../frontend
+npm test
+npm run test:coverage
+
+# End-to-end tests
+npm run test:e2e
+```
+
+### Building for Production
+
+```bash
+# Build production images
+docker-compose -f docker-compose.prod.yml build
+
+# Start production services
+docker-compose -f docker-compose.prod.yml up -d
+
+# Frontend production build
+cd frontend
+npm run build
+```
+
+### Debugging
+
+```bash
+# Access Python shell with app context
+cd backend
+poetry run python -c "
+from app.main import app
+from app.database import SessionLocal
+print('Database connection successful')
+"
+
+# Access Neo4j console
+docker-compose exec neo4j cypher-shell -u neo4j -p your_secure_password
+
+# Profile API endpoints
+poetry run python -m cProfile -s cumtime -m uvicorn app.main:app --reload
+```
+
+---
+
+## 📖 API Reference
+
+### Authentication
+
+```bash
+# Login
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "user@example.com",
+    "password": "your_password"
+  }'
+
+# Refresh token
+curl -X POST http://localhost:8000/api/v1/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refresh_token": "your_refresh_token"
+  }'
+```
+
+### Website Endpoints
+
+```bash
+# Create website
+POST /api/v1/websites
+
+# List websites
+GET /api/v1/websites
+
+# Get website details
+GET /api/v1/websites/{id}
+
+# Update website
+PATCH /api/v1/websites/{id}
+
+# Delete website
+DELETE /api/v1/websites/{id}
+
+# Start scraping
+POST /api/v1/websites/{id}/scrape
+
+# List discovered files
+GET /api/v1/websites/{id}/files
+
+# Select files for ingestion
+POST /api/v1/websites/{id}/files/select
+
+# Deselect files
+POST /api/v1/websites/{id}/files/deselect
+
+# Start ingestion
+POST /api/v1/websites/{id}/ingest
+
+# Get scrape status
+GET /api/v1/websites/{id}/scrape-status
+```
+
+### Knowledge Card Endpoints
+
+```bash
+# List knowledge cards
+GET /api/v1/cards
+
+# Get specific card
+GET /api/v1/cards/{id}
+
+# Create knowledge card
+POST /api/v1/cards
+
+# Update knowledge card
+PATCH /api/v1/cards/{id}
+
+# List card blocks
+GET /api/v1/cards/{id}/blocks
+
+# Get specific block
+GET /api/v1/cards/{id}/blocks/{block_id}
+
+# Update block
+PATCH /api/v1/cards/{id}/blocks/{block_id}
+
+# Approve card
+POST /api/v1/cards/{id}/approve
+
+# Reject card
+POST /api/v1/cards/{id}/reject
+```
+
+### Curation Endpoints
+
+```bash
+# List validation cards
+GET /api/v1/validation/cards
+
+# Get validation card
+GET /api/v1/validation/cards/{id}
+
+# Approve validation card
+POST /api/v1/validation/cards/{id}/approve
+
+# Reject validation card
+POST /api/v1/validation/cards/{id}/reject
+
+# Merge validation card
+POST /api/v1/validation/cards/{id}/merge
+
+# Escalate validation card
+POST /api/v1/validation/cards/{id}/escalate
+
+# List discussion threads
+GET /api/v1/discussion/threads
+
+# Create discussion thread
+POST /api/v1/discussion/threads
+
+# Add comment to thread
+POST /api/v1/discussion/threads/{id}/comments
+```
+
+---
+
+## 🎯 Best Practices
+
+### Website Crawling
+
+1. **Start small**: Begin with a single website before scaling
+2. **Respect robots.txt**: Always honor website policies
+3. **Monitor performance**: Track crawl rates and adjust concurrency
+4. **Handle errors gracefully**: Implement robust retry logic
+5. **Validate URLs**: Ensure URLs are properly formatted before crawling
+
+### File Selection
+
+1. **Review carefully**: Check file previews before selection
+2. **Use filters**: Leverage file type and date filters for efficiency
+3. **Start with recent files**: Prioritize recently modified documents
+4. **Monitor file sizes**: Be mindful of storage constraints
+5. **Document decisions**: Keep records of selection criteria
+
+### Knowledge Curation
+
+1. **Verify provenance**: Always check source information
+2. **Cross-reference**: Compare with multiple sources when possible
+3. **Document disputes**: Use discussion threads for contested knowledge
+4. **Regular reviews**: Schedule periodic knowledge validation
+5. **Monitor expiry**: Track validity periods and update cards proactively
+
+### System Maintenance
+
+1. **Regular backups**: Automate daily backups with verification
+2. **Monitor performance**: Track key metrics and set alerts
+3. **Update dependencies**: Keep software current with security patches
+4. **Test upgrades**: Validate changes in staging before production
+5. **Document processes**: Maintain runbooks for common operations
+
+---
+
+## 🆘 Troubleshooting
 
 ### Common Issues
 
-#### Website Not Accessible
-- **Symptom:** Crawling fails immediately with "Website not accessible"
-- **Solutions:**
-  - Check the URL is correct
-  - Verify the website is online
-  - Check if the website blocks crawlers (robots.txt)
-  - Try a different website
+**Issue: Crawling fails with 403 errors**
+- **Solution**: Check robots.txt compliance and user-agent settings
+- **Command**: `curl -I https://example.com/robots.txt`
 
-#### No Files Discovered
-- **Symptom:** Crawling completes but no files found
-- **Solutions:**
-  - Check if the website has any scrapable files
-  - Try increasing the crawl depth in settings
-  - Try increasing the max pages limit
-  - Check if the website uses JavaScript (may need Playwright)
-  - Verify the website allows crawling
+**Issue: File ingestion stalls**
+- **Solution**: Check error panel for specific failures
+- **Command**: `docker-compose logs backend | grep ERROR`
 
-#### Crawling is Slow
-- **Symptom:** Crawling takes a long time
-- **Solutions:**
-  - Check if the website has rate limiting
-  - Increase the delay between requests
-  - Reduce the crawl depth
-  - Reduce the max pages limit
-  - Check server resources (CPU, memory)
+**Issue: Neo4j connection refused**
+- **Solution**: Verify container health and credentials
+- **Command**: `docker-compose ps neo4j`
 
-#### Ingestion Failures
-- **Symptom:** Files fail to ingest
-- **Solutions:**
-  - Check the error message for specific issues
-  - Try re-ingesting the failed files
-  - Check if files are accessible (not 404)
-  - Check if files are password-protected
-  - Check if files are too large
+**Issue: Frontend doesn't load**
+- **Solution**: Check API connectivity and CORS settings
+- **Command**: `curl -v http://localhost:8000/api/v1/health`
 
-#### Preview Not Available
-- **Symptom:** Preview shows "Preview unavailable"
-- **Solutions:**
-  - File may be binary or unsupported format
-  - File may be too large for preview
-  - Preview generation may have timed out
-  - Try opening the file directly in browser
+**Issue: Memory errors during parsing**
+- **Solution**: Increase Docker memory limits and process files in batches
+- **Command**: `docker stats`
 
-### Getting Help
-1. **Check Documentation:** This guide and the full spec.md v3.0
-2. **Search Issues:** Look for similar issues in the issue tracker
-3. **Ask in Chat:** Use the team chat channel
-4. **Create Issue:** If it's a bug or feature request, create an issue
-5. **Contact Admin:** For urgent production issues
+### Debugging Commands
+
+```bash
+# Check container resource usage
+docker stats
+
+# Inspect container logs
+docker-compose logs --tail=100 service_name
+
+# Test database connection
+docker-compose exec neo4j cypher-shell -u neo4j -p your_password "RETURN 'Connection successful'"
+
+# Test API endpoint
+curl -v http://localhost:8000/api/v1/health
+
+# Check network connectivity
+docker network inspect metamorph_network
+```
 
 ---
 
-## 📞 Support & Contact
+## 📚 Resources
 
-| Issue Type | Contact | Response Time |
-|------------|---------|---------------|
-| Bug Report | Issue Tracker | 24 hours |
-| Feature Request | Issue Tracker | 48 hours |
-| Crawling Problem | Support Team | 4 hours |
-| General Question | Team Chat | 4 hours |
-| Training Request | Training Team | 48 hours |
+### Documentation
 
----
+- **Official Docs**: [Metamorph Documentation](https://metamorph.example.com/docs)
+- **API Reference**: [Swagger UI](http://localhost:8000/docs)
+- **Architecture**: [System Architecture Guide](ARCHITECTURE.md)
+- **Data Model**: [Data Model Reference](data-model.md)
 
-## 🔄 Version History
+### Support
 
-| Date | Version | Changes |
-|------|---------|---------|
-| 2026-05-12 | 3.0 | Major update for website-first workflow. Rewrote entire guide to reflect new workflow: website URL input → automatic exploration → file selection → automatic ingestion. Added website scraper role, updated all sections for new data model (Website, DiscoveredFile, ScrapeSession, IngestionJob). Added troubleshooting for crawling issues. |
-| 2026-04-12 | 1.0 | Initial quick start guide |
+- **GitHub Issues**: [https://github.com/your-org/metamorph/issues](https://github.com/your-org/metamorph/issues)
+- **Community Forum**: [https://community.metamorph.example.com](https://community.metamorph.example.com)
+- **Email Support**: support@metamorph.example.com
 
----
+### Learning
 
-## 📚 Additional Resources
-
-- [Full Specification (spec.md)](./spec.md) - Complete project specification with website-first workflow
-- [Implementation Plan (plan.md)](./plan.md) - Detailed implementation roadmap for v3.0
-- [Task List (tasks.md)](./tasks.md) - Development task tracking with new crawling tasks
-- [Research Notes (research.md)](./research.md) - Technical research on website crawling and discovery
-- [API Documentation](../api/) - REST API reference including website scraping endpoints
-- [Developer Guide](../dev-guide.md) - Detailed development instructions
+- **Neo4j Documentation**: [https://neo4j.com/docs/](https://neo4j.com/docs/)
+- **FastAPI Tutorial**: [https://fastapi.tiangolo.com/](https://fastapi.tiangolo.com/)
+- **React Documentation**: [https://react.dev/](https://react.dev/)
+- **Web Crawling Guide**: [https://developers.google.com/search/docs/crawling-intro](https://developers.google.com/search/docs/crawling-intro)
 
 ---
 
-*Happy website scraping! 🌐🎉*
+## 🎉 Next Steps
+
+Now that you have Metamorph up and running:
+
+1. **Start small**: Begin with one website and a few files
+2. **Explore features**: Try all the workflows (crawling, ingestion, curation)
+3. **Provide feedback**: Report issues and suggest improvements
+4. **Scale up**: Gradually increase the scope of your knowledge extraction
+5. **Integrate**: Connect Metamorph with your proposal drafting systems
+
+**Happy knowledge extraction!** 🚀
+
+---
+
+## 📝 Changelog
+
+**v3.0.0** (2026-05-12):
+- Initial release of Metamorph Website-to-Knowledge System
+- Website crawling and file discovery features
+- Automatic ingestion pipeline
+- Knowledge graph storage with Neo4j
+- Curation workflows and validation cards
+- Six knowledge card types for proposal drafting
+
+**v2.0.0** (2026-04-12):
+- Previous version (manual document upload only)
+
+---
+
+## 📄 License
+
+Metamorph is released under the [MIT License](LICENSE).
+
+Copyright © 2026 UN and Humanitarian Organizations. All rights reserved.

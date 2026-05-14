@@ -3,6 +3,10 @@ import { Link, useLocation } from "react-router-dom";
 
 const NAV_ITEMS = [
   { to: "/wiki", label: "Wiki" },
+  { to: "/websites", label: "Websites" },
+  { to: "/users", label: "Users" },
+  { to: "/teams", label: "Teams" },
+  { to: "/topics", label: "Topics" },
   { to: "/scraping", label: "Scraping" },
   { to: "/ingestion", label: "Ingestion" },
   { to: "/settings", label: "Settings" },
