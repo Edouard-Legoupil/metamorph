@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 import os
 
 from app.api.v1.endpoints import triplets
@@ -13,7 +14,26 @@ from app.api.v1.endpoints.delta_alerts import router as delta_alerts_router
 from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.blocks_card import router as blocks_card_router
 
+# New endpoints for website crawling (FR-001, FR-002, FR-003)
+from app.api.v1.endpoints.websites import router as websites_router
+from app.api.v1.endpoints.users import router as users_router
+from app.api.v1.endpoints.topics import router as topics_router
+from app.api.v1.endpoints.team_members import router as team_members_router
+from app.api.v1.endpoints.website_topics import router as website_topics_router
+from app.api.v1.endpoints.crawler_settings import router as crawler_settings_router
+
 app = FastAPI()
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include all routers
 app.include_router(triplets.router, prefix="/api/v1/triplets")
 app.include_router(ingestion_router, prefix="/api/v1/ingestion")
 app.include_router(triplet_extraction_router, prefix="/api/v1/extraction")
@@ -24,6 +44,18 @@ app.include_router(trust_routing_router, prefix="/api/v1/trust")
 app.include_router(delta_alerts_router, prefix="/api/v1/alerts")
 app.include_router(auth_router, prefix="/api/v1/auth")
 app.include_router(blocks_card_router, prefix="/api/v1/blocks")
+
+# Website crawling and management endpoints
+app.include_router(websites_router, prefix="/api/v1")
+app.include_router(users_router, prefix="/api/v1")
+app.include_router(topics_router, prefix="/api/v1")
+app.include_router(team_members_router, prefix="/api/v1")
+app.include_router(website_topics_router, prefix="/api/v1")
+app.include_router(crawler_settings_router, prefix="/api/v1")
+
+# Knowledge graph endpoints
+from app.api.v1.endpoints.knowledge_graph import router as knowledge_graph_router
+app.include_router(knowledge_graph_router, prefix="/api/v1")
 
 # Must be LAST: Serve React build at /
 FRONTEND_BUILD_DIR = os.getenv(
