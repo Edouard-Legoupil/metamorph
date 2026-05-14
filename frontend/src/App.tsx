@@ -12,6 +12,7 @@ import UserManagement from "./pages/UserManagement";
 import TeamManagement from "./pages/TeamManagement";
 import TopicManagement from "./pages/TopicManagement";
 import FileSelectionPage from "./pages/FileSelectionPage";
+import IngestionProgressPage from "./pages/IngestionProgressPage";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const apiKey = typeof window !== 'undefined' ? localStorage.getItem("API_KEY") : null;
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="/ingestion" element={<RequireAuth><Ingestion /></RequireAuth>} />
         <Route path="/websites" element={<RequireAuth><WebsiteManagement /></RequireAuth>} />
         <Route path="/websites/:websiteId/files" element={<RequireAuth><FileSelectionPage /></RequireAuth>} />
+        <Route path="/ingestion/progress/:jobId" element={<RequireAuth><IngestionProgressPage /></RequireAuth>} />
         <Route path="/users" element={<RequireAuth><UserManagement /></RequireAuth>} />
         <Route path="/teams" element={<RequireAuth><TeamManagement /></RequireAuth>} />
         <Route path="/topics" element={<RequireAuth><TopicManagement /></RequireAuth>} />
