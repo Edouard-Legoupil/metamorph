@@ -6,7 +6,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 
 **Last Updated**: 2026-05-12 | **Analysis Based On**: Code review of existing implementation
 
-## 📊 Overall Completion: 40%
+## 📊 Overall Completion: 45%
 
 ### 🎯 User Story Implementation Status
 
@@ -15,7 +15,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 | **US-SCR-001** | Website Definition | ✅ 90% | ❌ 10% | ⚠️ 50% |
 | **US-SCR-002** | Automatic Exploration | ✅ 70% | ❌ 0% | ⚠️ 35% |
 | **US-SCR-003** | File Selection | ✅ 60% | ❌ 0% | ⚠️ 30% |
-| **US-SCR-004** | File Preview | 🚧 10% | ❌ 0% | 🚧 5% |
+| **US-SCR-004** | File Preview | ✅ 50% | ❌ 0% | ⚠️ 25% |
 | **US-SCR-005** | Automatic Ingestion | 🚧 20% | ❌ 0% | 🚧 10% |
 | **US-SCR-006** | Scheduled Re-scraping | ❌ 0% | ❌ 0% | ❌ 0% |
 
@@ -28,7 +28,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 | **Backend API** | ⚠️ 70% | Core endpoints implemented, missing preview/ingestion |
 | **Database Models** | ✅ 85% | All core models defined, some relationships missing |
 | **Frontend UI** | ❌ 15% | Mostly stubs, minimal functional components |
-| **Core Functionality** | 🚧 25% | Preview/ingestion/scheduling not implemented |
+| **Core Functionality** | ⚠️ 35% | Preview implemented, ingestion/scheduling pending |
 | **Testing** | ❌ 0% | No tests found in codebase |
 | **Deployment** | ⚠️ 30% | Basic Docker setup, no production config |
 
@@ -49,10 +49,10 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 **Frontend**: ❌ 0% - No UI components
 **Missing**: Search, grouping, frontend FileList/Filter components
 
-#### US-SCR-004: File Preview (🚧 5%)
-**Backend**: 🚧 10% - Only stub endpoint with TODO
+#### US-SCR-004: File Preview (⚠️ 25%)
+**Backend**: ✅ 50% - Complete preview service implemented
 **Frontend**: ❌ 0% - No UI components
-**Missing**: Complete preview generation, all frontend components
+**Missing**: Frontend FilePreview component, UI integration
 
 #### US-SCR-005: Automatic Ingestion (🚧 10%)
 **Backend**: 🚧 20% - Job model and queueing, no actual processing
@@ -88,27 +88,30 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 ## 🎯 Critical Path Analysis
 
 ### Blocking Issues (Must Fix First)
-1. **T067-T069**: File preview implementation (US-SCR-004)
-   - Currently has TODO in production code
-   - Required for user file evaluation
-
-2. **T088-T095**: Ingestion pipeline (US-SCR-005)
+1. **T088-T095**: Ingestion pipeline (US-SCR-005)
    - Only stub implementation exists
    - Core workflow dependency
+   - Required for complete file processing workflow
 
-3. **T105-T116**: Scheduled scraping (US-SCR-006)
+2. **T105-T116**: Scheduled scraping (US-SCR-006)
    - Completely missing
    - Key feature for ongoing updates
 
+3. **T117-T139**: Knowledge graph core (Core System)
+   - Foundation for all curation functionality
+   - Required for knowledge extraction and storage
+   - Key feature for ongoing updates
+
 ### High Priority (Next Phase)
-1. **T072-T080**: File selection frontend (US-SCR-003)
+1. **T088-T095**: Ingestion pipeline (US-SCR-005)
+   - Core workflow dependency
+   - Required for complete file processing
+
+2. **T072-T080**: File selection frontend (US-SCR-003)
    - Needed for user file management
 
-2. **T096-T102**: Ingestion progress UI (US-SCR-005)
+3. **T096-T102**: Ingestion progress UI (US-SCR-005)
    - Required for user feedback
-
-3. **T117-T139**: Knowledge graph core
-   - Foundation for all curation
 
 ### Medium Priority (Polish)
 1. **T035-T040**: Website management frontend (US-SCR-001)
@@ -297,7 +300,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 
 ---
 
-## Phase 5: User Story 3 - File Selection & Preview (US-SCR-003, US-SCR-004) ✅ 60% Backend / ❌ 0% Frontend
+## Phase 5: User Story 3 - File Selection & Preview (US-SCR-003, US-SCR-004) ✅ 100% Backend / ❌ 0% Frontend
 
 **Goal**: Users can review discovered files with metadata and preview content before selection
 
@@ -316,9 +319,9 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 - [x] T064 [US-SCR-003] Add pagination and sorting support ✅
 - [x] T065 [US-SCR-003] Implement file selection/deselection endpoints ✅
 - [x] T066 [US-SCR-003] Add bulk selection operations (select all, by type, by date) ✅
-- [ ] T067 [US-SCR-004] Implement file preview service in `backend/app/services/preview_service.py` 🚧 (TODO in code)
-- [ ] T068 [US-SCR-004] Add preview endpoint for different file types (PDF, DOCX, HTML, etc.) 🚧 (TODO in code)
-- [ ] T069 [US-SCR-004] Implement text extraction for preview generation 🚧 (TODO in code)
+- [x] T067 [US-SCR-004] Implement file preview service in `backend/app/services/preview_service.py` ✅
+- [x] T068 [US-SCR-004] Add preview endpoint for different file types (PDF, DOCX, HTML, etc.) ✅
+- [x] T069 [US-SCR-004] Implement text extraction for preview generation ✅
 - [x] T070 [US-SCR-003] Add file metadata enhancement (size, type, last modified, etc.) ✅
 - [x] T071 [US-SCR-003] Implement search functionality for discovered files ✅
 
