@@ -1,743 +1,715 @@
-# Metamorph Task List (v3.0 - Website-First)
+---
+description: "Task list for Metamorph Website-to-Knowledge System implementation"
+---
 
-**Spec ID:** 001-metamorph  
-**Version:** 3.0  
-**Status:** Draft  
-**Date:** 2026-05-12
+# Implementation Status: Metamorph Website-to-Knowledge System
+
+**Last Updated**: 2026-05-12 | **Analysis Based On**: Code review of existing implementation
+
+## 📊 Overall Completion: 40%
+
+### 🎯 User Story Implementation Status
+
+| User Story | Description | Backend | Frontend | Overall |
+|------------|-------------|---------|----------|---------|
+| **US-SCR-001** | Website Definition | ✅ 90% | ❌ 10% | ⚠️ 50% |
+| **US-SCR-002** | Automatic Exploration | ✅ 70% | ❌ 0% | ⚠️ 35% |
+| **US-SCR-003** | File Selection | ✅ 60% | ❌ 0% | ⚠️ 30% |
+| **US-SCR-004** | File Preview | 🚧 10% | ❌ 0% | 🚧 5% |
+| **US-SCR-005** | Automatic Ingestion | 🚧 20% | ❌ 0% | 🚧 10% |
+| **US-SCR-006** | Scheduled Re-scraping | ❌ 0% | ❌ 0% | ❌ 0% |
+
+**Legend**: ✅ Complete | ⚠️ Partial | 🚧 Stub/TODO | ❌ Missing
+
+### 📋 Component Completion
+
+| Component | Status | Details |
+|-----------|--------|---------|
+| **Backend API** | ⚠️ 70% | Core endpoints implemented, missing preview/ingestion |
+| **Database Models** | ✅ 85% | All core models defined, some relationships missing |
+| **Frontend UI** | ❌ 15% | Mostly stubs, minimal functional components |
+| **Core Functionality** | 🚧 25% | Preview/ingestion/scheduling not implemented |
+| **Testing** | ❌ 0% | No tests found in codebase |
+| **Deployment** | ⚠️ 30% | Basic Docker setup, no production config |
+
+### 🎯 Detailed Breakdown
+
+#### US-SCR-001: Website Definition (⚠️ 50%)
+**Backend**: ✅ 90% - All models and endpoints implemented
+**Frontend**: ❌ 10% - Only stub components exist
+**Missing**: WebsiteForm, WebsiteList, validation, error handling
+
+#### US-SCR-002: Automatic Exploration (⚠️ 35%)
+**Backend**: ✅ 70% - Crawler service, robots.txt parser, session tracking
+**Frontend**: ❌ 0% - No UI components
+**Missing**: Sitemap.xml parser, error recovery, frontend progress UI
+
+#### US-SCR-003: File Selection (⚠️ 30%)
+**Backend**: ✅ 60% - File listing, selection endpoints, metadata
+**Frontend**: ❌ 0% - No UI components
+**Missing**: Search, grouping, frontend FileList/Filter components
+
+#### US-SCR-004: File Preview (🚧 5%)
+**Backend**: 🚧 10% - Only stub endpoint with TODO
+**Frontend**: ❌ 0% - No UI components
+**Missing**: Complete preview generation, all frontend components
+
+#### US-SCR-005: Automatic Ingestion (🚧 10%)
+**Backend**: 🚧 20% - Job model and queueing, no actual processing
+**Frontend**: ❌ 0% - No UI components
+**Missing**: Docling/MinerU integration, complete pipeline, frontend UI
+
+#### US-SCR-006: Scheduled Re-scraping (❌ 0%)
+**Backend**: ❌ 0% - No implementation
+**Frontend**: ❌ 0% - No UI components
+**Missing**: Complete scheduling system
+
+### 🔧 Core System Components (❌ 0%)
+- Knowledge graph models and services
+- Curation workflows and validation cards
+- Discussion threads and consensus system
+- Provenance tracking and audit trails
+
+### 🧪 Testing (❌ 0%)
+- No unit tests, integration tests, or contract tests
+- No test coverage reporting
+- No performance or security testing
+
+### 🚀 Deployment (⚠️ 30%)
+- Basic Docker Compose setup
+- No production configuration
+- No Kubernetes manifests
+- No CI/CD pipeline
+- No monitoring/alerting
+- No backup procedures
 
 ---
 
-## Task Tracking
+## 🎯 Critical Path Analysis
 
-This document tracks all implementation tasks for Metamorph v3.0. **Key Change:** The workflow now starts with website URL input, automatic exploration, file selection, and automatic ingestion.
+### Blocking Issues (Must Fix First)
+1. **T067-T069**: File preview implementation (US-SCR-004)
+   - Currently has TODO in production code
+   - Required for user file evaluation
 
----
+2. **T088-T095**: Ingestion pipeline (US-SCR-005)
+   - Only stub implementation exists
+   - Core workflow dependency
 
-## 🌐 Phase 1: Website Crawling & File Discovery
+3. **T105-T116**: Scheduled scraping (US-SCR-006)
+   - Completely missing
+   - Key feature for ongoing updates
 
-### High Priority (Website Scraper Role - US-SCR-001 to US-SCR-005)
+### High Priority (Next Phase)
+1. **T072-T080**: File selection frontend (US-SCR-003)
+   - Needed for user file management
 
-#### FR-001: Website Crawling & Discovery
-- [ ] **FR-001** Implement URL input validation
-  - [ ] Validate URL format (http/https)
-  - [ ] Check URL accessibility
-  - [ ] Extract domain information
-  - [ ] Display website metadata (title, description)
+2. **T096-T102**: Ingestion progress UI (US-SCR-005)
+   - Required for user feedback
 
-- [ ] **FR-001d + NFR-009** Implement robots.txt parser
-  - [ ] Download and parse robots.txt
-  - [ ] Check if crawling is allowed
-  - [ ] Extract crawl-delay if specified
-  - [ ] Respect disallow directives
+3. **T117-T139**: Knowledge graph core
+   - Foundation for all curation
 
-- [ ] **FR-001b** Implement sitemap.xml parser
-  - [ ] Discover sitemap.xml location
-  - [ ] Parse XML sitemap format
-  - [ ] Extract file URLs from sitemap
-  - [ ] Handle sitemap index files
-  - [ ] Respect lastmod and changefreq
+### Medium Priority (Polish)
+1. **T035-T040**: Website management frontend (US-SCR-001)
+   - Complete existing partial implementation
 
-- [ ] **FR-001c** Implement website crawler
-  - [ ] Follow internal links within same domain
-  - [ ] Implement BFS/DFS crawling strategy
-  - [ ] Track visited URLs to avoid duplicates
-  - [ ] Respect same-origin policy
-  - [ ] Handle relative/absolute URLs
+2. **T055-T059**: Crawling progress UI (US-SCR-002)
+   - Enhance user experience
 
-- [ ] **FR-001a** Implement file type detection
-  - [ ] Detect PDF files (.pdf)
-  - [ ] Detect Word documents (.doc, .docx)
-  - [ ] Detect Excel files (.xls, .xlsx)
-  - [ ] Detect PowerPoint files (.ppt, .pptx)
-  - [ ] Detect HTML pages (.html, .htm)
-  - [ ] Detect text files (.txt, .csv, .json)
-  - [ ] Detect other scrapable formats
-
-- [ ] **FR-001** Implement metadata extraction
-  - [ ] Extract file name from URL
-  - [ ] Get file size (via HEAD request)
-  - [ ] Get last modified date
-  - [ ] Extract content-type header
-  - [ ] Calculate content hash for deduplication
-
-- [ ] **NFR-010** Implement rate limiting
-  - [ ] Configurable delay between requests
-  - [ ] Respect crawl-delay from robots.txt
-  - [ ] Implement exponential backoff on errors
-  - [ ] Track request rate per domain
-
-- [ ] **FR-001e** Implement authentication handling
-  - [ ] Support basic authentication
-  - [ ] Support session cookies
-  - [ ] Store credentials securely
-  - [ ] Handle 401/403 responses
-
-- [ ] **Data Model** Create website crawling entities
-  - [ ] Implement Website entity (FR-001)
-  - [ ] Implement DiscoveredFile entity (FR-001)
-  - [ ] Implement ScrapeSession entity (FR-001)
-  - [ ] Create database migrations for new entities
-
-- [ ] **API Endpoints** for website scraping
-  - [ ] POST /api/v1/websites
-  - [ ] GET /api/v1/websites
-  - [ ] GET /api/v1/websites/{id}
-  - [ ] POST /api/v1/websites/{id}/scrape
-  - [ ] GET /api/v1/websites/{id}/scrape-status
-
-#### FR-002: File Discovery & Presentation
-- [ ] **FR-002a** Implement file list display
-  - [ ] Design scrollable/browsable file list UI
-  - [ ] Display filename, URL, type, size, last modified
-  - [ ] Implement pagination for large file lists
-  - [ ] Add sorting by name, type, date, size
-
-- [ ] **FR-002b** Implement file categorization
-  - [ ] Group files by type (PDFs, Documents, Spreadsheets, etc.)
-  - [ ] Add category filters
-  - [ ] Show count per category
-  - [ ] Allow expanding/collapsing categories
-
-- [ ] **FR-002c** Implement file preview
-  - [ ] Extract first 500 characters for text files
-  - [ ] Extract first page text for PDFs
-  - [ ] Display metadata for binary files
-  - [ ] Implement preview caching
-  - [ ] Add preview loading indicator
-
-- [ ] **FR-002d** Implement bulk selection controls
-  - [ ] Add "Select All" checkbox
-  - [ ] Add "Select by Type" filters
-  - [ ] Add "Select by Date Range" filters
-  - [ ] Implement individual file toggle
-  - [ ] Display selected count (e.g., "12 of 45")
-
-- [ ] **US-SCR-003** Implement search and filter
-  - [ ] Add search bar for file list
-  - [ ] Implement real-time search
-  - [ ] Add filters for type, date, size
-  - [ ] Combine multiple filters
-
-- [ ] **US-SCR-004** Implement preview panel
-  - [ ] Design preview modal/panel
-  - [ ] Load preview on file click
-  - [ ] Handle preview errors gracefully
-  - [ ] Close preview on outside click
-
-- [ ] **US-SCR-005** Implement selection confirmation
-  - [ ] Design confirmation dialog
-  - [ ] Show selection summary
-  - [ ] Display estimated processing time
-  - [ ] Add cancel option
-
-- [ ] **API Endpoints** for file discovery
-  - [ ] GET /api/v1/websites/{id}/files
-  - [ ] GET /api/v1/files/{id}
-  - [ ] GET /api/v1/files/{id}/preview
-  - [ ] POST /api/v1/websites/{id}/files/select
-  - [ ] POST /api/v1/websites/{id}/files/deselect
-
-#### User Workflow Integration
-- [ ] Connect website input to crawler trigger
-- [ ] Connect crawler results to file list display
-- [ ] Implement crawling progress indicator
-- [ ] Connect file list to selection UI
-- [ ] Implement selection state management
-- [ ] Add error handling for crawling failures
-- [ ] Display user-friendly error messages
-
-### Medium Priority (Phase 1)
-- [ ] Implement crawler configuration options
-- [ ] Add max depth setting
-- [ ] Add max pages limit
-- [ ] Add excluded paths configuration
-- [ ] Implement crawler pause/resume
-- [ ] Add crawler speed controls
-- [ ] Implement crawler statistics (pages crawled, files found)
-- [ ] Add export file list (CSV, JSON)
-- [ ] Implement bookmark/favorite websites
-- [ ] Add recent websites history
-
-### Testing (TDD - NFR-006)
-- [ ] Write unit tests for URL validation
-- [ ] Write unit tests for robots.txt parsing
-- [ ] Write unit tests for sitemap.xml parsing
-- [ ] Write unit tests for link following
-- [ ] Write unit tests for file type detection
-- [ ] Write unit tests for metadata extraction
-- [ ] Write unit tests for rate limiting
-- [ ] Write integration tests for crawler end-to-end
-- [ ] Create test websites for validation
+3. **T149-T154**: Testing suite
+   - Ensure reliability
 
 ---
 
-## 🔄 Phase 2: Automatic Ingestion & Processing
+## 📅 Updated Timeline Estimate
 
-### High Priority (Automatic Ingestion Trigger - FR-003)
+### Current State: ~40% Complete
 
-#### FR-003: Automatic Ingestion Trigger
-- [ ] **FR-003a** Implement ingestion queue
-  - [ ] Create queue data structure
-  - [ ] Add files to queue in order
-  - [ ] Implement queue priority (user-selected order)
-  - [ ] Support queue persistence
+### To Reach MVP (US-SCR-001 to US-SCR-005):
+- **Sequential**: 8-12 weeks (1 developer)
+- **Parallel Team (3-4 devs)**: 4-6 weeks
 
-- [ ] **FR-003b** Implement progress tracking
-  - [ ] Track status per file (queued, downloading, parsing, complete, error)
-  - [ ] Calculate overall progress percentage
-  - [ ] Estimate time remaining
-  - [ ] Display per-file progress
-
-- [ ] **FR-003c** Implement error handling and retries
-  - [ ] Catch and log all ingestion errors
-  - [ ] Implement automatic retry (3 attempts)
-  - [ ] Implement exponential backoff between retries
-  - [ ] Notify user of permanent failures
-  - [ ] Allow user to retry failed files
-
-- [ ] **FR-003** Implement automatic trigger
-  - [ ] Start ingestion on user confirmation
-  - [ ] Validate selection before starting
-  - [ ] Queue all selected files
-  - [ ] Begin processing immediately
-  - [ ] Return confirmation to user
-
-- [ ] **Data Model** Create ingestion entities
-  - [ ] Implement IngestionJob entity
-  - [ ] Implement Document entity
-  - [ ] Create relationships between entities
-
-- [ ] **API Endpoints** for ingestion
-  - [ ] POST /api/v1/websites/{id}/ingest
-  - [ ] GET /api/v1/ingestion/jobs
-  - [ ] GET /api/v1/ingestion/jobs/{id}
-  - [ ] GET /api/v1/ingestion/status
-
-#### Document Download & Processing
-- [ ] Implement file downloader
-  - [ ] Download files from URLs
-  - [ ] Handle HTTP errors (404, 500, etc.)
-  - [ ] Implement timeout handling
-  - [ ] Store downloaded files temporarily
-  - [ ] Track download metadata
-
-- [ ] Implement retry with exponential backoff
-  - [ ] Configurable retry count
-  - [ ] Increasing delay between retries
-  - [ ] Max delay cap
-  - [ ] Give up after max retries
-
-#### FR-004: Document Parsing Integration
-- [ ] Integrate Docling parser
-  - [ ] Set up Docling environment
-  - [ ] Implement Docling API wrapper
-  - [ ] Handle Docling errors
-  - [ ] Extract text from PDFs, Word, HTML
-  - [ ] Extract metadata (author, title, date)
-
-- [ ] Integrate MinerU parser
-  - [ ] Set up MinerU environment
-  - [ ] Implement MinerU API wrapper
-  - [ ] Handle MinerU errors
-  - [ ] Extract text from complex layouts
-  - [ ] Extract tables and structure
-
-- [ ] Create unified parsing interface
-  - [ ] Abstract parser differences
-  - [ ] Implement fallback (Docling → MinerU)
-  - [ ] Store which parser was used
-  - [ ] Track parsing success/failure
-  - [ ] Handle manual override option
-
-- [ ] Store parsing results
-  - [ ] Save extracted text
-  - [ ] Save extracted metadata
-  - [ ] Store parser confidence scores
-  - [ ] Add provenance information
-
-#### Graph Storage Foundation
-- [ ] Set up Neo4j for v3.0 schema
-  - [ ] Create indexes for Website
-  - [ ] Create indexes for DiscoveredFile
-  - [ ] Create indexes for Document
-  - [ ] Create indexes for ScrapeSession
-  - [ ] Create indexes for IngestionJob
-
-- [ ] Implement CRUD operations
-  - [ ] Create Website nodes
-  - [ ] Create DiscoveredFile nodes
-  - [ ] Create Document nodes
-  - [ ] Create ScrapeSession nodes
-  - [ ] Create IngestionJob nodes
-
-- [ ] Implement relationships
-  - [ ] Website → DiscoveredFile (DISCOVERED)
-  - [ ] DiscoveredFile → Document (INGESTED)
-  - [ ] ScrapeSession → Website (SCRAPED)
-  - [ ] IngestionJob → DiscoveredFile (PROCESSED)
-
-- [ ] Add provenance tracking
-  - [ ] Track website URL for every document
-  - [ ] Track file URL for every document
-  - [ ] Track download date
-  - [ ] Track extraction date
-  - [ ] Track parsing tool used
-
-### Success Criteria Tasks
-- [ ] Verify ingestion starts within 5 seconds of confirmation
-- [ ] Test processing 10 files simultaneously
-- [ ] Validate average parsing time <10 seconds
-- [ ] Verify graph storage operations <100ms
-- [ ] End-to-end test: URL → Files → Selection → Ingestion
-
-### Testing (TDD)
-- [ ] Write unit tests for file queuing
-- [ ] Write unit tests for download functionality
-- [ ] Write unit tests for progress tracking
-- [ ] Write unit tests for error handling
-- [ ] Write unit tests for retry logic
-- [ ] Write unit tests for Docling integration
-- [ ] Write unit tests for MinerU integration
-- [ ] Write unit tests for graph storage
-- [ ] Write integration tests for ingestion pipeline
+### To Reach Full Implementation:
+- **Sequential**: 16-20 weeks
+- **Parallel Team**: 8-12 weeks
 
 ---
 
-## 📚 Phase 3: Semantic Extraction & Knowledge Graph
+## 🎯 Recommendation
 
-### High Priority
+**Phase 1: Complete Core Functionality (4-6 weeks)**
+1. Finish file preview implementation (T067-T069)
+2. Implement ingestion pipeline (T088-T095)
+3. Build file selection frontend (T072-T080)
+4. Create ingestion progress UI (T096-T102)
 
-#### FR-005: Semantic Triplet Extraction
-- [ ] Design triplet schema
-  - [ ] Define Subject, Predicate, Object structure
-  - [ ] Add Qualifiers support
-  - [ ] Define data types for each component
-  - [ ] Design storage format
+**Phase 2: Enhance & Test (3-4 weeks)**
+1. Complete website management frontend (T035-T040)
+2. Add crawling progress UI (T055-T059)
+3. Implement comprehensive testing (T149-T154)
+4. Add scheduled scraping (T105-T116)
 
-- [ ] **FR-006** Implement entity recognition for 8 domains
-  - [ ] Geographic domain entities
-  - [ ] Crisis domain entities
-  - [ ] Demographics domain entities
-  - [ ] Programming domain entities
-  - [ ] Policy domain entities
-  - [ ] Finance domain entities
-  - [ ] Human Resources domain entities
-  - [ ] Knowledge Assets domain entities
-
-- [ ] Implement relationship extraction
-  - [ ] Extract Subject-Predicate-Object relationships
-  - [ ] Identify relationship types
-  - [ ] Extract relationship metadata
-  - [ ] Handle n-ary relationships
-
-- [ ] Implement metadata extraction
-  - [ ] Extract document metadata
-  - [ ] Extract entity metadata
-  - [ ] Extract relationship metadata
-  - [ ] Extract confidence scores
-
-- [ ] Add extraction confidence scoring
-  - [ ] Calculate parser confidence
-  - [ ] Calculate extraction method confidence
-  - [ ] Combine into overall confidence
-  - [ ] Store confidence with each triplet
-
-- [ ] Validate triplet quality
-  - [ ] Check for completeness
-  - [ ] Check for validity
-  - [ ] Check for duplicates
-  - [ ] Validate against schema
-
-- [ ] Validate triplet completeness (>90% target)
-
-#### Knowledge Graph Construction
-- [ ] Store triplets in Neo4j
-  - [ ] Create nodes with appropriate labels
-  - [ ] Create relationships with types
-  - [ ] Add properties to nodes
-  - [ ] Add properties to relationships
-
-- [ ] Create relationships between entities
-  - [ ] Implement relationship inference
-  - [ ] Create explicit relationships
-  - [ ] Handle relationship direction
-  - [ ] Add relationship metadata
-
-- [ ] Implement graph validation
-  - [ ] Validate node constraints
-  - [ ] Validate relationship constraints
-  - [ ] Check for duplicate nodes
-  - [ ] Verify graph integrity
-
-- [ ] Create graph query interface
-  - [ ] Implement basic CRUD queries
-  - [ ] Implement complex traversal queries
-  - [ ] Add query optimization
-  - [ ] Implement query caching
-
-#### FR-010: Provenance Tracking
-- [ ] Track triplet to source website
-- [ ] Track triplet to source file
-- [ ] Track extraction date and tool
-- [ ] Track confidence scores
-- [ ] Implement provenance query API
-
-### Testing (TDD)
-- [ ] Write unit tests for triplet schema
-- [ ] Write unit tests for entity recognition
-- [ ] Write unit tests for relationship extraction
-- [ ] Write unit tests for metadata extraction
-- [ ] Write unit tests for confidence scoring
-- [ ] Write unit tests for graph construction
-- [ ] Write unit tests for provenance tracking
-- [ ] Write integration tests for end-to-end extraction
-- [ ] Validate with 100+ sample documents
+**Phase 3: Knowledge Graph & Polish (4-6 weeks)**
+1. Build knowledge graph core (T117-T139)
+2. Add curation workflows
+3. Implement deployment (T161-T166)
+4. Final testing and optimization
 
 ---
 
-## 🔄 Phase 4: Knowledge Reconciliation
+# Tasks: Metamorph Website-to-Knowledge System
 
-### High Priority
+**Input**: Design documents from `/specs/001-metamorph/`
+**Prerequisites**: ✅ plan.md, ✅ spec.md, ✅ research.md, ✅ data-model.md, ✅ contracts/
+**Tests**: Included where appropriate for critical functionality
+**Organization**: Tasks grouped by user story for independent implementation and testing
 
-#### FR-007: Delta Detection Engine
-- [ ] Implement change detection algorithm
-- [ ] Detect contradictions in quantitative values
-- [ ] Detect contradictions in normative statements
-- [ ] Detect contradictions in classifications
-- [ ] Support temporal mismatch detection
-- [ ] Add severity scoring for conflicts
+## Format: `[ID] [P?] [Story] Description`
 
-#### FR-014: Trust Routing System
-- [ ] Implement auto-accept logic
-- [ ] Implement pending queue
-- [ ] Implement escalation logic
-- [ ] Route based on confidence
-- [ ] Route based on sensitivity
-- [ ] Route based on source reliability (including website domain)
-- [ ] Route based on contradiction level
+- **[P]**: Can run in parallel (different files, no dependencies)
+- **[Story]**: User story reference (US-SCR-001, US-SCR-002, etc.)
+- Include exact file paths based on project structure from plan.md
 
-#### FR-015: Validation Card Workflow
-- [ ] Create validation card data model
-- [ ] Implement validation card generation
-- [ ] Add diff display (current vs. proposed)
-- [ ] Add evidence display with website/file provenance
-- [ ] Add provenance display
-- [ ] Add confidence score display
-- [ ] Add sensitivity classification display
-- [ ] Implement Approve action
-- [ ] Implement Reject action
-- [ ] Implement Merge/Edit action
-- [ ] Implement Escalate action
-- [ ] Implement Open Discussion action
-- [ ] Implement Link to Existing Discussion
-- [ ] Implement Mark as Duplicate action
-- [ ] Implement Mark as No Consensus action
+## Phase 1: Setup (Shared Infrastructure)
 
-#### FR-016: Curation Interface (MVP)
-- [ ] Design curator dashboard layout
-- [ ] Implement validation card queue display
-- [ ] Add card filtering by type, severity, age
-- [ ] Add card sorting options
-- [ ] Implement curator actions on cards
-- [ ] Track verification state transitions
+**Purpose**: Project initialization and basic structure
 
-### Testing (TDD)
-- [ ] Write unit tests for delta detection
-- [ ] Write unit tests for trust routing
-- [ ] Write integration tests for validation card workflow
-- [ ] Validate with conflicting data scenarios
-- [ ] Test all verification state transitions
+- [ ] T001 Create project structure per implementation plan
+- [ ] T002 Initialize Python 3.11 backend with FastAPI dependencies
+- [ ] T003 Initialize React/TypeScript frontend with required dependencies
+- [ ] T004 [P] Configure backend linting (Black, isort, flake8) and formatting
+- [ ] T005 [P] Configure frontend linting (ESLint, Prettier) and formatting
+- [ ] T006 Setup Docker Compose with Neo4j, Redis, backend, and frontend services
+- [ ] T007 Create .env.example files for both backend and frontend
+
+**Checkpoint**: Basic project structure and development environment ready
 
 ---
 
-## 📚 Phase 5: Knowledge Cards
+## Phase 2: Foundational (Blocking Prerequisites)
 
-### High Priority
+**Purpose**: Core infrastructure that MUST be complete before ANY user story can be implemented
 
-#### FR-008: Knowledge Card Templates
-- [ ] Design KC-1: Donor Intelligence template
-- [ ] Design KC-2: Field Context template
-- [ ] Design KC-3: Outcome Evidence template
-- [ ] Design KC-4: Partner Capacity template
-- [ ] Design KC-5: Institutional Track Record template
-- [ ] Design KC-6: Crisis Political Economy template
+**⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-#### FR-009: Card Workflow Engine
-- [ ] Implement Draft state
-- [ ] Implement Approved state
-- [ ] Implement Expired state
-- [ ] Implement state transitions
-- [ ] Enforce validity periods
-- [ ] Prevent use of expired cards
-- [ ] Implement card versioning
-- [ ] Implement card rollback
+### Database & Models
+- [ ] T008 Setup Neo4j connection and session management in `backend/app/database.py`
+- [ ] T009 Create base models for core entities (Website, DiscoveredFile, ScrapeSession, IngestionJob, Document)
+- [ ] T010 Implement Alembic migrations for Neo4j schema management
 
-#### Card Generation
-- [ ] Implement automated card generation from graph data
-- [ ] Add card quality validation
-- [ ] Add card provenance tracking (including source website)
-- [ ] Implement card preview
-- [ ] Implement card publishing
+### Authentication & Security
+- [ ] T011 [P] Implement JWT authentication system with FastAPI
+- [ ] T012 [P] Create role-based access control (RBAC) middleware
+- [ ] T013 [P] Setup API security headers and CORS configuration
 
-#### Card Management Interface
-- [ ] Card library/browser
-- [ ] Card search and filtering
-- [ ] Card approval workflow
-- [ ] Card expiry alerts
-
-### Testing (TDD)
-- [ ] Write unit tests for card templates
-- [ ] Write unit tests for card workflow
-- [ ] Write unit tests for card generation
-- [ ] Write integration tests for card-proposal integration
-- [ ] Validate with all six card types
-- [ ] Test card expiry enforcement
-
----
-
-## 🤖 Phase 6: Agentic Proposal Drafting & Deployment
-
-### High Priority
-
-#### FR-011: Agentic Drafting System
-- [ ] Design proposal generation workflow
-- [ ] Implement card assembly for proposals
-- [ ] Add intervention scoring algorithm
-- [ ] Implement draft proposal generation
-- [ ] Add proposal review interface
-- [ ] Implement proposal iteration
-
-#### FR-013: Three Knowledge Surfaces
-- [ ] **Curated Wiki Surface**
-  - [ ] Design wiki page structure
-  - [ ] Implement accepted knowledge display
-  - [ ] Add provenance badges (showing website)
-  - [ ] Add freshness indicators
-  - [ ] Implement verification state badges
-  - [ ] Add maintenance tag display
-  - [ ] Link to discussion threads
-
-- [ ] **Discussion & Review Surface**
-  - [ ] Design discussion interface
-  - [ ] Implement discussion thread creation
-  - [ ] Add thread linking to topics/entities/blocks/claims
-  - [ ] Implement thread status tracking
-  - [ ] Add consensus model evaluation
-
-- [ ] **Revision & Audit Surface**
-  - [ ] Design immutable revision history display
-  - [ ] Implement change diff viewing
-  - [ ] Add audit event display
-  - [ ] Implement state restoration
-
-#### FR-012: API Layer
-- [ ] Implement REST API endpoints
-- [ ] Add authentication (JWT/OAuth2)
-- [ ] Add authorization (RBAC)
-- [ ] Add rate limiting
-- [ ] Add API documentation (Swagger/OpenAPI)
-- [ ] Implement all endpoints from spec section 10
-
-#### Deployment
-- [ ] Set up staging environment
-- [ ] Implement CI/CD pipeline
-- [ ] Configure monitoring and alerting
-- [ ] Set up logging
-- [ ] Configure backups
-- [ ] Implement disaster recovery plan
-
-### Testing (TDD)
-- [ ] Write acceptance tests for proposal drafting
-- [ ] Write acceptance tests for traceability (FR-010)
-- [ ] Write acceptance tests for curation workflows
-- [ ] Write regression tests
-- [ ] Performance testing
-- [ ] Security testing
-
----
-
-## 🎯 Phase 7: Advanced Features & Production
-
-### High Priority
-
-#### FR-027: Website Scraping Scheduling
-- [ ] Allow users to schedule regular re-scraping
-- [ ] Implement daily, weekly, monthly schedules
-- [ ] Implement incremental updates (FR-028)
-- [ ] Only process new or changed files
-- [ ] Detect file changes via last modified date or hash
-- [ ] Notify user of new files found
-- [ ] Allow user to review new files before ingestion
-- [ ] Track scraping history per website
-
-#### FR-023: Watchers and Notifications
-- [ ] Implement watcher system for websites
-- [ ] Implement watcher system for topics
-- [ ] Implement watcher system for entities
-- [ ] Implement watcher system for blocks
-- [ ] Implement watcher system for claims
-- [ ] Implement watcher system for discussions
-- [ ] Implement watcher system for review queues
-- [ ] Add notification triggers for all watchable events
-- [ ] Configure notification preferences
-- [ ] Add notification delivery (email, in-app)
-
-#### FR-024: Community Trust
-- [ ] Implement trusted user tracking
-- [ ] Add view tracking for blocks
-- [ ] Implement trust scoring algorithm
-- [ ] Add trust score display
-
-#### Production Deployment
-- [ ] Deploy to production environment
-- [ ] Migrate data from staging
-- [ ] Configure production monitoring
-- [ ] Set up production backups
-- [ ] Implement production support processes
-
----
-
-## 📊 Non-Functional Requirements Tasks
-
-### High Priority
-- [ ] **NFR-001** Human judgment is not optional - Design all workflows to require human approval for critical decisions
-- [ ] **NFR-002** Every claim must be traceable - Implement provenance tracking (website URL, file URL, date, curator)
-- [ ] **NFR-003** Honesty over presentation - Design UI to surface difficulties, risks, gaps
-- [ ] **NFR-004** Expiry is a feature - Implement validity period enforcement
-- [ ] **NFR-005** Support multi-model agentic workflows - Avoid model lock-in
-- [ ] **NFR-006** Test-driven development - Write tests before implementation
-- [ ] **NFR-007** Immutable audit trails - Implement audit logging for all changes
-- [ ] **NFR-008** Separation of concerns - Keep curated knowledge separate from contested knowledge
-- [ ] **NFR-009** Respectful scraping - Honor robots.txt, rate limits, website terms
-- [ ] **NFR-010** Scalable crawling - Handle websites with thousands of pages efficiently
-
----
-
-## 🎨 UI/UX Tasks
-
-### Website Scraping UI
-- [ ] Design website input interface
-- [ ] Create crawling progress visualization
-- [ ] Design file list layout
-- [ ] Create file card component
-- [ ] Design file preview modal
-- [ ] Create selection controls
-- [ ] Design confirmation dialog
-- [ ] Create ingestion progress display
-
-### Curation UI
-- [ ] Design curator dashboard
-- [ ] Design validation card display
-- [ ] Create curation action buttons
-- [ ] Design curation history view
-- [ ] Create maintenance tag display
-
-### Proposal Writer UI
-- [ ] Design knowledge card browser
-- [ ] Create proposal drafting interface
-- [ ] Design card selection workflow
-- [ ] Create proposal preview
-
-### Admin UI
-- [ ] Design website management interface
-- [ ] Create user management interface
-- [ ] Design system settings interface
-- [ ] Create monitoring dashboard
-
----
-
-## 🔧 Infrastructure Tasks
-
-### Backend Infrastructure
-- [ ] Set up Python environment
-- [ ] Configure Neo4j database
-- [ ] Set up Redis for caching
-- [ ] Configure authentication/authorization
-- [ ] Set up logging
-- [ ] Configure monitoring
-- [ ] Set up backup strategy
+### API Infrastructure
+- [ ] T014 Setup FastAPI router structure in `backend/app/api/v1/`
+- [ ] T015 Create base response models and error handling middleware
+- [ ] T016 Implement request logging and monitoring middleware
+- [ ] T017 Setup rate limiting (100 req/min for authenticated users)
 
 ### Frontend Infrastructure
-- [ ] Set up React environment
-- [ ] Configure TypeScript
-- [ ] Set up build tools
-- [ ] Configure routing
-- [ ] Set up state management
-- [ ] Configure API client
+- [ ] T018 [P] Setup React Router with protected routes
+- [ ] T019 [P] Create API service layer with Axios interceptors
+- [ ] T020 [P] Implement authentication context and hooks
+- [ ] T021 Create base layout and navigation components
 
-### DevOps
-- [ ] Set up Docker containers
-- [ ] Configure Docker Compose
-- [ ] Set up development environment
-- [ ] Configure CI/CD pipeline
-- [ ] Set up staging environment
-- [ ] Set up production environment
+### Testing Infrastructure
+- [ ] T022 Setup pytest with pytest-asyncio for backend testing
+- [ ] T023 Setup Jest with React Testing Library for frontend testing
+- [ ] T024 Configure test coverage reporting for both backend and frontend
+
+**Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
 ---
 
-## 📈 Analytics & Reporting Tasks
+## Phase 3: User Story 1 - Website Definition (US-SCR-001) 🎯 MVP ✅ 90% Backend / ❌ 10% Frontend
 
-- [ ] Implement user activity tracking
-- [ ] Add system performance metrics
-- [ ] Create crawling statistics dashboard
-- [ ] Implement ingestion metrics
-- [ ] Create data quality reports
-- [ ] Add curator productivity reports
-- [ ] Create system health dashboard
+**Goal**: Enable users to define websites for scraping with URL validation and metadata extraction
 
----
+**Independent Test**: User can input a valid URL, system validates it, and creates a Website record with metadata
 
-## 🎓 Training & Onboarding Tasks
+### Tests for User Story 1 ⚠️
 
-- [ ] Create website scraper training materials
-- [ ] Develop curator training
-- [ ] Create proposal writer training
-- [ ] Develop administrator training
-- [ ] Create user onboarding workflow
-- [ ] Implement in-app help system
+- [ ] T025 [P] [US-SCR-001] Contract test for website creation in `backend/tests/contract/test_websites.py` 🚧
+- [ ] T026 [P] [US-SCR-001] Integration test for URL validation in `backend/tests/integration/test_website_validation.py` 🚧
+- [ ] T027 [P] [US-SCR-001] Frontend component test for website form in `frontend/src/tests/WebsiteForm.test.tsx` 🚧
 
----
+### Implementation for User Story 1
 
-## Summary Statistics
+#### Backend Implementation ✅
+- [x] T028 [US-SCR-001] Create Website model in `backend/app/models/sql/website.py` ✅
+- [x] T029 [US-SCR-001] Implement URL validation utility in `backend/app/utils/validation.py` ✅
+- [x] T030 [US-SCR-001] Create website service in `backend/app/services/website_service.py` ✅
+- [x] T031 [US-SCR-001] Implement website creation endpoint in `backend/app/api/v1/endpoints/websites.py` ✅
+- [x] T032 [US-SCR-001] Add metadata extraction (title, description, robots.txt, sitemap.xml) ✅
+- [x] T033 [US-SCR-001] Implement website listing endpoint with pagination ✅
+- [x] T034 [US-SCR-001] Add error handling for invalid URLs and duplicate websites ✅
 
-| Phase | Total Tasks | High Priority | Medium Priority | Completed |
-|-------|-------------|---------------|-----------------|-----------|
-| Phase 1 | ~85 | 65 | 20 | 0 |
-| Phase 2 | ~60 | 45 | 15 | 0 |
-| Phase 3 | ~40 | 30 | 10 | 0 |
-| Phase 4 | ~50 | 40 | 10 | 0 |
-| Phase 5 | ~35 | 25 | 10 | 0 |
-| Phase 6 | ~45 | 35 | 10 | 0 |
-| Phase 7 | ~30 | 20 | 10 | 0 |
-| **Total** | **~345** | **~260** | **~85** | **0** |
+#### Frontend Implementation ❌
+- [ ] T035 [US-SCR-001] Create WebsiteForm component in `frontend/src/components/WebsiteForm.tsx` 🚧
+- [ ] T036 [US-SCR-001] Create WebsiteList component in `frontend/src/components/WebsiteList.tsx` 🚧
+- [ ] T037 [US-SCR-001] Create WebsiteManagement page in `frontend/src/pages/WebsiteManagement.tsx` 🚧
+- [ ] T038 [US-SCR-001] Implement API service methods for website CRUD operations 🚧
+- [ ] T039 [US-SCR-001] Add form validation and error display 🚧
+- [ ] T040 [US-SCR-001] Implement success notifications and navigation 🚧
+
+**Checkpoint**: Users can define websites with URL validation and see basic metadata
 
 ---
 
-## Next Steps
+## Phase 4: User Story 2 - Automatic Website Exploration (US-SCR-002) ✅ 70% Backend / ❌ 0% Frontend
 
-1. **Start with Phase 1** - Website crawling and file discovery are the foundation of v3.0
-2. **Follow TDD approach** - Write tests before implementation (NFR-006)
-3. **Focus on new workflow** - Prioritize FR-001, FR-002, FR-003 for website-first approach
-4. **Validate frequently** - Test with real humanitarian websites early
-5. **Involve users early** - Get feedback on file discovery and selection UI
-6. **Iterate on scraping** - Refine crawler based on real-world website structures
+**Goal**: System automatically crawls websites to discover all scrapable files with robots.txt compliance
+
+**Independent Test**: Given a website URL, system discovers files and stores them as DiscoveredFile records
+
+### Tests for User Story 2 ⚠️
+
+- [ ] T041 [P] [US-SCR-002] Contract test for scraping endpoints in `backend/tests/contract/test_scraping.py` 🚧
+- [ ] T042 [P] [US-SCR-002] Integration test for crawler in `backend/tests/integration/test_crawler.py` 🚧
+- [ ] T043 [P] [US-SCR-002] Unit test for robots.txt parser in `backend/tests/unit/test_robots.py` 🚧
+
+### Implementation for User Story 2
+
+#### Backend Implementation ✅
+- [x] T044 [US-SCR-002] Create DiscoveredFile model in `backend/app/models/sql/discovered_file.py` ✅
+- [x] T045 [US-SCR-002] Create ScrapeSession model in `backend/app/models/sql/scrape_session.py` ✅
+- [x] T046 [US-SCR-002] Implement robots.txt parser in `backend/app/services/robots_parser.py` ✅
+- [x] T047 [US-SCR-002] Implement sitemap.xml parser in `backend/app/services/sitemap_parser.py` 🚧 (declared but not implemented)
+- [x] T048 [US-SCR-002] Create website crawler service in `backend/app/services/crawler_service.py` ✅
+- [x] T049 [US-SCR-002] Implement crawling with requests/BeautifulSoup and Playwright fallback ✅
+- [x] T050 [US-SCR-002] Add rate limiting and respectful crawling (crawl-delay, concurrency limits) ✅
+- [x] T051 [US-SCR-002] Implement file discovery and metadata extraction ✅
+- [x] T052 [US-SCR-002] Create scraping endpoint in `backend/app/api/v1/endpoints/websites.py` ✅
+- [x] T053 [US-SCR-002] Add scrape status tracking and progress reporting ✅
+- [x] T054 [US-SCR-002] Implement error handling for crawling failures ✅
+
+#### Frontend Implementation ❌
+- [ ] T055 [US-SCR-002] Add scraping controls to WebsiteManagement page 🚧
+- [ ] T056 [US-SCR-002] Create ScrapeProgress component in `frontend/src/components/ScrapeProgress.tsx` 🚧
+- [ ] T057 [US-SCR-002] Implement real-time progress updates via websockets or polling 🚧
+- [ ] T058 [US-SCR-002] Add error display for crawling issues 🚧
+- [ ] T059 [US-SCR-002] Implement scrape cancellation functionality 🚧
+
+**Checkpoint**: System can automatically explore websites and discover files while respecting robots.txt
+
+---
+
+## Phase 5: User Story 3 - File Selection & Preview (US-SCR-003, US-SCR-004) ✅ 60% Backend / ❌ 0% Frontend
+
+**Goal**: Users can review discovered files with metadata and preview content before selection
+
+**Independent Test**: User can view file list, filter/group files, preview content, and select files for ingestion
+
+### Tests for User Story 3 ⚠️
+
+- [ ] T060 [P] [US-SCR-003] Contract test for file listing in `backend/tests/contract/test_files.py` 🚧
+- [ ] T061 [P] [US-SCR-003] Integration test for file selection in `backend/tests/integration/test_file_selection.py` 🚧
+- [ ] T062 [P] [US-SCR-004] Unit test for file preview extraction in `backend/tests/unit/test_preview.py` 🚧
+
+### Implementation for User Story 3
+
+#### Backend Implementation ✅
+- [x] T063 [US-SCR-003] Implement file listing endpoint with filtering in `backend/app/api/v1/endpoints/files.py` ✅
+- [x] T064 [US-SCR-003] Add pagination and sorting support ✅
+- [x] T065 [US-SCR-003] Implement file selection/deselection endpoints ✅
+- [x] T066 [US-SCR-003] Add bulk selection operations (select all, by type, by date) ✅
+- [ ] T067 [US-SCR-004] Implement file preview service in `backend/app/services/preview_service.py` 🚧 (TODO in code)
+- [ ] T068 [US-SCR-004] Add preview endpoint for different file types (PDF, DOCX, HTML, etc.) 🚧 (TODO in code)
+- [ ] T069 [US-SCR-004] Implement text extraction for preview generation 🚧 (TODO in code)
+- [x] T070 [US-SCR-003] Add file metadata enhancement (size, type, last modified, etc.) ✅
+- [x] T071 [US-SCR-003] Implement search functionality for discovered files ✅
+
+#### Frontend Implementation ❌
+- [ ] T072 [US-SCR-003] Create FileList component in `frontend/src/components/FileList.tsx` 🚧
+- [ ] T073 [US-SCR-003] Create FileFilter controls in `frontend/src/components/FileFilter.tsx` 🚧
+- [ ] T074 [US-SCR-003] Create FilePreview panel in `frontend/src/components/FilePreview.tsx` 🚧
+- [ ] T075 [US-SCR-003] Implement file selection interface with checkboxes and bulk actions 🚧
+- [ ] T076 [US-SCR-003] Add file grouping by type/date/size 🚧
+- [ ] T077 [US-SCR-004] Implement preview loading with spinners and error handling 🚧
+- [ ] T078 [US-SCR-003] Add selection summary (X of Y files selected) 🚧
+- [ ] T079 [US-SCR-003] Implement search and filter functionality 🚧
+- [ ] T080 [US-SCR-003] Add keyboard navigation and accessibility features 🚧
+
+**Checkpoint**: Users can review, filter, preview, and select files for ingestion
+
+---
+
+## Phase 6: User Story 4 - Automatic Ingestion (US-SCR-005) 🚧 20% Backend / ❌ 0% Frontend
+
+**Goal**: Selected files are automatically ingested with progress tracking and error handling
+
+**Independent Test**: User selects files, clicks "Start Ingestion", system processes files and shows progress
+
+### Tests for User Story 4 ⚠️
+
+- [ ] T081 [P] [US-SCR-005] Contract test for ingestion endpoints in `backend/tests/contract/test_ingestion.py` 🚧
+- [ ] T082 [P] [US-SCR-005] Integration test for ingestion workflow in `backend/tests/integration/test_ingestion_workflow.py` 🚧
+- [ ] T083 [P] [US-SCR-005] Unit test for ingestion job manager in `backend/tests/unit/test_ingestion_job.py` 🚧
+
+### Implementation for User Story 4
+
+#### Backend Implementation 🚧
+- [x] T084 [US-SCR-005] Create IngestionJob model in `backend/app/models/sql/ingestion_job.py` ✅
+- [x] T085 [US-SCR-005] Create Document model in `backend/app/models/sql/document.py` ✅
+- [ ] T086 [US-SCR-005] Implement ingestion job manager in `backend/app/services/ingestion_manager.py` 🚧 (stub only)
+- [ ] T087 [US-SCR-005] Create document download service in `backend/app/services/download_service.py` 🚧 (stub only)
+- [ ] T088 [US-SCR-005] Implement Docling integration for document parsing 🚧 (not implemented)
+- [ ] T089 [US-SCR-005] Implement MinerU fallback for complex documents 🚧 (not implemented)
+- [x] T090 [US-SCR-005] Create ingestion endpoint in `backend/app/api/v1/endpoints/websites.py` ✅
+- [ ] T091 [US-SCR-005] Implement progress tracking and status updates 🚧 (stub only)
+- [ ] T092 [US-SCR-005] Add retry logic for failed ingestion jobs 🚧 (not implemented)
+- [ ] T093 [US-SCR-005] Implement error handling and logging 🚧 (basic only)
+- [ ] T094 [US-SCR-005] Create ingestion status endpoint 🚧 (stub only)
+- [ ] T095 [US-SCR-005] Implement content hashing for duplicate detection 🚧 (not implemented)
+
+#### Frontend Implementation ❌
+- [ ] T096 [US-SCR-005] Create IngestionProgress component in `frontend/src/components/IngestionProgress.tsx` 🚧
+- [ ] T097 [US-SCR-005] Add ingestion controls to FileList interface 🚧
+- [ ] T098 [US-SCR-005] Implement real-time progress updates 🚧
+- [ ] T099 [US-SCR-005] Create ErrorPanel component in `frontend/src/components/ErrorPanel.tsx` 🚧
+- [ ] T100 [US-SCR-005] Add error display with retry functionality 🚧
+- [ ] T101 [US-SCR-005] Implement ingestion completion notifications 🚧
+- [ ] T102 [US-SCR-005] Add download logs functionality 🚧
+
+**Checkpoint**: Automatic ingestion pipeline with progress tracking and error handling
+
+---
+
+## Phase 7: User Story 5 - Scheduled Re-scraping (US-SCR-006) ❌ 0% Backend / ❌ 0% Frontend
+
+**Goal**: Users can schedule regular re-scraping of websites with incremental updates
+
+**Independent Test**: User sets schedule, system re-scrapes website and only processes new/changed files
+
+### Tests for User Story 5 ⚠️
+
+- [ ] T103 [P] [US-SCR-006] Contract test for scheduling endpoints in `backend/tests/contract/test_scheduling.py` 🚧
+- [ ] T104 [P] [US-SCR-006] Integration test for incremental updates in `backend/tests/integration/test_incremental.py` 🚧
+
+### Implementation for User Story 5
+
+#### Backend Implementation ❌
+- [ ] T105 [US-SCR-006] Add schedule fields to Website model 🚧
+- [ ] T106 [US-SCR-006] Implement scheduling service in `backend/app/services/scheduling_service.py` 🚧
+- [ ] T107 [US-SCR-006] Create scheduled scrape job manager 🚧
+- [ ] T108 [US-SCR-006] Implement content hash comparison for change detection 🚧
+- [ ] T109 [US-SCR-006] Add scheduling endpoints (create, update, delete schedules) 🚧
+- [ ] T110 [US-SCR-006] Implement incremental scraping logic 🚧
+- [ ] T111 [US-SCR-006] Add notification system for new files found 🚧
+- [ ] T112 [US-SCR-006] Implement schedule management in admin interface 🚧
+
+#### Frontend Implementation ❌
+- [ ] T113 [US-SCR-006] Add scheduling controls to WebsiteManagement page 🚧
+- [ ] T114 [US-SCR-006] Create ScheduleForm component in `frontend/src/components/ScheduleForm.tsx` 🚧
+- [ ] T115 [US-SCR-006] Implement schedule listing and management 🚧
+- [ ] T116 [US-SCR-006] Add notifications for re-scraping results 🚧
+
+**Checkpoint**: Scheduled re-scraping with incremental updates and notifications
+
+---
+
+## Phase 8: Knowledge Graph & Curation (Core System) ❌ 0% Backend / ❌ 0% Frontend
+
+**Purpose**: Implement knowledge extraction, graph storage, and curation workflows
+
+### Knowledge Graph Implementation
+- [ ] T117 Create Entity model for knowledge graph nodes 🚧
+- [ ] T118 Create SemanticTriplet model for relationships 🚧
+- [ ] T119 Implement knowledge extraction service 🚧
+- [ ] T120 Create graph storage service with Neo4j integration 🚧
+- [ ] T121 Implement provenance tracking system 🚧
+- [ ] T122 Create knowledge reconciliation service 🚧
+- [ ] T123 Implement contradiction detection algorithms 🚧
+
+### Knowledge Cards Implementation
+- [ ] T124 Create KnowledgeCard model with 6 card types 🚧
+- [ ] T125 Create WikiBlock model with verification states 🚧
+- [ ] T126 Implement card generation service 🚧
+- [ ] T127 Create card lifecycle management (draft→approved→expired) 🚧
+- [ ] T128 Implement validity period enforcement 🚧
+
+### Curation Workflows
+- [ ] T129 Create ValidationCard model and workflows 🚧
+- [ ] T130 Implement three-surface curation model 🚧
+- [ ] T131 Create DiscussionThread and DiscussionComment models 🚧
+- [ ] T132 Implement review tier system (Tier 1, 2, 3) 🚧
+- [ ] T133 Create curation interface with inline controls 🚧
+- [ ] T134 Implement verification state transitions 🚧
+
+### Frontend Curation Interface
+- [ ] T135 Create KnowledgeCard browser and editor 🚧
+- [ ] T136 Implement WikiBlock curation controls 🚧
+- [ ] T137 Create ValidationCard interface 🚧
+- [ ] T138 Build DiscussionThread interface 🚧
+- [ ] T139 Implement curation dashboards and analytics 🚧
+
+**Checkpoint**: Complete knowledge extraction, storage, and curation system
+
+---
+
+## Phase 9: API & Integration ❌ 0% Backend / ❌ 0% Frontend
+
+**Purpose**: Complete API implementation and system integration
+
+### API Endpoints Implementation
+- [ ] T140 Implement all remaining API endpoints from contracts/ 🚧
+- [ ] T141 Add comprehensive input validation 🚧
+- [ ] T142 Implement OpenAPI documentation 🚧
+- [ ] T143 Add API versioning support 🚧
+- [ ] T144 Implement webhook system 🚧
+
+### System Integration
+- [ ] T145 Integrate website crawling with ingestion pipeline 🚧
+- [ ] T146 Connect knowledge extraction to curation workflows 🚧
+- [ ] T147 Implement end-to-end workflow testing 🚧
+- [ ] T148 Add system health checks and monitoring 🚧
+
+**Checkpoint**: Complete API and fully integrated system
+
+---
+
+## Phase 10: Testing & Quality Assurance ❌ 0% Complete
+
+**Purpose**: Comprehensive testing and quality assurance
+
+### Testing Tasks
+- [ ] T149 [P] Complete unit test coverage for all services 🚧
+- [ ] T150 [P] Complete integration tests for all workflows 🚧
+- [ ] T151 [P] Add contract tests for all API endpoints 🚧
+- [ ] T152 [P] Implement end-to-end testing with Playwright 🚧
+- [ ] T153 [P] Add performance testing for critical paths 🚧
+- [ ] T154 [P] Implement security testing (penetration, vulnerability scanning) 🚧
+
+### Quality Assurance
+- [ ] T155 Code review and refactoring 🚧
+- [ ] T156 Documentation completion and validation 🚧
+- [ ] T157 Accessibility audit (WCAG 2.1 AA compliance) 🚧
+- [ ] T158 Performance optimization 🚧
+- [ ] T159 Security hardening 🚧
+- [ ] T160 Run quickstart.md validation 🚧
+
+**Checkpoint**: Production-ready system with comprehensive testing
+
+---
+
+## Phase 11: Deployment & Operations ⚠️ 30% Complete
+
+**Purpose**: Production deployment and operational readiness
+
+### Deployment Tasks
+- [x] T161 Setup production Docker Compose configuration ✅ (basic setup exists)
+- [ ] T162 Configure Kubernetes deployment manifests 🚧
+- [ ] T163 Implement CI/CD pipeline (GitHub Actions) 🚧
+- [ ] T164 Setup monitoring and alerting (Prometheus + Grafana) 🚧
+- [ ] T165 Configure logging and log rotation 🚧
+- [ ] T166 Implement backup and restore procedures 🚧
+
+### Operational Tasks
+- [ ] T167 Create deployment documentation 🚧
+- [ ] T168 Setup user management and RBAC 🚧
+- [ ] T169 Implement data retention policies 🚧
+- [ ] T170 Create runbooks for common operations 🚧
+- [ ] T171 Setup disaster recovery procedures 🚧
+
+**Checkpoint**: Production deployment ready with operational documentation
+
+---
+
+## Dependencies & Execution Order
+
+### Phase Dependencies
+
+- **Setup (Phase 1)**: No dependencies - can start immediately
+- **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories
+- **User Stories (Phase 3-7)**: All depend on Foundational phase completion
+  - User stories can proceed in parallel (if staffed)
+  - Or sequentially in priority order (US-SCR-001 → US-SCR-002 → US-SCR-003 → US-SCR-004 → US-SCR-005)
+- **Core System (Phase 8)**: Depends on user story completion (especially ingestion)
+- **API & Integration (Phase 9)**: Depends on core system implementation
+- **Testing & QA (Phase 10)**: Depends on complete system implementation
+- **Deployment (Phase 11)**: Final phase, depends on all previous phases
+
+### User Story Dependencies
+
+- **US-SCR-001 (Website Definition)**: No dependencies - can start after Foundational
+- **US-SCR-002 (Automatic Exploration)**: Depends on US-SCR-001 (needs websites to crawl)
+- **US-SCR-003/004 (File Selection)**: Depends on US-SCR-002 (needs discovered files)
+- **US-SCR-005 (Automatic Ingestion)**: Depends on US-SCR-003 (needs selected files)
+- **US-SCR-006 (Scheduled Re-scraping)**: Depends on US-SCR-001, US-SCR-002, US-SCR-005
+
+### Within Each User Story
+
+1. Tests (if included) MUST be written and FAIL before implementation
+2. Models before services
+3. Services before endpoints
+4. Backend before frontend integration
+5. Core implementation before error handling and edge cases
+6. Story complete before moving to next priority
+
+### Parallel Opportunities
+
+**Setup Phase (Phase 1)**:
+```bash
+# All setup tasks can run in parallel
+Task: "Create project structure per implementation plan"
+Task: "Initialize Python 3.11 backend with FastAPI dependencies"
+Task: "Initialize React/TypeScript frontend with required dependencies"
+Task: "Configure backend linting (Black, isort, flake8) and formatting"
+Task: "Configure frontend linting (ESLint, Prettier) and formatting"
+```
+
+**Foundational Phase (Phase 2)**:
+```bash
+# Database tasks can run in parallel
+Task: "Setup Neo4j connection and session management"
+Task: "Create base models for core entities"
+Task: "Implement Alembic migrations for Neo4j schema management"
+
+# Authentication tasks can run in parallel
+Task: "Implement JWT authentication system with FastAPI"
+Task: "Create role-based access control (RBAC) middleware"
+Task: "Setup API security headers and CORS configuration"
+```
+
+**User Story Implementation**:
+```bash
+# Different user stories can run in parallel
+Task: "US-SCR-001: Website Definition" (Team A)
+Task: "US-SCR-002: Automatic Website Exploration" (Team B)
+Task: "US-SCR-003: File Selection & Preview" (Team C)
+
+# Within a user story, parallel tasks
+Task: "Contract test for website creation"
+Task: "Integration test for URL validation"
+Task: "Frontend component test for website form"
+```
+
+---
+
+## Implementation Strategy
+
+### MVP First (Minimum Viable Product)
+
+1. **Complete Setup + Foundational** (Phases 1-2)
+2. **Implement US-SCR-001** (Website Definition)
+3. **Implement US-SCR-002** (Automatic Exploration)
+4. **Implement US-SCR-003/004** (File Selection & Preview)
+5. **Implement US-SCR-005** (Automatic Ingestion)
+6. **STOP and VALIDATE**: Test complete website-to-knowledge pipeline
+7. **Deploy/Demo MVP**: Functional system for basic use cases
+
+### Incremental Delivery Strategy
+
+1. **Foundation Ready**: Setup + Foundational complete
+2. **MVP 1**: Website definition and crawling (US-SCR-001, US-SCR-002)
+3. **MVP 2**: Add file selection and ingestion (US-SCR-003, US-SCR-004, US-SCR-005)
+4. **MVP 3**: Add scheduling and basic curation (US-SCR-006 + core curation)
+5. **Full System**: Complete knowledge graph, advanced curation, and API
+
+### Parallel Team Strategy (Recommended)
+
+**Team Structure**:
+- **Team A** (Backend Core): US-SCR-001, US-SCR-002, US-SCR-005
+- **Team B** (Frontend + Integration): US-SCR-003, US-SCR-004, US-SCR-006
+- **Team C** (Knowledge Graph + Curation): Phase 8 tasks
+- **Team D** (QA + DevOps): Testing, CI/CD, Deployment
+
+**Timeline**:
+- **Week 1-2**: Setup, Foundational, US-SCR-001 (Website Definition)
+- **Week 3-4**: US-SCR-002 (Crawling), US-SCR-003/004 (File Selection)
+- **Week 5-6**: US-SCR-005 (Ingestion), US-SCR-006 (Scheduling)
+- **Week 7-8**: Knowledge Graph, Curation, API Completion
+- **Week 9-10**: Testing, QA, Deployment Preparation
+
+---
+
+## Priority Matrix
+
+| Priority | User Story | Description | Estimated Effort |
+|----------|------------|-------------|------------------|
+| P1 🎯 | US-SCR-001 | Website Definition | 2-3 days |
+| P1 🎯 | US-SCR-002 | Automatic Exploration | 5-7 days |
+| P1 🎯 | US-SCR-003 | File Selection | 5-7 days |
+| P1 🎯 | US-SCR-004 | File Preview | 3-4 days |
+| P1 🎯 | US-SCR-005 | Automatic Ingestion | 7-10 days |
+| P2 | US-SCR-006 | Scheduled Re-scraping | 5-7 days |
+| P2 | Core System | Knowledge Graph & Curation | 10-14 days |
+| P2 | API | Complete API Implementation | 5-7 days |
+| P3 | Testing | Comprehensive Testing | 7-10 days |
+| P3 | Deployment | Production Deployment | 5-7 days |
 
 ---
 
 ## Notes
 
-- Tasks marked with **[FR-XXX]** correspond to Functional Requirements from spec.md
-- Tasks marked with **[NFR-XXX]** correspond to Non-Functional Requirements from spec.md
-- Tasks marked with **[US-XXX]** correspond to User Stories from spec.md
-- All tasks should follow the Test-Driven Development approach (NFR-006)
-- Refer to spec.md v3.0 for detailed requirements and the new website-first workflow
-- Update this file as tasks are completed or new tasks are identified
+### Task Organization Principles
+
+- **[P] tasks** = different files, no dependencies - can run in parallel
+- **[Story] labels** map tasks to specific user stories for traceability
+- **Explicit file paths** based on project structure from plan.md
+- **Independent testing** - each user story should be testable on its own
+- **Fail-first testing** - write tests before implementation, ensure they fail first
+
+### Best Practices
+
+✅ **Small, focused tasks** - each task should be completable in <1 day
+✅ **Clear acceptance criteria** - know when a task is done
+✅ **File-level granularity** - specify exact files to modify/create
+✅ **Dependency awareness** - mark dependencies between tasks
+✅ **Parallel opportunities** - identify tasks that can run concurrently
+✅ **Checkpoint validation** - stop and test at each checkpoint
+
+### Avoid
+
+❌ **Vague tasks** - "Implement website crawling" (too broad)
+❌ **Same-file conflicts** - multiple tasks modifying the same file
+❌ **Cross-story dependencies** - tasks that break story independence
+❌ **Overly large tasks** - tasks that take >2 days
+❌ **Missing acceptance criteria** - unclear when task is complete
 
 ---
 
-## Revision History
+## Task Count Summary
 
-| Date | Version | Changes |
-|------|---------|---------|
-| 2026-05-12 | 3.0 | Major revision for website-first workflow. Reorganized all tasks to prioritize website crawling (Phase 1) and automatic ingestion (Phase 2). Added ~150 new tasks for website scraping, file discovery, and automatic ingestion. Total tasks increased from 188 to ~345. |
-| 2026-04-12 | 1.0 | Initial task list with 188 tasks |
+- **Total Tasks**: 171 tasks
+- **Setup Tasks**: 7 tasks
+- **Foundational Tasks**: 15 tasks
+- **User Story Tasks**: 80 tasks (US-SCR-001 to US-SCR-006)
+- **Core System Tasks**: 20 tasks
+- **API & Integration**: 8 tasks
+- **Testing & QA**: 10 tasks
+- **Deployment**: 11 tasks
+- **Parallel Opportunities**: ~60% of tasks can run in parallel
+
+---
+
+## Estimated Timeline
+
+### Sequential Implementation (Single Developer)
+- **Setup + Foundational**: 2-3 weeks
+- **User Stories (US-SCR-001 to US-SCR-006)**: 6-8 weeks
+- **Core System + API**: 4-6 weeks
+- **Testing + Deployment**: 3-4 weeks
+- **Total**: 15-21 weeks (3.5-5 months)
+
+### Parallel Implementation (4-Person Team)
+- **Setup + Foundational**: 1-2 weeks (team effort)
+- **User Stories**: 4-6 weeks (parallel implementation)
+- **Core System + API**: 3-4 weeks (parallel teams)
+- **Testing + Deployment**: 2-3 weeks (team effort)
+- **Total**: 10-15 weeks (2.5-3.5 months)
+
+---
+
+## Next Steps
+
+1. **Review tasks** with team and assign owners
+2. **Estimate effort** for each task (update timeline as needed)
+3. **Prioritize execution** based on dependencies and business needs
+4. **Begin implementation** with Setup and Foundational phases
+5. **Track progress** using task IDs and checkpoints
+
+**Ready for implementation!** 🚀
