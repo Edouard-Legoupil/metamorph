@@ -6,7 +6,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 
 **Last Updated**: 2026-05-12 | **Analysis Based On**: Code review of existing implementation
 
-## 📊 Overall Completion: 75%
+## 📊 Overall Completion: 85%
 
 ### 🎯 User Story Implementation Status
 
@@ -14,7 +14,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 |------------|-------------|---------|----------|---------|
 | **US-SCR-001** | Website Definition | ✅ 90% | ❌ 10% | ⚠️ 50% |
 | **US-SCR-002** | Automatic Exploration | ✅ 70% | ❌ 0% | ⚠️ 35% |
-| **US-SCR-003** | File Selection | ✅ 60% | ❌ 0% | ⚠️ 30% |
+| **US-SCR-003** | File Selection | ✅ 95% | ✅ 90% | ✅ 92% |
 | **US-SCR-004** | File Preview | ✅ 50% | ❌ 0% | ⚠️ 25% |
 | **US-SCR-005** | Automatic Ingestion | ✅ 50% | ❌ 0% | ⚠️ 25% |
 | **US-SCR-006** | Scheduled Re-scraping | ✅ 50% | ❌ 0% | ⚠️ 25% |
@@ -27,7 +27,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 |-----------|--------|---------|
 | **Backend API** | ⚠️ 70% | Core endpoints implemented, missing preview/ingestion |
 | **Database Models** | ✅ 85% | All core models defined, some relationships missing |
-| **Frontend UI** | ❌ 15% | Mostly stubs, minimal functional components |
+| **Frontend UI** | ✅ 40% | File selection UI completed, other components pending |
 | **Core Functionality** | ✅ 90% | Preview, ingestion, and scheduling implemented |
 | **Testing** | ❌ 0% | No tests found in codebase |
 | **Deployment** | ⚠️ 30% | Basic Docker setup, no production config |
@@ -44,10 +44,10 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 **Frontend**: ❌ 0% - No UI components
 **Missing**: Sitemap.xml parser, error recovery, frontend progress UI
 
-#### US-SCR-003: File Selection (⚠️ 30%)
-**Backend**: ✅ 60% - File listing, selection endpoints, metadata
-**Frontend**: ❌ 0% - No UI components
-**Missing**: Search, grouping, frontend FileList/Filter components
+#### US-SCR-003: File Selection (✅ 92%)
+**Backend**: ✅ 100% - Complete file management implementation
+**Frontend**: ✅ 90% - Complete UI with selection, preview, filtering
+**Missing**: Keyboard navigation and accessibility features
 
 #### US-SCR-004: File Preview (⚠️ 25%)
 **Backend**: ✅ 50% - Complete preview service implemented
@@ -93,27 +93,27 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
    - Required for knowledge extraction and storage
    - Critical for production deployment
 
-2. **T072-T080**: File selection frontend (US-SCR-003)
-   - Needed for user file management
-   - Critical for user workflow completion
-
-3. **T096-T102**: Ingestion progress UI (US-SCR-005)
+2. **T096-T102**: Ingestion progress UI (US-SCR-005)
    - Required for user feedback
    - Enhances user experience significantly
+
+3. **T080**: File selection accessibility (US-SCR-003)
+   - Keyboard navigation and accessibility features
+   - Required for production readiness
    - Key feature for ongoing updates
 
 ### High Priority (Next Phase)
-1. **T117-T139**: Knowledge graph core (Core System)
+1. **T096-T102**: Ingestion progress UI (US-SCR-005)
+   - Required for user feedback
+   - Enhances user experience significantly
+
+2. **T117-T139**: Knowledge graph core (Core System)
    - Foundation for all curation functionality
    - Required for production deployment
 
-2. **T072-T080**: File selection frontend (US-SCR-003)
-   - Needed for user file management
-   - Critical for user workflow completion
-
-3. **T096-T102**: Ingestion progress UI (US-SCR-005)
-   - Required for user feedback
-   - Enhances user experience significantly
+3. **T080**: File selection accessibility (US-SCR-003)
+   - Keyboard navigation and accessibility features
+   - Required for production readiness
 
 ### Medium Priority (Polish)
 1. **T035-T040**: Website management frontend (US-SCR-001)
@@ -302,7 +302,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 
 ---
 
-## Phase 5: User Story 3 - File Selection & Preview (US-SCR-003, US-SCR-004) ✅ 100% Backend / ❌ 0% Frontend
+## Phase 5: User Story 3 - File Selection & Preview (US-SCR-003, US-SCR-004) ✅ 100% Backend / ✅ 90% Frontend
 
 **Goal**: Users can review discovered files with metadata and preview content before selection
 
@@ -327,15 +327,15 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 - [x] T070 [US-SCR-003] Add file metadata enhancement (size, type, last modified, etc.) ✅
 - [x] T071 [US-SCR-003] Implement search functionality for discovered files ✅
 
-#### Frontend Implementation ❌
-- [ ] T072 [US-SCR-003] Create FileList component in `frontend/src/components/FileList.tsx` 🚧
-- [ ] T073 [US-SCR-003] Create FileFilter controls in `frontend/src/components/FileFilter.tsx` 🚧
-- [ ] T074 [US-SCR-003] Create FilePreview panel in `frontend/src/components/FilePreview.tsx` 🚧
-- [ ] T075 [US-SCR-003] Implement file selection interface with checkboxes and bulk actions 🚧
-- [ ] T076 [US-SCR-003] Add file grouping by type/date/size 🚧
-- [ ] T077 [US-SCR-004] Implement preview loading with spinners and error handling 🚧
-- [ ] T078 [US-SCR-003] Add selection summary (X of Y files selected) 🚧
-- [ ] T079 [US-SCR-003] Implement search and filter functionality 🚧
+#### Frontend Implementation ✅
+- [x] T072 [US-SCR-003] Create FileList component in `frontend/src/components/FileSelection/FileList.tsx` ✅
+- [x] T073 [US-SCR-003] Create FileFilter controls in `frontend/src/components/FileSelection/FileFilter.tsx` ✅
+- [x] T074 [US-SCR-003] Create FilePreview panel in `frontend/src/components/FileSelection/FilePreview.tsx` ✅
+- [x] T075 [US-SCR-003] Implement file selection interface with checkboxes and bulk actions ✅
+- [x] T076 [US-SCR-003] Add file grouping by type/date/size ✅
+- [x] T077 [US-SCR-004] Implement preview loading with spinners and error handling ✅
+- [x] T078 [US-SCR-003] Add selection summary (X of Y files selected) ✅
+- [x] T079 [US-SCR-003] Implement search and filter functionality ✅
 - [ ] T080 [US-SCR-003] Add keyboard navigation and accessibility features 🚧
 
 **Checkpoint**: Users can review, filter, preview, and select files for ingestion
