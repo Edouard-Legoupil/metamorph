@@ -16,6 +16,8 @@ class BM25SearchRequest(BaseModel):
     """Request model for BM25 search"""
     query: str
     limit: int = 10
+    metadata_filters: Optional[Dict[str, Any]] = None
+    metadata_weights: Optional[Dict[str, float]] = None
     
 
 class SemanticSearchRequest(BaseModel):
@@ -42,6 +44,8 @@ class AdvancedSearchRequest(BaseModel):
     limit: int = 10
     bm25_weight: float = 0.4
     semantic_weight: float = 0.6
+    metadata_filters: Optional[Dict[str, Any]] = None
+    metadata_weights: Optional[Dict[str, float]] = None
 
 
 @router.post("/bm25", response_model=Dict[str, Any])
@@ -49,21 +53,37 @@ async def bm25_search(
     request: BM25SearchRequest = Body(...)
 ) -> Dict[str, Any]:
     """
-    Perform BM25 keyword-based search
+    Perform BM25 keyword-based search with optional metadata filtering and reranking
     
     This endpoint uses the BM25 ranking algorithm to search for documents
-    based on keyword matching and term frequency.
+    based on keyword matching and term frequency. It also supports:
+    - Metadata filtering to restrict results to specific criteria
+    - Metadata-based reranking to boost results based on document attributes
     
     Args:
-        request: BM25SearchRequest containing query and limit
+        request: BM25SearchRequest containing query, limit, and optional metadata parameters
+        
+    Metadata Filtering Examples:
+        - {"card_type": "KC-3"} - Only return Outcome Evidence cards
+        - {"status": "approved"} - Only return approved content
+        - {"created_at": {"gte": "2023-01-01"}} - Only return content created after Jan 1, 2023
+        - {"tags": {"in": ["humanitarian", "conflict"]}} - Only return content with specific tags
+        
+    Metadata Reranking Examples:
+        - {"confidence_score": 0.3} - Boost higher confidence results
+        - {"created_at": 0.2} - Boost more recent content
+        - {"status": 0.4} - Boost approved content
+        - {"card_type": 0.1} - Apply card type specific boosts
         
     Returns:
-        Dictionary with search results including BM25 scores
+        Dictionary with search results including BM25 scores and metadata
     """
     try:
         results = search_service.bm25_search(
             query=request.query,
-            limit=request.limit
+            limit=request.limit,
+            metadata_filters=request.metadata_filters,
+            metadata_weights=request.metadata_weights
         )
         
         return {
@@ -71,7 +91,9 @@ async def bm25_search(
             "results": results,
             "count": len(results),
             "search_type": "bm25",
-            "message": f"Found {len(results)} results using BM25 search"
+            "message": f"Found {len(results)} results using BM25 search",
+            "metadata_filters_applied": bool(request.metadata_filters),
+            "metadata_reranking_applied": bool(request.metadata_weights)
         }
     except Exception as e:
         raise HTTPException(
@@ -163,31 +185,53 @@ async def advanced_search(
     request: AdvancedSearchRequest = Body(...)
 ) -> Dict[str, Any]:
     """
-    Perform advanced search with configurable search type
+    Perform advanced search with configurable search type and metadata support
     
     This endpoint provides a unified interface for all search types
-    (BM25, semantic, or hybrid) with configurable parameters.
+    (BM25, semantic, or hybrid) with configurable parameters. It also supports:
+    - Metadata filtering to restrict results to specific criteria
+    - Metadata-based reranking to boost results based on document attributes
     
     Args:
-        request: AdvancedSearchRequest with search parameters
+        request: AdvancedSearchRequest with search parameters and optional metadata
+        
+    Metadata Filtering Examples:
+        - {"card_type": "KC-3"} - Only return Outcome Evidence cards
+        - {"status": "approved"} - Only return approved content
+        - {"created_at": {"gte": "2023-01-01"}} - Only return content created after Jan 1, 2023
+        - {"tags": {"in": ["humanitarian", "conflict"]}} - Only return content with specific tags
+        
+    Metadata Reranking Examples:
+        - {"confidence_score": 0.3} - Boost higher confidence results
+        - {"created_at": 0.2} - Boost more recent content
+        - {"status": 0.4} - Boost approved content
+        - {"card_type": 0.1} - Apply card type specific boosts
         
     Returns:
-        Dictionary with search results based on selected search type
+        Dictionary with search results based on selected search type and metadata processing
     """
     try:
         result = search_service.advanced_search(
             query=request.query,
             query_embedding=request.embedding,
             search_type=request.search_type,
-            limit=request.limit
+            limit=request.limit,
+            metadata_filters=request.metadata_filters,
+            metadata_weights=request.metadata_weights
         )
         
-        # Add weights to response if hybrid
+        # Add weights and metadata info to response
         if request.search_type == "hybrid":
             result.update({
                 "bm25_weight": request.bm25_weight,
                 "semantic_weight": request.semantic_weight
             })
+        
+        # Add metadata usage info
+        result.update({
+            "metadata_filters_applied": bool(request.metadata_filters),
+            "metadata_reranking_applied": bool(request.metadata_weights)
+        })
         
         return result
     except Exception as e:

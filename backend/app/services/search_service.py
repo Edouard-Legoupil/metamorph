@@ -12,6 +12,7 @@ import math
 from typing import List, Dict, Any, Tuple, Optional
 from collections import defaultdict
 import re
+from datetime import datetime
 from app.database import get_db
 from app.models.sql.knowledge_card import KnowledgeCard, WikiBlock
 from app.models.sql.website import Website
@@ -30,12 +31,17 @@ class BM25:
         self.term_freq = defaultdict(lambda: defaultdict(int))
         self.idf = {}
         self.corpus_size = 0
+        self.metadata = {}  # Store metadata for each document
     
-    def add_document(self, doc_id: str, text: str):
-        """Add a document to the BM25 index."""
+    def add_document(self, doc_id: str, text: str, metadata: Optional[Dict[str, Any]] = None):
+        """Add a document to the BM25 index with optional metadata."""
         terms = self._tokenize(text)
         self.doc_len[doc_id] = len(terms)
         self.corpus_size += 1
+        
+        # Store metadata if provided
+        if metadata:
+            self.metadata[doc_id] = metadata
         
         # Update document frequency and term frequency
         for term in set(terms):  # Use set to count unique terms
@@ -91,6 +97,97 @@ class BM25:
                 scores[doc_id] += term_score
         
         return scores
+    
+    def filter_by_metadata(self, metadata_filters: Dict[str, Any]) -> List[str]:
+        """Filter documents by metadata criteria."""
+        if not metadata_filters or not self.metadata:
+            return list(self.doc_len.keys())
+        
+        filtered_docs = []
+        
+        for doc_id, doc_metadata in self.metadata.items():
+            match = True
+            
+            for key, value in metadata_filters.items():
+                if key not in doc_metadata:
+                    match = False
+                    break
+                    
+                if isinstance(value, dict):
+                    # Handle range queries (e.g., {"created_at": {"gte": "2023-01-01"}})
+                    if "gte" in value and doc_metadata[key] < value["gte"]:
+                        match = False
+                        break
+                    if "lte" in value and doc_metadata[key] > value["lte"]:
+                        match = False
+                        break
+                    if "in" in value and doc_metadata[key] not in value["in"]:
+                        match = False
+                        break
+                elif doc_metadata[key] != value:
+                    match = False
+                    break
+            
+            if match:
+                filtered_docs.append(doc_id)
+        
+        return filtered_docs
+    
+    def rerank_by_metadata(self, doc_scores: Dict[str, float], metadata_weights: Dict[str, float]) -> Dict[str, float]:
+        """Rerank documents based on metadata weights."""
+        if not metadata_weights or not self.metadata:
+            return doc_scores
+        
+        reranked_scores = {}
+        
+        for doc_id, score in doc_scores.items():
+            if doc_id not in self.metadata:
+                reranked_scores[doc_id] = score
+                continue
+            
+            metadata_boost = 1.0
+            doc_metadata = self.metadata[doc_id]
+            
+            # Apply metadata-based boosts
+            for metadata_key, weight in metadata_weights.items():
+                if metadata_key in doc_metadata:
+                    metadata_value = doc_metadata[metadata_key]
+                    
+                    # Different boost strategies based on metadata type
+                    if metadata_key == "confidence_score":
+                        # Higher confidence = higher boost (0-2x range)
+                        metadata_boost += weight * (metadata_value or 0) * 2
+                    elif metadata_key == "created_at":
+                        # More recent = higher boost (decay over time)
+                        if isinstance(metadata_value, datetime):
+                            days_old = (datetime.now() - metadata_value).days
+                            recency_boost = max(0, 1 - (days_old / 365))  # 1x boost for recent, 0 for >1 year old
+                            metadata_boost += weight * recency_boost
+                    elif metadata_key == "status":
+                        # Approved cards get higher boost
+                        if metadata_value == "approved":
+                            metadata_boost += weight * 1.5
+                        elif metadata_value == "draft":
+                            metadata_boost += weight * 0.5
+                    elif metadata_key == "card_type":
+                        # Different card types can have different base weights
+                        card_type_weights = {
+                            "KC-1": 1.2,  # Donor Intelligence
+                            "KC-2": 1.1,  # Field Context
+                            "KC-3": 1.3,  # Outcome Evidence
+                            "KC-4": 1.0,  # Partner Capacity
+                            "KC-5": 1.4,  # Track Record
+                            "KC-6": 1.2   # Crisis Political Economy
+                        }
+                        metadata_boost += weight * card_type_weights.get(metadata_value, 1.0)
+                    elif metadata_key == "tags":
+                        # More tags = slightly higher boost
+                        if isinstance(metadata_value, list):
+                            metadata_boost += weight * min(0.2, len(metadata_value) * 0.05)
+            
+            reranked_scores[doc_id] = score * metadata_boost
+        
+        return reranked_scores
 
 
 class SearchService:
@@ -101,34 +198,87 @@ class SearchService:
         self._initialize_search_index()
     
     def _initialize_search_index(self):
-        """Initialize the search index with data from the database."""
+        """Initialize the search index with data from the database including metadata."""
         try:
             db = next(get_db())
             
-            # Index knowledge cards
+            # Index knowledge cards with metadata
             knowledge_cards = db.query(KnowledgeCard).all()
             for card in knowledge_cards:
                 search_text = f"{card.title} {card.card_type} {card.domain}"
-                self.bm25.add_document(f"card_{card.id}", search_text)
                 
-                # Index wiki blocks for this card
+                # Extract comprehensive metadata
+                card_metadata = {
+                    'card_type': card.card_type.value if hasattr(card.card_type, 'value') else str(card.card_type),
+                    'domain': card.domain,
+                    'status': card.status.value if hasattr(card.status, 'value') else str(card.status),
+                    'created_at': card.created_at,
+                    'updated_at': card.updated_at,
+                    'created_by': card.created_by,
+                    'confidence_score': card.confidence_score,
+                    'tags': card.tags,
+                    'version': card.version,
+                    'validity_start': card.validity_start,
+                    'validity_end': card.validity_end,
+                    'source_count': len(card.source_websites or []) + len(card.source_documents or [])
+                }
+                
+                self.bm25.add_document(f"card_{card.id}", search_text, card_metadata)
+                
+                # Index wiki blocks for this card with metadata
                 blocks = db.query(WikiBlock).filter(WikiBlock.card_id == card.id).all()
                 for block in blocks:
                     block_text = f"{block.section_name} {block.content}"
-                    self.bm25.add_document(f"block_{block.id}", block_text)
+                    
+                    block_metadata = {
+                        'card_id': block.card_id,
+                        'section_name': block.section_name,
+                        'block_type': block.block_type.value if hasattr(block.block_type, 'value') else str(block.block_type),
+                        'verification_state': block.verification_state.value if hasattr(block.verification_state, 'value') else str(block.verification_state),
+                        'confidence_score': block.confidence_score,
+                        'created_at': block.created_at,
+                        'created_by': block.created_by,
+                        'is_live': block.is_live,
+                        'word_count': len(block.content.split()),
+                        'maintenance_tags': block.maintenance_tags
+                    }
+                    
+                    self.bm25.add_document(f"block_{block.id}", block_text, block_metadata)
             
-            # Index websites
+            # Index websites with metadata
             websites = db.query(Website).all()
             for website in websites:
                 website_text = f"{website.url} {website.title} {website.description}"
-                self.bm25.add_document(f"website_{website.id}", website_text)
+                
+                website_metadata = {
+                    'url': website.url,
+                    'domain': website.domain,
+                    'status': website.status.value if hasattr(website.status, 'value') else str(website.status),
+                    'created_at': website.created_at,
+                    'updated_at': website.updated_at,
+                    'last_scraped_at': website.last_scraped_at,
+                    'total_files_discovered': website.total_files_discovered,
+                    'total_files_ingested': website.total_files_ingested,
+                    'scrape_frequency': website.scrape_frequency
+                }
+                
+                self.bm25.add_document(f"website_{website.id}", website_text, website_metadata)
                 
         except Exception as e:
             print(f"Error initializing search index: {e}")
     
-    def bm25_search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
-        """Perform BM25 search on indexed content."""
+    def bm25_search(self, query: str, limit: int = 10, metadata_filters: Optional[Dict[str, Any]] = None, metadata_weights: Optional[Dict[str, float]] = None) -> List[Dict[str, Any]]:
+        """Perform BM25 search on indexed content with optional metadata filtering and reranking."""
         scores = self.bm25.calculate_scores(query)
+        
+        # Apply metadata filtering if provided
+        if metadata_filters:
+            filtered_docs = self.bm25.filter_by_metadata(metadata_filters)
+            scores = {doc_id: score for doc_id, score in scores.items() if doc_id in filtered_docs}
+        
+        # Apply metadata reranking if provided
+        if metadata_weights:
+            scores = self.bm25.rerank_by_metadata(scores, metadata_weights)
         
         # Sort by score descending
         sorted_results = sorted(scores.items(), key=lambda x: x[1], reverse=True)
@@ -136,16 +286,22 @@ class SearchService:
         # Get top results
         top_results = sorted_results[:limit]
         
-        # Format results
+        # Format results with metadata
         results = []
         for doc_id, score in top_results:
             doc_type, doc_id_only = doc_id.split('_', 1)
-            results.append({
+            result = {
                 'id': doc_id,
                 'type': doc_type,
                 'score': score,
                 'document_id': doc_id_only
-            })
+            }
+            
+            # Include metadata if available
+            if doc_id in self.bm25.metadata:
+                result['metadata'] = self.bm25.metadata[doc_id]
+            
+            results.append(result)
         
         return results
     
@@ -217,12 +373,19 @@ class SearchService:
         return combined_results[:limit]
     
     def advanced_search(self, query: str, query_embedding: Optional[List[float]] = None, 
-                       search_type: str = "hybrid", limit: int = 10) -> Dict[str, Any]:
-        """Perform advanced search with configurable search type."""
+                       search_type: str = "hybrid", limit: int = 10,
+                       metadata_filters: Optional[Dict[str, Any]] = None,
+                       metadata_weights: Optional[Dict[str, float]] = None) -> Dict[str, Any]:
+        """Perform advanced search with configurable search type and optional metadata filtering/reranking."""
         results = []
         
         if search_type == "bm25" or search_type == "hybrid":
-            bm25_results = self.bm25_search(query, limit if search_type == "bm25" else limit * 2)
+            bm25_results = self.bm25_search(
+                query, 
+                limit if search_type == "bm25" else limit * 2,
+                metadata_filters=metadata_filters,
+                metadata_weights=metadata_weights if search_type == "bm25" else None
+            )
             results.extend(bm25_results)
         
         if search_type == "semantic" or search_type == "hybrid":
@@ -232,7 +395,26 @@ class SearchService:
         
         # If hybrid and we have both types of results, perform hybrid ranking
         if search_type == "hybrid" and query_embedding:
-            results = self.hybrid_search(query, query_embedding, limit)
+            # For hybrid search, apply metadata filtering to the combined results
+            if metadata_filters:
+                filtered_doc_ids = self.bm25.filter_by_metadata(metadata_filters)
+                results = [r for r in results if r['id'] in filtered_doc_ids]
+            
+            # Apply metadata reranking to hybrid results
+            if metadata_weights:
+                # Extract scores and apply metadata boosts
+                doc_scores = {r['id']: r.get('score', 0) for r in results}
+                boosted_scores = self.bm25.rerank_by_metadata(doc_scores, metadata_weights)
+                
+                # Update results with boosted scores
+                for result in results:
+                    result['score'] = boosted_scores[result['id']]
+                
+                # Re-sort by boosted scores
+                results.sort(key=lambda x: x['score'], reverse=True)
+                results = results[:limit]
+            else:
+                results = self.hybrid_search(query, query_embedding, limit)
         
         return {
             "success": True,
