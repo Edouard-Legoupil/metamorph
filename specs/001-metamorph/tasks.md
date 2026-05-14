@@ -6,7 +6,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 
 **Last Updated**: 2026-05-12 | **Analysis Based On**: Code review of existing implementation
 
-## 📊 Overall Completion: 60%
+## 📊 Overall Completion: 75%
 
 ### 🎯 User Story Implementation Status
 
@@ -17,7 +17,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 | **US-SCR-003** | File Selection | ✅ 60% | ❌ 0% | ⚠️ 30% |
 | **US-SCR-004** | File Preview | ✅ 50% | ❌ 0% | ⚠️ 25% |
 | **US-SCR-005** | Automatic Ingestion | ✅ 50% | ❌ 0% | ⚠️ 25% |
-| **US-SCR-006** | Scheduled Re-scraping | ❌ 0% | ❌ 0% | ❌ 0% |
+| **US-SCR-006** | Scheduled Re-scraping | ✅ 50% | ❌ 0% | ⚠️ 25% |
 
 **Legend**: ✅ Complete | ⚠️ Partial | 🚧 Stub/TODO | ❌ Missing
 
@@ -28,7 +28,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 | **Backend API** | ⚠️ 70% | Core endpoints implemented, missing preview/ingestion |
 | **Database Models** | ✅ 85% | All core models defined, some relationships missing |
 | **Frontend UI** | ❌ 15% | Mostly stubs, minimal functional components |
-| **Core Functionality** | ✅ 70% | Preview and ingestion implemented, scheduling pending |
+| **Core Functionality** | ✅ 90% | Preview, ingestion, and scheduling implemented |
 | **Testing** | ❌ 0% | No tests found in codebase |
 | **Deployment** | ⚠️ 30% | Basic Docker setup, no production config |
 
@@ -59,10 +59,10 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 **Frontend**: ❌ 0% - No UI components
 **Missing**: Frontend IngestionProgress component, UI integration
 
-#### US-SCR-006: Scheduled Re-scraping (❌ 0%)
-**Backend**: ❌ 0% - No implementation
+#### US-SCR-006: Scheduled Re-scraping (⚠️ 25%)
+**Backend**: ✅ 50% - Complete scheduling system implemented
 **Frontend**: ❌ 0% - No UI components
-**Missing**: Complete scheduling system
+**Missing**: Frontend scheduling controls and UI integration
 
 ### 🔧 Core System Components (❌ 0%)
 - Knowledge graph models and services
@@ -88,24 +88,10 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 ## 🎯 Critical Path Analysis
 
 ### Blocking Issues (Must Fix First)
-1. **T105-T116**: Scheduled scraping (US-SCR-006)
-   - Completely missing
-   - Key feature for ongoing updates
-   - Required for production deployment
-
-2. **T117-T139**: Knowledge graph core (Core System)
+1. **T117-T139**: Knowledge graph core (Core System)
    - Foundation for all curation functionality
    - Required for knowledge extraction and storage
-
-3. **T072-T080**: File selection frontend (US-SCR-003)
-   - Needed for user file management
-   - Critical for user workflow completion
-   - Key feature for ongoing updates
-
-### High Priority (Next Phase)
-1. **T105-T116**: Scheduled scraping (US-SCR-006)
-   - Required for production deployment
-   - Key feature for ongoing updates
+   - Critical for production deployment
 
 2. **T072-T080**: File selection frontend (US-SCR-003)
    - Needed for user file management
@@ -113,7 +99,21 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 
 3. **T096-T102**: Ingestion progress UI (US-SCR-005)
    - Required for user feedback
-   - Enhances user experience
+   - Enhances user experience significantly
+   - Key feature for ongoing updates
+
+### High Priority (Next Phase)
+1. **T117-T139**: Knowledge graph core (Core System)
+   - Foundation for all curation functionality
+   - Required for production deployment
+
+2. **T072-T080**: File selection frontend (US-SCR-003)
+   - Needed for user file management
+   - Critical for user workflow completion
+
+3. **T096-T102**: Ingestion progress UI (US-SCR-005)
+   - Required for user feedback
+   - Enhances user experience significantly
 
 ### Medium Priority (Polish)
 1. **T035-T040**: Website management frontend (US-SCR-001)
@@ -383,7 +383,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 
 ---
 
-## Phase 7: User Story 5 - Scheduled Re-scraping (US-SCR-006) ❌ 0% Backend / ❌ 0% Frontend
+## Phase 7: User Story 5 - Scheduled Re-scraping (US-SCR-006) ✅ 100% Backend / ❌ 0% Frontend
 
 **Goal**: Users can schedule regular re-scraping of websites with incremental updates
 
@@ -396,15 +396,15 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 
 ### Implementation for User Story 5
 
-#### Backend Implementation ❌
-- [ ] T105 [US-SCR-006] Add schedule fields to Website model 🚧
-- [ ] T106 [US-SCR-006] Implement scheduling service in `backend/app/services/scheduling_service.py` 🚧
-- [ ] T107 [US-SCR-006] Create scheduled scrape job manager 🚧
-- [ ] T108 [US-SCR-006] Implement content hash comparison for change detection 🚧
-- [ ] T109 [US-SCR-006] Add scheduling endpoints (create, update, delete schedules) 🚧
-- [ ] T110 [US-SCR-006] Implement incremental scraping logic 🚧
-- [ ] T111 [US-SCR-006] Add notification system for new files found 🚧
-- [ ] T112 [US-SCR-006] Implement schedule management in admin interface 🚧
+#### Backend Implementation ✅
+- [x] T105 [US-SCR-006] Add schedule fields to Website model ✅ (already existed)
+- [x] T106 [US-SCR-006] Implement scheduling service in `backend/app/services/scheduling_service.py` ✅
+- [x] T107 [US-SCR-006] Create scheduled scrape job manager ✅
+- [x] T108 [US-SCR-006] Implement content hash comparison for change detection ✅
+- [x] T109 [US-SCR-006] Add scheduling endpoints (create, update, delete schedules) ✅
+- [x] T110 [US-SCR-006] Implement incremental scraping logic ✅
+- [x] T111 [US-SCR-006] Add notification system for new files found ✅ (basic implementation)
+- [x] T112 [US-SCR-006] Implement schedule management in admin interface ✅ (API endpoints)
 
 #### Frontend Implementation ❌
 - [ ] T113 [US-SCR-006] Add scheduling controls to WebsiteManagement page 🚧
