@@ -24,6 +24,7 @@ from app.models.sql.settings import Topic, AppSettings
 from app.services.website_crawler.crawler import WebsiteCrawler, CloudflareConfig, CrawlConfig
 from app.services.preview_service import preview_service
 from app.services.ingestion_manager import ingestion_manager
+from app.services.scheduling_service import scheduling_service
 
 router = APIRouter(prefix="/websites", tags=["websites"])
 
@@ -694,6 +695,109 @@ async def get_ingestion_statistics(
     Get overall ingestion statistics.
     """
     return ingestion_manager.get_ingestion_stats(db)
+
+
+# Scheduled Scraping Endpoints
+
+@router.post("/{website_id}/schedule")
+async def schedule_website(
+    website_id: int,
+    db: Session = Depends(get_db),
+    api_key: str = Depends(get_api_key),
+) -> Dict[str, Any]:
+    """
+    Schedule a website for regular scraping.
+    """
+    return scheduling_service.schedule_website(db, website_id)
+
+
+@router.put("/{website_id}/schedule")
+async def update_website_schedule(
+    website_id: int,
+    frequency: str,
+    db: Session = Depends(get_db),
+    api_key: str = Depends(get_api_key),
+) -> Dict[str, Any]:
+    """
+    Update the schedule frequency for a website.
+    """
+    return scheduling_service.update_website_schedule(db, website_id, frequency)
+
+
+@router.delete("/{website_id}/schedule")
+async def cancel_website_schedule(
+    website_id: int,
+    db: Session = Depends(get_db),
+    api_key: str = Depends(get_api_key),
+) -> Dict[str, Any]:
+    """
+    Cancel scheduled scraping for a website.
+    """
+    return scheduling_service.cancel_website_schedule(website_id)
+
+
+@router.get("/{website_id}/schedule")
+async def get_website_schedule(
+    website_id: int,
+    api_key: str = Depends(get_api_key),
+) -> Dict[str, Any]:
+    """
+    Get schedule information for a website.
+    """
+    return scheduling_service.get_website_schedule(website_id)
+
+
+@router.post("/{website_id}/scrape-now")
+async def trigger_immediate_scrape(
+    website_id: int,
+    db: Session = Depends(get_db),
+    api_key: str = Depends(get_api_key),
+) -> Dict[str, Any]:
+    """
+    Trigger an immediate scrape of a website (outside of schedule).
+    """
+    return await scheduling_service.trigger_immediate_scrape(db, website_id)
+
+
+@router.get("/scheduling/schedules")
+async def get_all_schedules(
+    api_key: str = Depends(get_api_key),
+) -> List[Dict[str, Any]]:
+    """
+    Get all scheduled scraping jobs.
+    """
+    return scheduling_service.get_all_schedules()
+
+
+@router.post("/scheduling/pause")
+async def pause_all_schedules(
+    api_key: str = Depends(get_api_key),
+) -> Dict[str, Any]:
+    """
+    Pause all scheduled scraping jobs.
+    """
+    return scheduling_service.pause_all_schedules()
+
+
+@router.post("/scheduling/resume")
+async def resume_all_schedules(
+    api_key: str = Depends(get_api_key),
+) -> Dict[str, Any]:
+    """
+    Resume all scheduled scraping jobs.
+    """
+    return scheduling_service.resume_all_schedules()
+
+
+@router.get("/scheduling/stats")
+async def get_scheduling_statistics(
+    db: Session = Depends(get_db),
+    api_key: str = Depends(get_api_key),
+) -> Dict[str, Any]:
+    """
+    Get statistics about scheduled scraping.
+    """
+    return scheduling_service.get_scheduling_stats(db)
 
 
 @router.get("/{website_id}/scrape-status")
