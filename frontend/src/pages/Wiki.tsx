@@ -15,7 +15,7 @@ const CARD_TEMPLATES: Record<string, {title: string; description: string; sectio
       { name: "Organisational Structure", word_limit: 60 },
       { name: "Funding History", word_limit: 75 },
       { name: "Strategic Alignment", word_limit: 65 },
-      { name: "Active Pledges", word_limit: 20 },
+      { name: "Active Pledges", word_limit: 20, live: true },
       { name: "Contact Details", word_limit: 30, live: true },
       { name: "Key Contacts List", word_limit: 20, live: true },
     ]
@@ -85,6 +85,8 @@ export default function Wiki() {
   const [modalBlock, setModalBlock] = useState<any>(null);
   const [editingBlock, setEditingBlock] = useState<any>(null);
   const [editContent, setEditContent] = useState('');
+  const [showEditToolbar, setShowEditToolbar] = useState(false);
+  const [selectedText, setSelectedText] = useState('');
 
   // Load topics
   useEffect(() => {
@@ -154,6 +156,23 @@ export default function Wiki() {
   // Get template sections for the current card
   const templateSections = currentCardTemplate?.sections || [];
 
+  // Handle text selection for curation toolbar
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim().length > 0) {
+      const rect = selection.getRangeAt(0).getBoundingClientRect();
+      setSelectedText(selection.toString());
+      setShowEditToolbar(true);
+    } else {
+      setShowEditToolbar(false);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('mouseup', handleTextSelection);
+    return () => document.removeEventListener('mouseup', handleTextSelection);
+  }, []);
+
   return (
     <div style={{ minHeight: '100vh', background: '#f9fbfd', fontFamily: 'Open Sans, Arial, sans-serif', display: 'flex', margin: 0 }}>
       {/* Sidebar - Topic Navigation */}
@@ -219,41 +238,74 @@ export default function Wiki() {
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main style={{ flex: 1, padding: 40, background: '#fff', margin: '36px', boxShadow: '0 2px 24px #e5e7ea', borderRadius: 12, minHeight: 'calc(100vh - 80px)' }}>
-        {/* Page Header */}
-        <div style={{ marginBottom: 32 }}>
-          <h1 style={{ color: UNHCR_BLUE, fontSize: 28, marginBottom: 8 }}>
-            {currentTopic?.title || 'Knowledge Topic'}
-          </h1>
-          {currentCardTemplate && (
-            <div style={{ fontSize: 14, color: '#666' }}>
-              Template: <strong>{currentCardTemplate.title}</strong> | {currentCardTemplate.description}
+      {/* Main Content Area - Wikipedia-style */}
+      <main style={{ flex: 1, background: '#fff', margin: '36px', boxShadow: '0 2px 24px #e5e7ea', borderRadius: 12, minHeight: 'calc(100vh - 80px)', position: 'relative' }}>
+        {/* Wikipedia-style Header */}
+        <div style={{ borderBottom: '1px solid #a2a9b1', padding: '24px 40px', background: '#f8f9fa' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h1 style={{ color: '#202122', fontSize: 32, margin: 0, fontWeight: 'bold' }}>
+                {currentTopic?.title || 'Knowledge Topic'}
+              </h1>
+              {currentCardTemplate && (
+                <div style={{ fontSize: 16, color: '#54595d', marginTop: 4 }}>
+                  {currentCardTemplate.title}
+                </div>
+              )}
             </div>
-          )}
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+              {/* Wikipedia-style search */}
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type="text"
+                  placeholder="Search this topic"
+                  style={{
+                    padding: '8px 16px',
+                    border: '1px solid #a2a9b1',
+                    borderRadius: '2px',
+                    fontSize: 14,
+                    width: 200
+                  }}
+                />
+                <button style={{
+                  position: 'absolute',
+                  right: 2,
+                  top: 2,
+                  background: '#36c',
+                  color: 'white',
+                  border: 'none',
+                  padding: '6px 12px',
+                  borderRadius: '2px',
+                  cursor: 'pointer'
+                }}>Go</button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 24, borderBottom: '2px solid #eee' }}>
-          {[
-            { id: 'article', label: 'Article', icon: '📄' },
-            { id: 'curation', label: 'Curation', icon: '✏️' },
+        {/* Wikipedia-style Tabs */}
+        <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #a2a9b1', background: '#f8f9fa', padding: '0 40px' }}>
+          {[{ id: 'article', label: 'Article', icon: '📄' },
             { id: 'discussion', label: 'Discussion', icon: '💬' },
-            { id: 'history', label: 'History', icon: '📜' },
+            { id: 'curation', label: 'Curation', icon: '✏️' },
+            { id: 'history', label: 'View history', icon: '📜' },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as TabType)}
               style={{
-                padding: '12px 24px',
+                padding: '12px 20px',
                 background: 'none',
                 border: 'none',
+                borderRight: '1px solid #a2a9b1',
                 cursor: 'pointer',
-                fontSize: 16,
-                fontWeight: activeTab === tab.id ? 'bold' : 'normal',
-                color: activeTab === tab.id ? UNHCR_BLUE : '#666',
-                borderBottom: activeTab === tab.id ? `3px solid ${UNHCR_BLUE}` : 'none',
-                marginBottom: -2,
+                fontSize: 14,
+                fontWeight: 'normal',
+                color: activeTab === tab.id ? '#202122' : '#0645ad',
+                backgroundColor: activeTab === tab.id ? 'white' : 'transparent',
+                borderBottom: activeTab === tab.id ? 'none' : '1px solid #a2a9b1',
+                marginBottom: -1,
+                ':hover': { backgroundColor: '#f8f9fa' }
               }}
             >
               <span style={{ marginRight: 8 }}>{tab.icon}</span>
@@ -263,7 +315,7 @@ export default function Wiki() {
         </div>
 
         {/* Tab Content */}
-        <div style={{ padding: 16 }}>
+        <div style={{ padding: '32px 40px' }}>
           {error && (
             <div style={{ padding: 16, background: '#ffebee', borderRadius: 8, marginBottom: 24, color: '#c62828' }}>
               Error: {error}
@@ -276,167 +328,282 @@ export default function Wiki() {
             </div>
           ) : (
             <>
-              {/* ARTICLE TAB - View the curated content */}
+              {/* ARTICLE TAB - Wikipedia-style article view */}
               {activeTab === 'article' && (
-                <div>
-                  <h2 style={{ color: UNHCR_BLUE, fontSize: 20, marginBottom: 16 }}>Article Content</h2>
-                  <p style={{ color: '#666', marginBottom: 24 }}>
-                    This is the curated view of the knowledge topic. Only accepted, sourced, and current information is displayed.
-                  </p>
-                  
-                  {templateSections.length > 0 && (
-                    <div style={{ marginBottom: 24 }}>
-                      <strong>Template Sections:</strong>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-                        {templateSections.map(section => (
-                          <span key={section.name} style={{ 
-                            background: '#e3f2fd', 
-                            padding: '4px 12px', 
-                            borderRadius: 12, 
-                            fontSize: 12,
-                            color: UNHCR_BLUE
-                          }}>
-                            {section.name} ({section.word_limit}w)
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                  {/* Wikipedia-style article header */}
+                  <div style={{ 
+                    background: '#f8f9fa', 
+                    border: '1px solid #a2a9b1', 
+                    borderRadius: '4px', 
+                    padding: '16px', 
+                    marginBottom: '24px',
+                    fontSize: '14px',
+                    lineHeight: '1.6'
+                  }}>
+                    <strong>Knowledge Card Type:</strong> {currentCardTemplate?.title || 'Unknown'}<br />
+                    <strong>Template:</strong> {currentTopic?.cardTemplateId || 'None'}<br />
+                    <strong>Last Updated:</strong> {new Date().toLocaleDateString()}<br />
+                    <strong>Status:</strong> <span style={{ color: '#006600' }}>✓ Curated</span>
+                  </div>
 
-                  {blocks.length > 0 ? (
-                    blocks.map(block => (
-                      <div key={block.block_id} style={{ 
-                        marginBottom: 32, 
-                        padding: 24, 
-                        background: '#f7f9fb', 
-                        borderRadius: 8, 
-                        boxShadow: '0 1px 8px #e6e6f0',
-                        position: 'relative'
+                  {/* Wikipedia-style article content */}
+                  <div style={{ 
+                    fontSize: '16px', 
+                    lineHeight: '1.6', 
+                    color: '#202122'
+                  }}>
+                    {templateSections.length > 0 && (
+                      <div style={{ marginBottom: '24px' }}>
+                        <strong>Template Sections:</strong>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                          {templateSections.map(section => (
+                            <span key={section.name} style={{ 
+                              background: '#e3f2fd', 
+                              padding: '4px 12px', 
+                              borderRadius: '12px', 
+                              fontSize: '12px',
+                              color: UNHCR_BLUE
+                            }}>
+                              {section.name} ({section.word_limit}w)
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Wikipedia-style article sections */}
+                    {blocks.length > 0 ? (
+                      blocks.map((block, index) => (
+                        <div key={block.block_id} style={{ marginBottom: '32px' }}>
+                          {/* Wikipedia-style section header */}
+                          <h2 style={{ 
+                            fontSize: '22px', 
+                            fontWeight: 'bold', 
+                            color: '#202122', 
+                            borderBottom: '1px solid #a2a9b1', 
+                            paddingBottom: '8px', 
+                            marginBottom: '16px'
+                          }}>
+                            <span id={block.section_name.replace(/\s+/g, '_')}>{block.section_name}</span>
+                            {block.verification_status === "PENDING" && (
+                              <span style={{ 
+                                marginLeft: '12px', 
+                                fontSize: '14px', 
+                                color: '#d97706', 
+                                fontWeight: 'normal'
+                              }}>
+                                [Pending review]
+                              </span>
+                            )}
+                            {block.verification_status === "CONFLICT" && (
+                              <span style={{ 
+                                marginLeft: '12px', 
+                                fontSize: '14px', 
+                                color: '#c0392b', 
+                                fontWeight: 'normal'
+                              }}>
+                                [Conflict detected]
+                              </span>
+                            )}
+                            <span style={{ float: 'right', fontSize: '14px', color: '#666' }}>
+                              <a href="#cite_note-1" style={{ color: '#0645ad' }}>[edit]</a>
+                            </span>
+                          </h2>
+
+                          {/* Wikipedia-style content */}
+                          <div style={{ 
+                            fontSize: '16px', 
+                            lineHeight: '1.6', 
+                            color: '#202122', 
+                            marginBottom: '16px'
+                          }}>
+                            {block.template}
+                          </div>
+
+                          {/* Wikipedia-style provenance and actions */}
+                          <div style={{ 
+                            fontSize: '14px', 
+                            color: '#54595d', 
+                            marginTop: '16px', 
+                            paddingTop: '16px', 
+                            borderTop: '1px solid #e5e5e5'
+                          }}>
+                            <strong>Provenance:</strong> {block.page_id} &nbsp;|&nbsp; 
+                            <strong>Word limit:</strong> {block.word_limit} words &nbsp;|&nbsp; 
+                            <button 
+                              style={{ 
+                                background: '#2196f3', 
+                                color: 'white', 
+                                border: 'none', 
+                                borderRadius: '4px', 
+                                padding: '3px 11px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }} 
+                              onClick={() => setModalBlock(block)}
+                            >
+                              View provenance
+                            </button>
+                          </div>
+
+                          <BlockActions 
+                            blockId={block.block_id} 
+                            userId="stub-user" 
+                            verificationStatus={block.verification_status} 
+                            communityTrustScore={35} 
+                          />
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ 
+                        padding: '40px', 
+                        textAlign: 'center', 
+                        color: '#999', 
+                        fontStyle: 'italic'
                       }}>
-                        <div style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 6 }}>
-                          {block.section_name} 
-                          <span style={{ fontSize: 12, color: '#2196f3', marginLeft: 8 }}>{block.block_type}</span>
-                        </div>
-                        
-                        {block.verification_status === "PENDING" && (
-                          <div style={{ 
-                            position: 'absolute', 
-                            top: 24, 
-                            right: 24,
-                            color: '#d97706', 
-                            fontWeight: 'bold', 
-                            marginBottom: 4,
-                            fontSize: 12,
-                            padding: '4px 8px',
-                            background: '#fff3e0',
-                            borderRadius: 4
-                          }}>
-                            ⚠️ Pending review
-                          </div>
-                        )}
-                        
-                        {block.verification_status === "CONFLICT" && (
-                          <div style={{ 
-                            position: 'absolute', 
-                            top: 24, 
-                            right: 24,
-                            color: '#c0392b', 
-                            fontWeight: 'bold', 
-                            marginBottom: 4,
-                            fontSize: 12,
-                            padding: '4px 8px',
-                            background: '#ffebee',
-                            borderRadius: 4
-                          }}>
-                            ⚠️ Conflict detected
-                          </div>
-                        )}
-
-                        <div style={{ fontSize: 16, color: '#444', marginBottom: 10, lineHeight: 1.6 }}>
-                          {block.template}
-                        </div>
-                        <div style={{ marginBottom: 8, fontSize: 13, color: '#00695c' }}>
-                          Provenance: <span>{block.page_id}</span> &nbsp;|&nbsp; Word limit: {block.word_limit}
-                          <button 
-                            style={{ 
-                              marginLeft: 16, 
-                              background: '#2196f3', 
-                              color: 'white', 
-                              border: 'none', 
-                              borderRadius: 4, 
-                              padding: '3px 11px',
-                              cursor: 'pointer'
-                            }} 
-                            onClick={() => setModalBlock(block)}
-                          >
-                            View
-                          </button>
-                        </div>
-                        <BlockActions 
-                          blockId={block.block_id} 
-                          userId="stub-user" 
-                          verificationStatus={block.verification_status} 
-                          communityTrustScore={35} 
-                        />
+                        No content available for this topic. Content will be generated based on the {currentCardTemplate?.title || 'selected template'}.
                       </div>
-                    ))
-                  ) : (
-                    <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>
-                      No blocks found for this topic. Blocks will be generated based on the {currentCardTemplate?.title || 'selected template'}.
-                    </div>
-                  )}
+                    )}
+                  </div>
+
+                  {/* Wikipedia-style footer */}
+                  <div style={{ 
+                    marginTop: '40px', 
+                    paddingTop: '24px', 
+                    borderTop: '1px solid #a2a9b1',
+                    fontSize: '12px', 
+                    color: '#54595d', 
+                    lineHeight: '1.6'
+                  }}>
+                    <strong>Retrieved from</strong> "https://metamorph.unhcr.org/wiki/{topicId}"<br />
+                    <strong>This page was last edited on</strong> {new Date().toLocaleDateString()} <strong>at</strong> {new Date().toLocaleTimeString()}.<br />
+                    <strong>Text is available under the</strong> <a href="#" style={{ color: '#0645ad' }}>Creative Commons Attribution-ShareAlike License</a>; <strong>additional terms may apply.</strong>
+                  </div>
                 </div>
               )}
 
-              {/* CURATION TAB - Edit and manage blocks */}
+              {/* DISCUSSION TAB - Wikipedia-style talk page */}
+              {activeTab === 'discussion' && (
+                <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                  <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#202122', marginBottom: '24px' }}>
+                    Discussion about "{currentTopic?.title || 'this topic'}"
+                  </h2>
+                  
+                  {/* Wikipedia-style discussion notice */}
+                  <div style={{ 
+                    background: '#f8f9fa', 
+                    border: '1px solid #a2a9b1', 
+                    borderRadius: '4px', 
+                    padding: '16px', 
+                    marginBottom: '24px',
+                    fontSize: '14px',
+                    lineHeight: '1.6'
+                  }}>
+                    <strong>This is the discussion page</strong> for improving the article "{currentTopic?.title || 'this topic'}".
+                    <br /><br />
+                    Here you can:
+                    <ul style={{ margin: '8px 0', paddingLeft: '24px' }}>
+                      <li>Discuss changes to article content</li>
+                      <li>Propose new content or edits</li>
+                      <li>Resolve conflicts and disagreements</li>
+                      <li>Ask questions about the topic</li>
+                    </ul>
+                    <strong>Please sign your posts</strong> with <code>~~~~</code>.
+                  </div>
+
+                  {/* Discussion threads would go here */}
+                  <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
+                    Discussion feature coming soon. This will show threads linked to blocks in the {currentCardTemplate?.title || 'current template'}.
+                  </div>
+
+                  {/* Wikipedia-style add topic section */}
+                  <div style={{ 
+                    marginTop: '32px', 
+                    padding: '16px', 
+                    background: '#f8f9fa', 
+                    border: '1px solid #a2a9b1', 
+                    borderRadius: '4px'
+                  }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '12px' }}>Add topic</h3>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input 
+                        type="text"
+                        placeholder="Enter a title for your discussion"
+                        style={{ 
+                          flex: 1, 
+                          padding: '8px', 
+                          border: '1px solid #a2a9b1', 
+                          borderRadius: '2px'
+                        }}
+                      />
+                      <button style={{ 
+                        padding: '8px 16px', 
+                        background: '#36c', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '2px', 
+                        cursor: 'pointer'
+                      }}>
+                        Start discussion
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* CURATION TAB - Integrated into article view */}
               {activeTab === 'curation' && (
-                <div>
-                  <h2 style={{ color: UNHCR_BLUE, fontSize: 20, marginBottom: 16 }}>Curation Workspace</h2>
-                  <p style={{ color: '#666', marginBottom: 24 }}>
-                    Edit, verify, and manage knowledge blocks. This tab allows you to work with the structured content based on the {currentCardTemplate?.title || 'selected template'}.
+                <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                  <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#202122', marginBottom: '16px' }}>
+                    Curation Workspace
+                  </h2>
+                  <p style={{ color: '#54595d', marginBottom: '24px', lineHeight: '1.6' }}>
+                    Edit, verify, and manage knowledge blocks. This workspace allows you to work with the structured content 
+                    based on the {currentCardTemplate?.title || 'selected template'}.
                   </p>
 
                   {/* Template-based section structure */}
                   {templateSections.length > 0 && (
-                    <div style={{ marginBottom: 24 }}>
-                      <div style={{ display: 'grid', gap: 16 }}>
+                    <div style={{ marginBottom: '24px' }}>
+                      <div style={{ display: 'grid', gap: '24px' }}>
                         {templateSections.map(section => {
                           const sectionBlocks = blocks.filter(b => b.section_name === section.name);
                           return (
                             <div key={section.name} style={{ 
-                              background: '#f5f5f5', 
-                              padding: 16, 
-                              borderRadius: 8,
+                              background: '#f8f9fa', 
+                              padding: '20px', 
+                              borderRadius: '8px',
                               border: '1px solid #e0e0e0'
                             }}>
                               <div style={{ 
                                 display: 'flex', 
                                 justifyContent: 'space-between', 
                                 alignItems: 'center', 
-                                marginBottom: 12
+                                marginBottom: '16px'
                               }}>
-                                <h3 style={{ margin: 0, color: UNHCR_BLUE }}>
+                                <h3 style={{ margin: 0, color: UNHCR_BLUE, fontSize: '18px' }}>
                                   {section.name}
                                 </h3>
                                 <div style={{ 
-                                  fontSize: 12, 
+                                  fontSize: '12px', 
                                   color: '#666', 
                                   padding: '4px 8px', 
                                   background: '#fff',
-                                  borderRadius: 4
+                                  borderRadius: '4px'
                                 }}>
                                   Word limit: {section.word_limit}
-                                  {section.live && <span style={{ marginLeft: 8, color: '#4caf50' }}>🔄 Live</span>}
+                                  {section.live && <span style={{ marginLeft: '8px', color: '#4caf50' }}>🔄 Live</span>}
                                 </div>
                               </div>
                               
                               {sectionBlocks.length > 0 ? (
                                 sectionBlocks.map(block => (
                                   <div key={block.block_id} style={{ 
-                                    marginBottom: 12, 
-                                    padding: 12, 
-                                    background: '#fff',
-                                    borderRadius: 4,
+                                    marginBottom: '16px', 
+                                    padding: '16px', 
+                                    background: '#fff', 
+                                    borderRadius: '4px', 
                                     border: '1px solid #e0e0e0',
                                     position: 'relative'
                                   }}>
@@ -444,47 +611,50 @@ export default function Wiki() {
                                       display: 'flex', 
                                       justifyContent: 'space-between', 
                                       alignItems: 'start',
-                                      marginBottom: 8
+                                      marginBottom: '12px'
                                     }}>
                                       <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
+                                        <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
                                           Block: {block.block_id}
                                         </div>
                                         <div style={{ 
-                                          fontSize: 14, 
+                                          fontSize: '14px', 
                                           color: '#444', 
                                           background: '#fafafa', 
-                                          padding: 8, 
-                                          borderRadius: 4,
-                                          minHeight: 60,
-                                          lineHeight: 1.5
+                                          padding: '12px', 
+                                          borderRadius: '4px', 
+                                          minHeight: '80px', 
+                                          lineHeight: '1.5',
+                                          border: '1px solid #eee'
                                         }}>
                                           {block.template || <span style={{ color: '#999' }}>Empty block - click to edit</span>}
                                         </div>
                                       </div>
                                       
-                                      <div style={{ marginLeft: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                      <div style={{ marginLeft: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                         <button 
                                           style={{ 
-                                            padding: '4px 12px', 
+                                            padding: '6px 14px', 
                                             background: UNHCR_BLUE, 
                                             color: 'white', 
                                             border: 'none', 
-                                            borderRadius: 4, 
+                                            borderRadius: '4px', 
                                             cursor: 'pointer',
-                                            fontSize: 12
-                                          }}
+                                            fontSize: '12px',
+                                            fontWeight: '600'
+                                          }} 
                                           onClick={() => startEditing(block)}
                                         >
                                           Edit
                                         </button>
                                         <div style={{ 
-                                          fontSize: 10, 
-                                          color: block.verification_status === 'PENDING' ? '#d97706' : block.verification_status === 'CONFLICT' ? '#c0392b' : '#4caf50',
-                                          padding: '2px 6px',
-                                          background: block.verification_status === 'PENDING' ? '#fff3e0' : block.verification_status === 'CONFLICT' ? '#ffebee' : '#e8f5e8',
-                                          borderRadius: 3,
-                                          textAlign: 'center'
+                                          fontSize: '11px', 
+                                          color: block.verification_status === 'PENDING' ? '#d97706' : block.verification_status === 'CONFLICT' ? '#c0392b' : '#4caf50', 
+                                          padding: '4px 8px', 
+                                          background: block.verification_status === 'PENDING' ? '#fff3e0' : block.verification_status === 'CONFLICT' ? '#ffebee' : '#e8f5e8', 
+                                          borderRadius: '4px', 
+                                          textAlign: 'center',
+                                          fontWeight: '600'
                                         }}>
                                           {block.verification_status || 'Accepted'}
                                         </div>
@@ -501,12 +671,12 @@ export default function Wiki() {
                                 ))
                               ) : (
                                 <div style={{ 
-                                  padding: 16, 
+                                  padding: '20px', 
                                   textAlign: 'center', 
-                                  color: '#999',
-                                  fontSize: 13,
-                                  background: '#fff',
-                                  borderRadius: 4,
+                                  color: '#999', 
+                                  fontSize: '13px', 
+                                  background: '#fff', 
+                                  borderRadius: '4px', 
                                   border: '2px dashed #ccc'
                                 }}>
                                   No blocks for this section yet
@@ -519,102 +689,42 @@ export default function Wiki() {
                     </div>
                   )}
 
-                  {/* Edit Modal */}
-                  {editingBlock && (
-                    <div style={{ 
-                      position: 'fixed', 
-                      top: 0, 
-                      left: 0, 
-                      right: 0, 
-                      bottom: 0, 
-                      background: 'rgba(0,0,0,0.5)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      zIndex: 1000
-                    }}>
-                      <div style={{ 
-                        background: 'white', 
-                        padding: 24, 
-                        borderRadius: 8, 
-                        maxWidth: 600, 
-                        width: '90%',
-                        maxHeight: '80vh',
-                        overflow: 'auto'
-                      }}>
-                        <h3 style={{ margin: 0, color: UNHCR_BLUE, marginBottom: 16 }}>
-                          Edit Block: {editingBlock.section_name}
-                        </h3>
-                        <div style={{ marginBottom: 16 }}>
-                          <label style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}>
-                            Content
-                          </label>
-                          <textarea
-                            value={editContent}
-                            onChange={(e) => setEditContent(e.target.value)}
-                            style={{ 
-                              width: '100%', 
-                              minHeight: 150, 
-                              padding: 12, 
-                              border: '1px solid #ddd', 
-                              borderRadius: 4, 
-                              fontSize: 14,
-                              fontFamily: 'inherit'
-                            }}
-                            placeholder="Enter block content..."
-                          />
-                          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-                            Word limit: {editingBlock.word_limit} words
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                          <button 
-                            onClick={cancelEdit}
-                            style={{ padding: '8px 20px', border: 'none', background: '#ccc', cursor: 'pointer', borderRadius: 4 }}
-                          >
-                            Cancel
-                          </button>
-                          <button 
-                            onClick={saveEdit}
-                            style={{ padding: '8px 20px', border: 'none', background: UNHCR_BLUE, color: 'white', cursor: 'pointer', borderRadius: 4 }}
-                          >
-                            Save Changes
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
                   {blocks.length === 0 && templateSections.length === 0 && (
-                    <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
                       No template sections or blocks found. Please select a topic with a valid card template.
                     </div>
                   )}
                 </div>
               )}
 
-              {/* DISCUSSION TAB */}
-              {activeTab === 'discussion' && (
-                <div>
-                  <h2 style={{ color: UNHCR_BLUE, fontSize: 20, marginBottom: 16 }}>Discussion</h2>
-                  <p style={{ color: '#666', marginBottom: 24 }}>
-                    This is where contested, uncertain, or proposed information is evaluated. 
-                    Discussion threads are linked to specific blocks, claims, or conflicts.
-                  </p>
-                  <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>
-                    Discussion feature coming soon. This will show threads linked to blocks in the {currentCardTemplate?.title || 'current template'}.
-                  </div>
-                </div>
-              )}
-
-              {/* HISTORY TAB */}
+              {/* HISTORY TAB - Wikipedia-style history */}
               {activeTab === 'history' && (
-                <div>
-                  <h2 style={{ color: UNHCR_BLUE, fontSize: 20, marginBottom: 16 }}>Revision History</h2>
-                  <p style={{ color: '#666', marginBottom: 24 }}>
+                <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                  <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#202122', marginBottom: '16px' }}>
+                    Revision History
+                  </h2>
+                  <p style={{ color: '#54595d', marginBottom: '24px', lineHeight: '1.6' }}>
                     Immutable record of all changes to this topic's knowledge blocks.
                   </p>
-                  <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>
+
+                  {/* Wikipedia-style history notice */}
+                  <div style={{ 
+                    background: '#f8f9fa', 
+                    border: '1px solid #a2a9b1', 
+                    borderRadius: '4px', 
+                    padding: '16px', 
+                    marginBottom: '24px',
+                    fontSize: '14px',
+                    lineHeight: '1.6'
+                  }}>
+                    <strong>View history</strong> for "{currentTopic?.title || 'this topic'}"
+                    <br /><br />
+                    This page provides access to every revision of this article. 
+                    Select any date to view the article as it appeared on that date. 
+                    You may also view the <a href="#" style={{ color: '#0645ad' }}>differences between revisions</a>.
+                  </div>
+
+                  <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
                     History feature coming soon. This will show the complete audit trail for all blocks in the {currentCardTemplate?.title || 'current template'}.
                   </div>
                 </div>
@@ -624,6 +734,138 @@ export default function Wiki() {
         </div>
 
         <ProvenanceModal block={modalBlock} onClose={() => setModalBlock(null)} />
+        
+        {/* Wikipedia-style edit toolbar (appears on text selection) */}
+        {showEditToolbar && (
+          <div style={{ 
+            position: 'absolute', 
+            background: 'white', 
+            border: '1px solid #a2a9b1', 
+            borderRadius: '4px', 
+            padding: '8px', 
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)', 
+            display: 'flex', 
+            gap: '8px', 
+            zIndex: 1000
+          }}>
+            <button style={{ 
+              padding: '4px 12px', 
+              background: '#36c', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px', 
+              cursor: 'pointer', 
+              fontSize: '12px'
+            }}>
+              Edit
+            </button>
+            <button style={{ 
+              padding: '4px 12px', 
+              background: '#6c6', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px', 
+              cursor: 'pointer', 
+              fontSize: '12px'
+            }}>
+              Flag
+            </button>
+            <button style={{ 
+              padding: '4px 12px', 
+              background: '#c60', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px', 
+              cursor: 'pointer', 
+              fontSize: '12px'
+            }}>
+              Discuss
+            </button>
+          </div>
+        )}
+        
+        {/* Edit Modal */}
+        {editingBlock && (
+          <div style={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            background: 'rgba(0,0,0,0.5)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            zIndex: 1000 
+          }}>
+            <div style={{ 
+              background: 'white', 
+              padding: '24px', 
+              borderRadius: '8px', 
+              maxWidth: '600px', 
+              width: '90%', 
+              maxHeight: '80vh', 
+              overflow: 'auto',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.3)'
+            }}>
+              <h3 style={{ margin: 0, color: UNHCR_BLUE, marginBottom: '16px', fontSize: '18px' }}>
+                Edit Block: {editingBlock.section_name}
+              </h3>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '14px' }}>
+                  Content
+                </label>
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  style={{ 
+                    width: '100%', 
+                    minHeight: '150px', 
+                    padding: '12px', 
+                    border: '1px solid #ddd', 
+                    borderRadius: '4px', 
+                    fontSize: '14px', 
+                    fontFamily: 'inherit',
+                    resize: 'vertical'
+                  }}
+                  placeholder="Enter block content..."
+                />
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                  Word limit: {editingBlock.word_limit} words
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button 
+                  onClick={cancelEdit}
+                  style={{ 
+                    padding: '8px 20px', 
+                    border: 'none', 
+                    background: '#ccc', 
+                    cursor: 'pointer', 
+                    borderRadius: '4px', 
+                    fontSize: '14px'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={saveEdit}
+                  style={{ 
+                    padding: '8px 20px', 
+                    border: 'none', 
+                    background: UNHCR_BLUE, 
+                    color: 'white', 
+                    cursor: 'pointer', 
+                    borderRadius: '4px', 
+                    fontSize: '14px'
+                  }}
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
