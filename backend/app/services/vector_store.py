@@ -58,7 +58,7 @@ class VectorStoreService:
         try:
             with engine.connect() as conn:
                 # Create document embeddings table
-                conn.execute("""
+                conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS document_embeddings (
                     id SERIAL PRIMARY KEY,
                     document_id VARCHAR(255) NOT NULL,
@@ -70,28 +70,28 @@ class VectorStoreService:
                     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                     UNIQUE(document_id)
                 )
-                """, {"dimensions": self.dimensions})
+                """).bindparams(dimensions=self.dimensions))
                 
                 # Create index based on configuration
                 if self.index_type.upper() == "HNSW":
-                    conn.execute("""
+                    conn.execute(text("""
                     CREATE INDEX IF NOT EXISTS idx_document_embeddings_hnsw 
-                    ON document_embeddings USING hnsw (embedding vector_hnsw_ops)
-                    """)
+                    ON document_embeddings USING hnsw (embedding vector_l2_ops)
+                    """))
                 else:  # IVFFlat
-                    conn.execute("""
+                    conn.execute(text("""
                     CREATE INDEX IF NOT EXISTS idx_document_embeddings_ivfflat 
-                    ON document_embeddings USING ivfflat (embedding vector_ip_ops)
-                    """)
+                    ON document_embeddings USING ivfflat (embedding vector_l2_ops)
+                    """))
                 
                 # Create index for document_id lookup
-                conn.execute("""
+                conn.execute(text("""
                 CREATE INDEX IF NOT EXISTS idx_document_embeddings_doc_id 
                 ON document_embeddings (document_id)
-                """)
+                """))
                 
                 # Create knowledge card embeddings table
-                conn.execute("""
+                conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS knowledge_card_embeddings (
                     id SERIAL PRIMARY KEY,
                     card_id VARCHAR(50) NOT NULL,
@@ -103,19 +103,19 @@ class VectorStoreService:
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                 )
-                """, {"dimensions": self.dimensions})
+                """).bindparams(dimensions=self.dimensions))
                 
                 # Create index for knowledge card embeddings
                 if self.index_type.upper() == "HNSW":
-                    conn.execute("""
+                    conn.execute(text("""
                     CREATE INDEX IF NOT EXISTS idx_knowledge_card_embeddings_hnsw 
-                    ON knowledge_card_embeddings USING hnsw (embedding vector_hnsw_ops)
-                    """)
+                    ON knowledge_card_embeddings USING hnsw (embedding vector_l2_ops)
+                    """))
                 else:  # IVFFlat
-                    conn.execute("""
+                    conn.execute(text("""
                     CREATE INDEX IF NOT EXISTS idx_knowledge_card_embeddings_ivfflat 
-                    ON knowledge_card_embeddings USING ivfflat (embedding vector_ip_ops)
-                    """)
+                    ON knowledge_card_embeddings USING ivfflat (embedding vector_l2_ops)
+                    """))
                 
                 conn.commit()
                 print("✅ Vector tables initialized successfully")

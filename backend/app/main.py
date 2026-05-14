@@ -59,6 +59,10 @@ app.include_router(crawler_settings_router, prefix="/api/v1")
 from app.api.v1.endpoints.knowledge_graph import router as knowledge_graph_router
 app.include_router(knowledge_graph_router, prefix="/api/v1")
 
+# Agentic content generation endpoints
+from app.api.v1.endpoints.agentic_content import router as agentic_content_router
+app.include_router(agentic_content_router, prefix="/api/v1")
+
 # Must be LAST: Serve React build at /
 FRONTEND_BUILD_DIR = os.getenv(
     "FRONTEND_BUILD_DIR",
