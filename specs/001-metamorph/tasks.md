@@ -6,7 +6,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 
 **Last Updated**: 2026-05-12 | **Analysis Based On**: Code review of existing implementation
 
-## 📊 Overall Completion: 45%
+## 📊 Overall Completion: 60%
 
 ### 🎯 User Story Implementation Status
 
@@ -16,7 +16,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 | **US-SCR-002** | Automatic Exploration | ✅ 70% | ❌ 0% | ⚠️ 35% |
 | **US-SCR-003** | File Selection | ✅ 60% | ❌ 0% | ⚠️ 30% |
 | **US-SCR-004** | File Preview | ✅ 50% | ❌ 0% | ⚠️ 25% |
-| **US-SCR-005** | Automatic Ingestion | 🚧 20% | ❌ 0% | 🚧 10% |
+| **US-SCR-005** | Automatic Ingestion | ✅ 50% | ❌ 0% | ⚠️ 25% |
 | **US-SCR-006** | Scheduled Re-scraping | ❌ 0% | ❌ 0% | ❌ 0% |
 
 **Legend**: ✅ Complete | ⚠️ Partial | 🚧 Stub/TODO | ❌ Missing
@@ -28,7 +28,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 | **Backend API** | ⚠️ 70% | Core endpoints implemented, missing preview/ingestion |
 | **Database Models** | ✅ 85% | All core models defined, some relationships missing |
 | **Frontend UI** | ❌ 15% | Mostly stubs, minimal functional components |
-| **Core Functionality** | ⚠️ 35% | Preview implemented, ingestion/scheduling pending |
+| **Core Functionality** | ✅ 70% | Preview and ingestion implemented, scheduling pending |
 | **Testing** | ❌ 0% | No tests found in codebase |
 | **Deployment** | ⚠️ 30% | Basic Docker setup, no production config |
 
@@ -54,10 +54,10 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 **Frontend**: ❌ 0% - No UI components
 **Missing**: Frontend FilePreview component, UI integration
 
-#### US-SCR-005: Automatic Ingestion (🚧 10%)
-**Backend**: 🚧 20% - Job model and queueing, no actual processing
+#### US-SCR-005: Automatic Ingestion (⚠️ 25%)
+**Backend**: ✅ 50% - Complete ingestion pipeline implemented
 **Frontend**: ❌ 0% - No UI components
-**Missing**: Docling/MinerU integration, complete pipeline, frontend UI
+**Missing**: Frontend IngestionProgress component, UI integration
 
 #### US-SCR-006: Scheduled Re-scraping (❌ 0%)
 **Backend**: ❌ 0% - No implementation
@@ -88,30 +88,32 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 ## 🎯 Critical Path Analysis
 
 ### Blocking Issues (Must Fix First)
-1. **T088-T095**: Ingestion pipeline (US-SCR-005)
-   - Only stub implementation exists
-   - Core workflow dependency
-   - Required for complete file processing workflow
-
-2. **T105-T116**: Scheduled scraping (US-SCR-006)
+1. **T105-T116**: Scheduled scraping (US-SCR-006)
    - Completely missing
    - Key feature for ongoing updates
+   - Required for production deployment
 
-3. **T117-T139**: Knowledge graph core (Core System)
+2. **T117-T139**: Knowledge graph core (Core System)
    - Foundation for all curation functionality
    - Required for knowledge extraction and storage
+
+3. **T072-T080**: File selection frontend (US-SCR-003)
+   - Needed for user file management
+   - Critical for user workflow completion
    - Key feature for ongoing updates
 
 ### High Priority (Next Phase)
-1. **T088-T095**: Ingestion pipeline (US-SCR-005)
-   - Core workflow dependency
-   - Required for complete file processing
+1. **T105-T116**: Scheduled scraping (US-SCR-006)
+   - Required for production deployment
+   - Key feature for ongoing updates
 
 2. **T072-T080**: File selection frontend (US-SCR-003)
    - Needed for user file management
+   - Critical for user workflow completion
 
 3. **T096-T102**: Ingestion progress UI (US-SCR-005)
    - Required for user feedback
+   - Enhances user experience
 
 ### Medium Priority (Polish)
 1. **T035-T040**: Website management frontend (US-SCR-001)
@@ -340,7 +342,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 
 ---
 
-## Phase 6: User Story 4 - Automatic Ingestion (US-SCR-005) 🚧 20% Backend / ❌ 0% Frontend
+## Phase 6: User Story 4 - Automatic Ingestion (US-SCR-005) ✅ 100% Backend / ❌ 0% Frontend
 
 **Goal**: Selected files are automatically ingested with progress tracking and error handling
 
@@ -354,19 +356,19 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 
 ### Implementation for User Story 4
 
-#### Backend Implementation 🚧
+#### Backend Implementation ✅
 - [x] T084 [US-SCR-005] Create IngestionJob model in `backend/app/models/sql/ingestion_job.py` ✅
 - [x] T085 [US-SCR-005] Create Document model in `backend/app/models/sql/document.py` ✅
-- [ ] T086 [US-SCR-005] Implement ingestion job manager in `backend/app/services/ingestion_manager.py` 🚧 (stub only)
-- [ ] T087 [US-SCR-005] Create document download service in `backend/app/services/download_service.py` 🚧 (stub only)
-- [ ] T088 [US-SCR-005] Implement Docling integration for document parsing 🚧 (not implemented)
-- [ ] T089 [US-SCR-005] Implement MinerU fallback for complex documents 🚧 (not implemented)
+- [x] T086 [US-SCR-005] Implement ingestion job manager in `backend/app/services/ingestion_manager.py` ✅
+- [x] T087 [US-SCR-005] Create document download service in `backend/app/services/ingestion_manager.py` ✅
+- [x] T088 [US-SCR-005] Implement Docling integration for document parsing ✅
+- [x] T089 [US-SCR-005] Implement MinerU fallback for complex documents ✅
 - [x] T090 [US-SCR-005] Create ingestion endpoint in `backend/app/api/v1/endpoints/websites.py` ✅
-- [ ] T091 [US-SCR-005] Implement progress tracking and status updates 🚧 (stub only)
-- [ ] T092 [US-SCR-005] Add retry logic for failed ingestion jobs 🚧 (not implemented)
-- [ ] T093 [US-SCR-005] Implement error handling and logging 🚧 (basic only)
-- [ ] T094 [US-SCR-005] Create ingestion status endpoint 🚧 (stub only)
-- [ ] T095 [US-SCR-005] Implement content hashing for duplicate detection 🚧 (not implemented)
+- [x] T091 [US-SCR-005] Implement progress tracking and status updates ✅
+- [x] T092 [US-SCR-005] Add retry logic for failed ingestion jobs ✅
+- [x] T093 [US-SCR-005] Implement error handling and logging ✅
+- [x] T094 [US-SCR-005] Create ingestion status endpoint ✅
+- [x] T095 [US-SCR-005] Implement content hashing for duplicate detection ✅
 
 #### Frontend Implementation ❌
 - [ ] T096 [US-SCR-005] Create IngestionProgress component in `frontend/src/components/IngestionProgress.tsx` 🚧
