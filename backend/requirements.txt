@@ -28,6 +28,10 @@ aiohttp
 # File and doc processing
 boto3
 Pillow  # for image/thumbnail handling if you support attachments
+PyPDF2  # for PDF text extraction
+python-docx  # for Word document processing
+openpyxl  # for Excel spreadsheet processing
+python-pptx  # for PowerPoint presentation processing
 
 # AI/Langchain/Embeddings
 litellm
