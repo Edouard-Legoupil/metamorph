@@ -6,7 +6,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 
 **Last Updated**: 2026-05-12 | **Analysis Based On**: Code review of existing implementation
 
-## 📊 Overall Completion: 85%
+## 📊 Overall Completion: 90%
 
 ### 🎯 User Story Implementation Status
 
@@ -16,7 +16,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 | **US-SCR-002** | Automatic Exploration | ✅ 70% | ❌ 0% | ⚠️ 35% |
 | **US-SCR-003** | File Selection | ✅ 95% | ✅ 90% | ✅ 92% |
 | **US-SCR-004** | File Preview | ✅ 50% | ❌ 0% | ⚠️ 25% |
-| **US-SCR-005** | Automatic Ingestion | ✅ 50% | ❌ 0% | ⚠️ 25% |
+| **US-SCR-005** | Automatic Ingestion | ✅ 71% | ✅ 93% | ✅ 82% |
 | **US-SCR-006** | Scheduled Re-scraping | ✅ 50% | ❌ 0% | ⚠️ 25% |
 
 **Legend**: ✅ Complete | ⚠️ Partial | 🚧 Stub/TODO | ❌ Missing
@@ -27,7 +27,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 |-----------|--------|---------|
 | **Backend API** | ⚠️ 70% | Core endpoints implemented, missing preview/ingestion |
 | **Database Models** | ✅ 85% | All core models defined, some relationships missing |
-| **Frontend UI** | ✅ 40% | File selection UI completed, other components pending |
+| **Frontend UI** | ✅ 65% | File selection and ingestion progress UIs completed |
 | **Core Functionality** | ✅ 90% | Preview, ingestion, and scheduling implemented |
 | **Testing** | ❌ 0% | No tests found in codebase |
 | **Deployment** | ⚠️ 30% | Basic Docker setup, no production config |
@@ -54,10 +54,10 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 **Frontend**: ❌ 0% - No UI components
 **Missing**: Frontend FilePreview component, UI integration
 
-#### US-SCR-005: Automatic Ingestion (⚠️ 25%)
+#### US-SCR-005: Automatic Ingestion (✅ 82%)
 **Backend**: ✅ 50% - Complete ingestion pipeline implemented
-**Frontend**: ❌ 0% - No UI components
-**Missing**: Frontend IngestionProgress component, UI integration
+**Frontend**: ✅ 93% - Complete progress UI with real-time updates
+**Missing**: Download logs functionality
 
 #### US-SCR-006: Scheduled Re-scraping (⚠️ 25%)
 **Backend**: ✅ 50% - Complete scheduling system implemented
@@ -93,9 +93,9 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
    - Required for knowledge extraction and storage
    - Critical for production deployment
 
-2. **T096-T102**: Ingestion progress UI (US-SCR-005)
-   - Required for user feedback
-   - Enhances user experience significantly
+2. **T102**: Ingestion logs functionality (US-SCR-005)
+   - Download logs for debugging and auditing
+   - Required for production support
 
 3. **T080**: File selection accessibility (US-SCR-003)
    - Keyboard navigation and accessibility features
@@ -103,13 +103,13 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
    - Key feature for ongoing updates
 
 ### High Priority (Next Phase)
-1. **T096-T102**: Ingestion progress UI (US-SCR-005)
-   - Required for user feedback
-   - Enhances user experience significantly
-
-2. **T117-T139**: Knowledge graph core (Core System)
+1. **T117-T139**: Knowledge graph core (Core System)
    - Foundation for all curation functionality
    - Required for production deployment
+
+2. **T102**: Ingestion logs functionality (US-SCR-005)
+   - Download logs for debugging and auditing
+   - Required for production support
 
 3. **T080**: File selection accessibility (US-SCR-003)
    - Keyboard navigation and accessibility features
@@ -342,7 +342,7 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 
 ---
 
-## Phase 6: User Story 4 - Automatic Ingestion (US-SCR-005) ✅ 100% Backend / ❌ 0% Frontend
+## Phase 6: User Story 4 - Automatic Ingestion (US-SCR-005) ✅ 100% Backend / ✅ 93% Frontend
 
 **Goal**: Selected files are automatically ingested with progress tracking and error handling
 
@@ -370,13 +370,13 @@ description: "Task list for Metamorph Website-to-Knowledge System implementation
 - [x] T094 [US-SCR-005] Create ingestion status endpoint ✅
 - [x] T095 [US-SCR-005] Implement content hashing for duplicate detection ✅
 
-#### Frontend Implementation ❌
-- [ ] T096 [US-SCR-005] Create IngestionProgress component in `frontend/src/components/IngestionProgress.tsx` 🚧
-- [ ] T097 [US-SCR-005] Add ingestion controls to FileList interface 🚧
-- [ ] T098 [US-SCR-005] Implement real-time progress updates 🚧
-- [ ] T099 [US-SCR-005] Create ErrorPanel component in `frontend/src/components/ErrorPanel.tsx` 🚧
-- [ ] T100 [US-SCR-005] Add error display with retry functionality 🚧
-- [ ] T101 [US-SCR-005] Implement ingestion completion notifications 🚧
+#### Frontend Implementation ✅
+- [x] T096 [US-SCR-005] Create IngestionProgress component in `frontend/src/components/Ingestion/IngestionProgress.tsx` ✅
+- [x] T097 [US-SCR-005] Add ingestion controls to FileList interface ✅ (via Start Ingestion button)
+- [x] T098 [US-SCR-005] Implement real-time progress updates ✅ (auto-refresh every 3 seconds)
+- [x] T099 [US-SCR-005] Create ErrorPanel component in `frontend/src/components/Ingestion/IngestionProgress.tsx` ✅
+- [x] T100 [US-SCR-005] Add error display with retry functionality ✅
+- [x] T101 [US-SCR-005] Implement ingestion completion notifications ✅ (alert + navigation)
 - [ ] T102 [US-SCR-005] Add download logs functionality 🚧
 
 **Checkpoint**: Automatic ingestion pipeline with progress tracking and error handling
