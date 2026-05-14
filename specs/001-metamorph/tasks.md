@@ -229,9 +229,10 @@ All user stories have been fully implemented according to specifications:
 - [ ] **T204**: Add CrewAI task delegation and coordination
 - [ ] **T205**: Configure agent memory and context management
 - [ ] **T206**: Connect CrewAI with knowledge graph
-- [ ] **T207**: Implement ChromaDB vector store integration
-- [ ] **T208**: Add semantic search capabilities
-- [ ] **T209**: Create hybrid query system (graph + vector)
+- [ ] **T207**: Enable PostgreSQL pgvector extension
+- [ ] **T208**: Create vector tables and indexes using pgvector
+- [ ] **T209**: Implement semantic search capabilities with pgvector
+- [ ] **T210**: Create hybrid query system (graph + vector) using pgvector
 - [ ] **T210**: Implement agent performance monitoring
 
 #### Phase 5: Content Generation Enhancement (T211-T220)
@@ -263,10 +264,11 @@ User Request → CrewAI Orchestrator → Specialized Agents → Knowledge Graph 
 
 **Integration Points:**
 - **Knowledge Graph**: Neo4j for structured data
-- **Vector Store**: ChromaDB for semantic search
+- **Vector Store**: PostgreSQL pgvector for semantic search
 - **API Layer**: FastAPI endpoints for agent communication
 - **Memory**: Agent context and session management
 - **Monitoring**: Agent performance tracking
+- **Database**: Unified PostgreSQL with pgvector extension
 
 **Timeline:**
 - **Week 1-2**: CrewAI framework integration

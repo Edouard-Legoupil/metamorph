@@ -77,6 +77,59 @@ POSTGRES_USER=metamorph_user
 POSTGRES_PASSWORD=your_strong_password
 DATABASE_URL=postgresql+psycopg2://metamorph_user:your_strong_password@postgres:5432/metamorph_prod
 
+# Vector Search (pgvector)
+VECTOR_DB_URL=postgresql+psycopg2://metamorph_user:your_strong_password@postgres:5432/metamorph_prod
+VECTOR_DIMENSIONS=384  # For sentence-transformers all-MiniLM-L6-v2
+VECTOR_INDEX_TYPE=HNSW  # or IVFFlat for different performance characteristics
+VECTOR_M=16  # HNSW parameter
+VECTOR_EF_CONSTRUCTION=64  # HNSW parameter
+VECTOR_EF_SEARCH=40  # HNSW parameter
+```
+
+### PostgreSQL pgvector Setup
+
+To enable pgvector extension:
+
+```sql
+-- Connect to your database
+psql -h localhost -U metamorph_user -d metamorph_prod
+
+-- Enable pgvector extension
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Verify extension is installed
+SELECT * FROM pg_extension WHERE extname = 'vector';
+
+-- Create vector table example
+CREATE TABLE IF NOT EXISTS document_embeddings (
+    id SERIAL PRIMARY KEY,
+    document_id VARCHAR(255) NOT NULL,
+    embedding vector(384) NOT NULL,  -- Dimension matches your embedding model
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index for fast similarity search
+CREATE INDEX IF NOT EXISTS idx_document_embeddings_hnsw 
+ON document_embeddings USING hnsw (embedding vector_hnsw_ops);
+
+-- Create index for document_id lookup
+CREATE INDEX IF NOT EXISTS idx_document_embeddings_doc_id 
+ON document_embeddings (document_id);
+```
+
+**Index Types Comparison:**
+
+| Index Type | Pros | Cons | Best For |
+|------------|------|------|----------|
+| **HNSW** | Fast search, good recall | Higher memory usage | Most use cases |
+| **IVFFlat** | Lower memory, fast build | Slightly lower recall | Memory-constrained |
+
+**Recommended Models:**
+- `sentence-transformers/all-MiniLM-L6-v2` (384 dim, good balance)
+- `sentence-transformers/all-mpnet-base-v2` (768 dim, higher quality)
+- `BAAI/bge-small-en-v1.5` (384 dim, multilingual)
+
 # Security
 SECRET_KEY=your_generated_secret_key_here
 MCP_API_KEYS=api_key_1,api_key_2,api_key_3
@@ -300,10 +353,29 @@ Referrer-Policy: no-referrer-when-downgrade
 
 ### Backups
 
+### Database Setup
+
+**PostgreSQL with pgvector:**
+
+```bash
+# Start PostgreSQL container with pgvector pre-installed
+docker run -d \
+  --name postgres \
+  -e POSTGRES_USER=metamorph_user \
+  -e POSTGRES_PASSWORD=your_strong_password \
+  -e POSTGRES_DB=metamorph_prod \
+  -p 5432:5432 \
+  -v pg_data:/var/lib/postgresql/data \
+  ankane/pgvector:0.5.1
+
+# Connect and enable pgvector extension
+psql -h localhost -U metamorph_user -d metamorph_prod -c "CREATE EXTENSION vector;"
+```
+
 Regular backup strategy:
 
 ```bash
-# Database backup
+# Database backup (includes vector data)
 docker exec postgres pg_dump -U metamorph_user metamorph_prod > backup.sql
 
 # MinIO data backup

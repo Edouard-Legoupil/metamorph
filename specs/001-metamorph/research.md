@@ -85,27 +85,34 @@ This document resolves all "NEEDS CLARIFICATION" items from the Technical Contex
 
 ## 4. Vector Store Integration
 
-**Decision**: ChromaDB for embeddings and semantic search
+**Decision**: PostgreSQL pgvector extension for embeddings and semantic search
 
 **Rationale**:
-- **Simplicity**: Easy to set up and integrate
-- **Performance**: Fast similarity search capabilities
+- **Unified Architecture**: Leverages existing PostgreSQL infrastructure
+- **Performance**: Optimized for PostgreSQL with efficient indexing
+- **Simplicity**: No additional database to manage
+- **Transaction Support**: Full ACID compliance with vector operations
 - **Scalability**: Handles large document collections efficiently
-- **Open Source**: No vendor lock-in, community-driven development
-- **Python Native**: Excellent Python API and documentation
+- **Cost Effective**: No additional infrastructure costs
+- **Maturity**: Production-ready with excellent PostgreSQL integration
 
 **Key Use Cases**:
 - **Semantic Search**: Find relevant documents based on meaning
 - **Content Enrichment**: Augment knowledge graph data with semantic context
 - **Hybrid Queries**: Combine graph queries with vector similarity
 - **Document Retrieval**: Retrieve similar documents for context
+- **Knowledge Discovery**: Find related concepts and entities
+- **Recommendation Engine**: Suggest related knowledge cards
 
 **Implementation Plan**:
+- **Database Setup**: Enable pgvector extension in PostgreSQL
+- **Table Design**: Create vector tables with proper indexing
 - **Embedding Generation**: Use sentence-transformers for document embeddings
-- **Vector Indexing**: Create and maintain vector indexes
-- **Similarity Search**: Implement semantic search endpoints
-- **Hybrid Queries**: Combine graph and vector results
-- **Caching**: Cache frequent queries for performance
+- **Vector Indexing**: Create IVFFlat or HNSW indexes for fast search
+- **Similarity Search**: Implement semantic search endpoints using pgvector functions
+- **Hybrid Queries**: Combine graph traversal with vector similarity in single queries
+- **Performance Optimization**: Configure appropriate index parameters
+- **Monitoring**: Add vector query performance tracking
 - CircleCI, Jenkins (more complex setup)
 - Azure Pipelines (if in Microsoft ecosystem)
 

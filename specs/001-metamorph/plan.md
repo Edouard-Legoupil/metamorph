@@ -16,7 +16,7 @@
 - **Document Parsing**: Docling for standard documents, MinerU for complex layouts
 - **Knowledge Storage**: Neo4j Labeled Property Graph with provenance tracking
 - **Agent Orchestration**: CrewAI framework for multi-agent collaboration and task delegation
-- **Vector Store**: ChromaDB for semantic search and content enrichment
+- **Vector Store**: PostgreSQL pgvector extension for semantic search and content enrichment
 - **Processing**: Asynchronous background ingestion with progress tracking and error handling
 - **API**: FastAPI REST endpoints with URL path versioning (/api/v1/)
 - **Accessibility**: WCAG 2.1 AA compliant interfaces
@@ -91,7 +91,7 @@
 - Deployment: Docker + Kubernetes with horizontal scaling
 - Security: Defense-in-depth approach with encryption and audit logging
 - Agent Orchestration: CrewAI for multi-agent collaboration
-- Vector Store: ChromaDB for semantic search and content enrichment
+- Vector Store: PostgreSQL pgvector extension for semantic search and content enrichment
 
 ### Workflow Enhancements
 

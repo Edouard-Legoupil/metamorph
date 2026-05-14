@@ -38,7 +38,8 @@ python-pptx  # for PowerPoint presentation processing
 litellm
 tiktoken
 crewai
-chromadb
+psycopg2-binary
+pgvector
 sentence-transformers
 
 # LLM extraction routing (Docling + MinerU) - install if available or as local module
