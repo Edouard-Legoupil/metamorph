@@ -7,6 +7,14 @@ import Wiki from "./pages/Wiki";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import About from "./pages/About";
+import WebsiteManagement from "./pages/WebsiteManagement";
+import UserManagement from "./pages/UserManagement";
+import TeamManagement from "./pages/TeamManagement";
+import TopicManagement from "./pages/TopicManagement";
+import FileSelectionPage from "./pages/FileSelectionPage";
+import IngestionProgressPage from "./pages/IngestionProgressPage";
+import KnowledgeCards from "./pages/KnowledgeCards";
+import KnowledgeCardDetail from "./pages/KnowledgeCardDetail";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const apiKey = typeof window !== 'undefined' ? localStorage.getItem("API_KEY") : null;
@@ -24,10 +32,18 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Navigate to="/wiki" />} />
+        <Route path="/cards" element={<RequireAuth><KnowledgeCards /></RequireAuth>} />
+        <Route path="/cards/:cardId" element={<RequireAuth><KnowledgeCardDetail /></RequireAuth>} />
         <Route path="/wiki" element={<RequireAuth><Wiki /></RequireAuth>} />
         <Route path="/wiki/:topicId" element={<RequireAuth><Wiki /></RequireAuth>} />
         <Route path="/scraping" element={<RequireAuth><Scraping /></RequireAuth>} />
         <Route path="/ingestion" element={<RequireAuth><Ingestion /></RequireAuth>} />
+        <Route path="/websites" element={<RequireAuth><WebsiteManagement /></RequireAuth>} />
+        <Route path="/websites/:websiteId/files" element={<RequireAuth><FileSelectionPage /></RequireAuth>} />
+        <Route path="/ingestion/progress/:jobId" element={<RequireAuth><IngestionProgressPage /></RequireAuth>} />
+        <Route path="/users" element={<RequireAuth><UserManagement /></RequireAuth>} />
+        <Route path="/teams" element={<RequireAuth><TeamManagement /></RequireAuth>} />
+        <Route path="/topics" element={<RequireAuth><TopicManagement /></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
         <Route path="/about" element={<RequireAuth><About /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/wiki" />} />

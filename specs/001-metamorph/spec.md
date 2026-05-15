@@ -29,6 +29,15 @@ This is achieved through three distinct surfaces:
 2. **Discussion & Review Surface** - Where contested or uncertain information is evaluated
 3. **Revision & Audit Surface** - Immutable record of all changes
 
+**Agent Orchestration Principle:**
+> Metamorph uses CrewAI for intelligent agent coordination and task delegation.
+
+This enables:
+- **Multi-Agent Collaboration** - Specialized agents work together on complex tasks
+- **Hierarchical Task Delegation** - Agents can delegate subtasks to specialized agents
+- **Autonomous Decision Making** - Agents make context-aware decisions
+- **Memory and Learning** - Agents retain context across interactions
+
 **New Workflow (v3.0):**
 1. **Website Definition:** User provides a URL to scrape
 2. **Automatic Exploration:** System crawls the website and identifies all scrapable files (PDFs, Word docs, HTML pages, etc.)
@@ -38,9 +47,37 @@ This is achieved through three distinct surfaces:
 
 ---
 
+## 1.1 Clarifications
+
+### Session 2026-05-12
+
+- **Q: What are the expected maximum website sizes (pages, files) that Metamorph should handle?**
+  **A:** Enterprise scale: Unlimited with horizontal scaling
+
+- **Q: How should crawling and ingestion errors be presented to users in the UI?**
+  **A:** Dedicated error panel with detailed logs
+
+- **Q: What are the target response times for website crawling and file ingestion operations?**
+  **A:** Asynchronous: No hard limits, background processing only
+
+- **Q: What API versioning strategy should be used for backward compatibility?**
+  **A:** URL path versioning (/api/v1/, /api/v2/)
+
+- **Q: Should the system comply with specific accessibility standards?**
+  **A:** WCAG 2.1 AA compliance
+
+---
+
 ## 2. Requirements
 
 ### 2.1 Functional Requirements
+
+**Clarifications (2026-05-12):**
+- **Scale & Performance:** Enterprise scale with unlimited horizontal scaling capability
+- **Error Handling:** Dedicated error panel with detailed logs for crawling/ingestion errors
+- **Performance Targets:** Asynchronous background processing with progress updates
+- **API Versioning:** URL path versioning (/api/v1/, /api/v2/) for backward compatibility
+- **Accessibility:** WCAG 2.1 AA compliance for all user interfaces
 
 | ID | Requirement | Priority | Notes |
 |----|-------------|----------|-------|
@@ -98,13 +135,16 @@ This is achieved through three distinct surfaces:
 | NFR-007 | Immutable audit trails | High | All state transitions must be documented for accountability |
 | NFR-008 | Separation of concerns | High | Curated knowledge presentation separate from contested knowledge negotiation |
 | NFR-009 | **Respectful Scraping** | **High** | Honor robots.txt, rate limits, and website terms of service |
-| NFR-010 | **Scalable Crawling** | **High** | Handle websites with thousands of pages efficiently |
+| NFR-010 | **Scalable Crawling** | **High** | Handle websites with thousands of pages efficiently, with enterprise-scale horizontal scaling capability |
+| NFR-011 | **Accessibility Compliance** | **High** | All user interfaces must comply with WCAG 2.1 AA accessibility standards |
+| NFR-012 | **Error Presentation** | **High** | Crawling and ingestion errors must be presented in a dedicated error panel with detailed logs |
+| NFR-013 | **API Versioning** | **Medium** | Use URL path versioning (/api/v1/, /api/v2/) for backward compatibility |
 
 ---
 
 ## 3. User Stories
 
-### 3.1 Website Scraper (New Role)
+### 3.1 Website Scraper 
 
 - **US-SCR-001:** As a user, I want to define a website URL to scrape so that I can start the knowledge extraction process.
   - **Acceptance Criteria:**
@@ -150,6 +190,9 @@ This is achieved through three distinct surfaces:
     - Individual file progress is visible (queue, processing, complete, error)
     - User receives confirmation when ingestion starts
     - User can navigate away and return later to check progress
+    - **Error Handling:** Errors are displayed in a dedicated error panel with detailed logs (NFR-012)
+    - Error panel shows: failed file name, error type, timestamp, retry option
+    - Users can download full error logs for support purposes
 
 - **US-SCR-006:** As a user, I want to schedule regular re-scraping of websites so that I can keep knowledge up to date.
   - **Acceptance Criteria:**
@@ -191,7 +234,7 @@ This is achieved through three distinct surfaces:
     - Changes are automatically routed to Tier 1 (Field), Tier 2 (Regional), or Tier 3 (HQ/Thematic) based on sensitivity and scope
     - Each tier has defined review queues, permissions, decision SLAs, and audit policies
 
-### 3.3 Proposal Writer
+### 3.3 Agentic Proposal Writer
 
 - **US-PROP-001:** As a proposal writer, I want to query the knowledge base for relevant cards so that I can draft a proposal.
   - **Acceptance Criteria:**
@@ -206,15 +249,13 @@ This is achieved through three distinct surfaces:
     - Each tag links to relevant discussion threads or conflicts
     - Tags indicate if source website may have newer information
 
-### 3.4 Donor
-
-- **US-DON-001:** As a donor, I want to see transparent, evidence-based proposals so that I can trust the funding request.
+- **US-PROP-003:** As a proposal writer, I want to generate proposal drafts using the knowledge base so that the funding request is supported by evidence.
   - **Acceptance Criteria:**
     - Proposals include sourcing for every claim with website references
     - Difficulties and risks are acknowledged and mitigated
     - Source websites are listed for verification
 
-### 3.5 Reviewer
+### 3.4 Knowledge Reviewer
 
 - **US-REV-001:** As a reviewer, I want to participate in discussion threads so that I can help resolve contested knowledge.
   - **Acceptance Criteria:**
@@ -320,6 +361,9 @@ Each card contains sections with blocks that have:
   - Extract file metadata (name, URL, size, last modified date)
   - Handle authentication (basic auth, session cookies)
   - Rate limiting to avoid overwhelming servers
+  - **Enterprise Scale:** Horizontal scaling capability for unlimited website sizes
+  - Distributed crawling with worker pools
+  - Automatic load balancing and failover
 - **Output:** List of discovered files with metadata
 
 #### 5.2.2 File Selector UI (NEW)
@@ -331,6 +375,9 @@ Each card contains sections with blocks that have:
   - Bulk selection (select all, select by type, select by date range)
   - Search and filter functionality
   - Selection confirmation with summary
+  - **Accessibility:** WCAG 2.1 AA compliant interface with keyboard navigation, screen reader support, and proper contrast ratios
+  - Responsive design for various screen sizes
+  - Internationalization-ready UI components
 - **Output:** List of selected file URLs to ingest
 
 #### 5.2.3 Automatic Ingestion Trigger (NEW)
@@ -360,6 +407,7 @@ Each card contains sections with blocks that have:
   - Trust routing based on confidence and sensitivity
 
 #### 5.2.6 Curation Layers (Three Surfaces)
+- **Purpose:** Use an agentic system to draft knowledge article based on the ingested knowledge and according to predefined templates - Surface automatically content that requires review and curation.
 - **Curated Wiki Surface:** Reader-facing accepted knowledge
 - **Discussion & Review Surface:** Contested knowledge evaluation
 - **Revision & Audit Surface:** Immutable change history
@@ -369,11 +417,7 @@ Each card contains sections with blocks that have:
 - Automatic generation from graph data
 - Approval and expiry workflows
 
-#### 5.2.8 Agentic Proposal Drafting
-- Assemble relevant knowledge cards
-- Score interventions based on context
-- Generate draft proposals
-- Multi-model agentic workflows
+
 
 ### 5.3 Data Model
 
@@ -866,6 +910,7 @@ if trustedUsersViewedWithoutFlag(block)
 - **Sensitivity Classification:** Content is classified by sensitivity level (low, medium, high) for appropriate routing and access control
 - **Respectful Scraping:** All website scraping must respect robots.txt, rate limits, and website terms of service (NFR-009)
 - **Data Provenance:** All extracted knowledge must maintain traceability to source website and file (NFR-002)
+- **Accessibility Compliance:** All user interfaces must comply with WCAG 2.1 AA standards (NFR-011)
 
 ---
 
@@ -897,6 +942,8 @@ if trustedUsersViewedWithoutFlag(block)
 ## 10. API Capabilities
 
 ### 10.1 Minimum API Endpoints for Curation
+
+**API Versioning Strategy:** All endpoints use URL path versioning (e.g., `/api/v1/`) for backward compatibility. Major version changes will increment the version number.
 
 ```http
 # Website Scraping (NEW)
@@ -1072,6 +1119,10 @@ if discussion_result == "no_consensus":
 - **File Selector:** UI component that allows users to review and select files for ingestion
 - **Discovered File:** A file found during website crawling, available for selection and ingestion
 - **Scrape Session:** A single run of the website crawler, tracking all discovered and processed files
+- **Enterprise Scale:** Horizontal scaling capability to handle unlimited website sizes and file volumes
+- **Error Panel:** Dedicated UI component displaying crawling and ingestion errors with detailed logs
+- **WCAG 2.1 AA:** Web Content Accessibility Guidelines 2.1 Level AA compliance standard
+- **URL Path Versioning:** API versioning strategy using version numbers in URL paths (e.g., /api/v1/)
 
 ---
 

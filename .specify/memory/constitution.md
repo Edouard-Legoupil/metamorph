@@ -4,7 +4,7 @@
 - **Human judgment is not optional:** The system assists curators; it does not replace judgment
 - **Every claim must be traceable:** Provenance, website URL, file URL, date, and curator must be stored for every piece of knowledge
 - **Honesty over presentation:** Surface difficulties, risks, and gaps
-- **Expiry is a feature:** Validity periods enforced for all cards
+- **Expiry is a feature:** Validity periods are enforced for all knowledge cards
 - **Website-first:** Users start by defining websites to scrape, not by uploading documents manually
 
 ## 2. Technical Stack

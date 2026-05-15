@@ -1,65 +1,8 @@
-Implement the curation interface from Pipeline Blueprint Sections 4.4 and 6.2.
+Implement a complete curation interface with both contextual (in-wiki/in-card) and reviewer queue workflows for knowledge blocks and conflicts. Each block should allow authenticated users to verify or flag via UI buttons. Verification should increment trust and allow status promotion; flagging triggers a modal for reason/comment entry, creates a flag record, and routes to review. Build validation cards for atomic conflict review, presenting all evidence/context, and offering actions for approve, reject, edit/merge, or escalate, with full note capture. Create a dashboard listing all pending conflicts and curations, filterable by severity/state/age, with live action routing. Workflow must include notification on assignment, escalation, SLA breach, and resolution. All curation, flag, queue, and action flows must be auditable and tie back to the knowledge graph. Integrate endpoints as described.
 
-Create frontend components for curation:
-
-1. In-wiki curation (embedded in reading experience):
-   - Each block has [Verify] button (visible to authenticated users)
-   - Each block has [Flag] button for reporting issues
-   - Clicking Verify:
-     * Increments community_trust_score
-     * If threshold reached, promotes to COMMUNITY_VERIFIED
-     * Shows success toast
-   - Clicking Flag:
-     * Opens modal with reason options
-     * Allows comment
-     * Creates FlagRecord
-
-2. Atomic validation cards (curation queue):
-   Component: ValidationCard
-   Props: {
-     conflict_id,
-     type: "QUANTITATIVE|NORMATIVE|CONTACT|STRUCTURAL",
-     severity: "CRITICAL|MINOR",
-     current_value: {value, source, date},
-     incoming_value: {value, source, date},
-     assigned_tier: 1|2|3,
-     context: {document_title, page_reference, snippet}
-   }
-   Actions: [Approve Update] [Reject] [Edit] [Escalate]
-
-3. Curation queue dashboard:
-   Columns (per 6.2):
-   - Conflict ID (clickable for detail)
-   - Type with icon
-   - Severity badge (🔴 CRITICAL / 🟡 MINOR)
-   - Current Value (truncated with source tooltip)
-   - Proposed Value (truncated with source tooltip)
-   - Assigned Tier
-   - Age (time since creation)
-   - Actions: Approve / Reject / Edit / Escalate
-   
-   Filters:
-   - By type, severity, tier, status
-   - Search by entity name
-   - Sort by age, severity
-
-4. Conflict resolution workflow:
-   - Approve: Update graph with incoming value, close conflict
-   - Reject: Keep current value, close conflict with note
-   - Edit: Open editor to create merged/corrected value
-   - Escalate: Move to next tier (1→2→3)
-   - Resolution adds note and resolved_by
-
-5. Notification system:
-   - On assignment to tier
-   - On escalation
-   - On SLA breach (24h for CRITICAL, 7d for MINOR)
-   - On resolution (notify original flagger)
-
-6. Mobile-responsive design:
-   - Queue view optimized for phone
-   - Quick approve/reject actions
-   - Swipe gestures for common actions
-
-- Wire up /api/v1/blocks/card/{card_id}/preview and /api/v1/curation/conflicts to power these components.
-- Reuse ValidationCard both in-wiki (for atomic popups on conflict) and in dashboard.
+Verification & Test Guidance
+- [ ] Confirm all curation UI/UX (in-wiki and dashboard) are present and working, with block-level verify/flag and full reviewer queues.
+- [ ] Test verification and flag actions, ensure new records and routing in backend and correct status updates/UI banners.
+- [ ] Inspect implementation and use of ValidationCard, and ensure conflict data and actions (approve/reject/edit/escalate) round-trip to the backend.
+- [ ] Check conflict/curation dashboard filters, sorting, and notifications operate as intended, and mobile/desktop workflows are tested.
+- [ ] Manually walk through a full review lifecycle (flag/block → queue → approve/escalate → audit log and cleanup).
